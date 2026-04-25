@@ -1,5 +1,15 @@
 import { Link } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid } from 'lucide-react';
+import { 
+    Activity, 
+    CircleDollarSign, 
+    LayoutDashboard, 
+    MessageCircle, 
+    Package, 
+    ShoppingCart, 
+    Users, 
+    UserRoundCog, 
+    Wrench
+} from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -20,20 +30,64 @@ const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: dashboard(),
-        icon: LayoutGrid,
+        icon: LayoutDashboard,
+    },
+    {
+        title: 'Antrean Servis',
+        href: '/services',
+        icon: Wrench,
+    },
+    {
+        title: 'Penjualan',
+        href: '#',
+        icon: ShoppingCart,
+        items: [
+            { title: 'Kasir (POS)', href: '/sales/pos' },
+            { title: 'Pembelian Bekas', href: '/sales/trade-in' },
+            { title: 'Pesanan Daring', href: '/sales/online' },
+        ],
+    },
+    {
+        title: 'Inventaris & Gudang',
+        href: '#',
+        icon: Package,
+        items: [
+            { title: 'Katalog Produk', href: '/inventory/products' },
+            { title: 'Stok Sparepart', href: '/inventory/spareparts' },
+            { title: 'Pengadaan Barang', href: '/inventory/procurement' },
+        ],
+    },
+    {
+        title: 'Manajemen Pelanggan',
+        href: '/customers',
+        icon: Users,
+    },
+    {
+        title: 'Keuangan',
+        href: '#',
+        icon: CircleDollarSign,
+        items: [
+            { title: 'Arus Kas Harian', href: '/finance/cashflow' },
+            { title: 'Laporan Laba Rugi', href: '/finance/income-statement' },
+        ],
     },
 ];
 
 const footerNavItems: NavItem[] = [
     {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: FolderGit2,
+        title: 'Pegawai',
+        href: '#',
+        icon: UserRoundCog,
     },
     {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
+        title: 'WhatsApp Gateway',
+        href: '/config-app/config-wa',
+        icon: MessageCircle,
+    },
+    {
+        title: 'Log & Webhook',
+        href: '#',
+        icon: Activity,
     },
 ];
 

@@ -76,7 +76,7 @@ const mainNavItems: NavItem[] = [
 const footerNavItems: NavItem[] = [
     {
         title: 'Pegawai',
-        href: '#',
+        href: '/pegawai',
         icon: UserRoundCog,
     },
     {

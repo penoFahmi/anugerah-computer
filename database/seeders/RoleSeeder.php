@@ -11,18 +11,21 @@ class RoleSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Buat Role
-        $adminRole = Role::create(['name' => 'admin']);
-        $teknisiRole = Role::create(['name' => 'teknisi']);
-        $teknisiRole = Role::create(['name' => 'pegawai']);
+        // Gunakan firstOrCreate agar tidak error jika dijalankan ulang
+        $adminRole = Role::firstOrCreate(['name' => 'admin']);
+        $teknisiRole = Role::firstOrCreate(['name' => 'teknisi']);
+        $pegawaiRole = Role::firstOrCreate(['name' => 'pegawai']);
 
-        // 2. Buat Akun Super Admin (Pemilik)
-        $admin = User::create([
-            'name' => 'Peno Admin',
-            'email' => 'admin@anugerah.com',
-            'phone_number' => '081234567890',
-            'password' => Hash::make('password'), // password default
-        ]);
+        // Buat Admin
+        $admin = User::firstOrCreate(
+            ['email' => 'admin@anugerah.com'],
+            [
+                'name' => 'Peno Admin',
+                'phone_number' => '081234567890',
+                'password' => Hash::make('password'),
+                'is_active' => true,
+            ]
+        );
         $admin->assignRole($adminRole);
 
         // 3. Buat Akun Teknisi

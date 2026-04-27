@@ -9,6 +9,7 @@ use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
+use App\Http\Middleware\Checkuserisactive;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -24,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
+            'is_active' => CheckUserIsActive::class,
         ]);
 
         $middleware->web(append: [

@@ -36,6 +36,11 @@ const mainNavItems: NavItem[] = [
         title: 'Antrean Servis',
         href: '/services',
         icon: Wrench,
+        items: [
+            { title: 'Servis & cek ', href: '/services/today' },
+            { title: 'Status', href: '/services/history' },
+            { title: 'Klaim & Garansi Servis', href: '/services/warranty' },
+        ],
     },
     {
         title: 'Penjualan',

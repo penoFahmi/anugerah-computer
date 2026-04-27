@@ -1,113 +1,109 @@
-import { useForm } from '@inertiajs/react';
-import { Loader2 } from 'lucide-react'; // Untuk efek loading
+import { Form } from '@inertiajs/react';
+import { Loader2 } from 'lucide-react';
+import { store, update } from '@/actions/App/Http/Controllers/PegawaiController';
+import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DialogDescription } from '@/components/ui/dialog';
+import type { Pegawai } from '@/types';
 
-interface PegawaiFormProps {
-    pegawai?: any; // Jika ada, berarti mode Edit
-    onSuccess?: () => void; // Untuk menutup modal setelah sukses
+interface Props {
+    pegawai?: Pegawai | null;
+    onSuccess?: () => void;
 }
 
-export function PegawaiForm({ pegawai, onSuccess }: PegawaiFormProps) {
+export function PegawaiForm({ pegawai, onSuccess }: Props) {
     const isEdit = !!pegawai;
 
-    const { data, setData, post, put, processing, errors, reset } = useForm({
-        name: pegawai?.name || '',
-        email: pegawai?.email || '',
-        password: '',
-        password_confirmation: '',
-    });
-
-    const submit = (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (isEdit) {
-            put(route('pegawai.update', pegawai.id), {
-                onSuccess: () => onSuccess?.(),
-            });
-        } else {
-            post(route('pegawai.store'), {
-                onSuccess: () => {
-                    reset();
-                    onSuccess?.();
-                },
-            });
-        }
-    };
-
     return (
-        <form onSubmit={submit} className="space-y-4 py-4">
-            <div className="space-y-2">
-                <Label htmlFor="name">Nama Lengkap</Label>
-                <Input
-                    id="name"
-                    value={data.name}
-                    onChange={(e) => setData('name', e.target.value)}
-                    placeholder="Masukkan nama pegawai..."
-                />
-                {errors.name && (
-                    <p className="text-xs text-red-500">{errors.name}</p>
-                )}
-            </div>
+        <>
+            {/* Mengatasi warning Accessibility "Missing Description" dari Radix UI */}
+            <DialogDescription className="sr-only">
+                {isEdit ? 'Formulir edit data pegawai.' : 'Formulir tambah pegawai baru.'}
+            </DialogDescription>
 
-            <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                    id="email"
-                    type="email"
-                    value={data.email}
-                    onChange={(e) => setData('email', e.target.value)}
-                    placeholder="nama@anugerah.com"
-                />
-                {errors.email && (
-                    <p className="text-xs text-red-500">{errors.email}</p>
-                )}
-            </div>
+            <Form
+                {...(isEdit ? update.form(pegawai.id) : store.form())}
+                className="space-y-4 py-4"
+                onSuccess={() => onSuccess?.()}
+            >
+                {/* HANYA ambil errors dan processing.
+                    Kita TIDAK memakai data/setData karena Inertia v3 otomatis 
+                    mengumpulkan data berdasarkan atribut 'name' pada Input!
+                */}
+                {({ errors, processing }) => (
+                    <>
+                        <div className="grid gap-2">
+                            <Label htmlFor="name">Nama Lengkap</Label>
+                            <Input 
+                                id="name" 
+                                name="name" 
+                                defaultValue={pegawai?.name ?? ''} 
+                                required 
+                            />
+                            <InputError message={errors.name} />
+                        </div>
 
-            {/* Password hanya wajib diisi saat tambah pegawai baru */}
-            {!isEdit && (
-                <>
-                    <div className="space-y-2">
-                        <Label htmlFor="password">Password</Label>
-                        <Input
-                            id="password"
-                            type="password"
-                            value={data.password}
-                            onChange={(e) =>
-                                setData('password', e.target.value)
-                            }
-                        />
-                        {errors.password && (
-                            <p className="text-xs text-red-500">
-                                {errors.password}
-                            </p>
+                        <div className="grid gap-2">
+                            <Label htmlFor="email">Email</Label>
+                            <Input 
+                                id="email" 
+                                name="email" 
+                                type="email" 
+                                defaultValue={pegawai?.email ?? ''} 
+                                required 
+                            />
+                            <InputError message={errors.email} />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="phone_number">No. Telepon</Label>
+                            <Input 
+                                id="phone_number" 
+                                name="phone_number" 
+                                type="tel"
+                                defaultValue={pegawai?.phone_number ?? ''} 
+                            />
+                            <InputError message={errors.phone_number} />
+                        </div>
+
+                        {!isEdit && (
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="password">Password</Label>
+                                    <Input 
+                                        id="password" 
+                                        name="password" 
+                                        type="password" 
+                                        required 
+                                    />
+                                    <InputError message={errors.password} />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="password_confirmation">Konfirmasi</Label>
+                                    <Input 
+                                        id="password_confirmation" 
+                                        name="password_confirmation" 
+                                        type="password" 
+                                        required 
+                                    />
+                                </div>
+                            </div>
                         )}
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="password_confirmation">
-                            Konfirmasi Password
-                        </Label>
-                        <Input
-                            id="password_confirmation"
-                            type="password"
-                            value={data.password_confirmation}
-                            onChange={(e) =>
-                                setData('password_confirmation', e.target.value)
-                            }
-                        />
-                    </div>
-                </>
-            )}
 
-            <div className="flex justify-end pt-4">
-                <Button type="submit" disabled={processing}>
-                    {processing && (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    {isEdit ? 'Simpan Perubahan' : 'Daftarkan Pegawai'}
-                </Button>
-            </div>
-        </form>
+                        <div className="flex justify-end pt-4 gap-2">
+                            <Button type="button" variant="outline" onClick={() => onSuccess?.()}>
+                                Batal
+                            </Button>
+                            <Button type="submit" disabled={processing}>
+                                {processing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                {isEdit ? 'Simpan Perubahan' : 'Daftarkan Pegawai'}
+                            </Button>
+                        </div>
+                    </>
+                )}
+            </Form>
+        </>
     );
 }

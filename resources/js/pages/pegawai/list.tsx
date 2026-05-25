@@ -2,7 +2,6 @@ import { Head, router } from '@inertiajs/react';
 import { Plus, Search } from 'lucide-react';
 import { useState } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
-import { index } from '@/actions/App/Http/Controllers/PegawaiController';
 import Heading from '@/components/heading';
 import { PegawaiForm } from '@/components/pegawai/pegawai-form';
 import { PegawaiTable } from '@/components/pegawai/pegawai-table';
@@ -10,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/app-layout';
+import { index } from '@/routes/pegawai';
 
 export default function PegawaiList({ pegawais, filters }: any) {
     const [open, setOpen] = useState(false);

@@ -1,12 +1,12 @@
 import { router, usePage } from '@inertiajs/react';
 import { MoreHorizontal, Pencil, Power, PowerOff, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { destroy, toggleStatus } from '@/actions/App/Http/Controllers/PegawaiController';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { destroy, toggleStatus } from '@/routes/pegawai';
 import type { Pegawai, PegawaiPagination } from '@/types';
 import { PegawaiForm } from './pegawai-form';
 

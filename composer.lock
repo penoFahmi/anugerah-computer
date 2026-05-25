@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f855e9cdbd78756f5d5b89408b4a74e1",
+    "content-hash": "65a4a507d89bf183db0d20d2cfab5b9d",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -1384,16 +1384,16 @@
         },
         {
             "name": "laravel/ai",
-            "version": "v0.6.3",
+            "version": "v0.6.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/laravel/ai.git",
-                "reference": "42cefc32ae2762b6fd1ec0b3c9272e894623b717"
+                "reference": "548f4b247c1c5f9e6a94252628eeb8a5f8fc5e6e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laravel/ai/zipball/42cefc32ae2762b6fd1ec0b3c9272e894623b717",
-                "reference": "42cefc32ae2762b6fd1ec0b3c9272e894623b717",
+                "url": "https://api.github.com/repos/laravel/ai/zipball/548f4b247c1c5f9e6a94252628eeb8a5f8fc5e6e",
+                "reference": "548f4b247c1c5f9e6a94252628eeb8a5f8fc5e6e",
                 "shasum": ""
             },
             "require": {
@@ -1448,7 +1448,7 @@
                 "issues": "https://github.com/laravel/ai/issues",
                 "source": "https://github.com/laravel/ai"
             },
-            "time": "2026-04-22T21:16:19+00:00"
+            "time": "2026-04-29T13:08:02+00:00"
         },
         {
             "name": "laravel/fortify",

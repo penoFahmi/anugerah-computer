@@ -13,6 +13,14 @@ return new class extends Migration
     {
         Schema::create('warranties', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('service_order_id')->constrained()->cascadeOnDelete();
+            $table->string('warranty_code')->unique(); 
+            
+            $table->date('start_date');
+            $table->date('end_date');
+            $table->enum('status', ['active', 'claimed', 'expired', 'void'])->default('active');
+            $table->text('notes')->nullable();
+            
             $table->timestamps();
         });
     }

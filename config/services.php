@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'wa_gateway' => [
+        'token' => env('WA_GATEWAY_TOKEN'),
+    ],
+
 ];

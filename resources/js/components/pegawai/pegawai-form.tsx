@@ -1,11 +1,11 @@
 import { Form } from '@inertiajs/react';
 import { Loader2 } from 'lucide-react';
-import { store, update } from '@/actions/App/Http/Controllers/PegawaiController';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
+import { DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { DialogDescription } from '@/components/ui/dialog';
+import { store, update } from '@/routes/pegawai';
 import type { Pegawai } from '@/types';
 
 interface Props {

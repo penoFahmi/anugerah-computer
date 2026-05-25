@@ -3,6 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 use App\Http\Controllers\PegawaiController;
+use App\Http\Controllers\ServiceOrderController;
+use App\Http\Controllers\ConfigWaController;
 
 Route::inertia('/', 'welcome', [
     'canRegister' => Features::enabled(Features::registration()),
@@ -10,7 +12,7 @@ Route::inertia('/', 'welcome', [
 
 Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
-    
+    Route::resource('services', ServiceOrderController::class)->except(['create', 'edit']);
 });
 
 Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
@@ -18,6 +20,9 @@ Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
         Route::resource('pegawai', PegawaiController::class)->except(['create', 'edit']);
         Route::patch('pegawai/{pegawai}/toggle-status', [PegawaiController::class, 'toggleStatus'])
             ->name('pegawai.toggle-status');
+
+        Route::get('config/wa', [ConfigWaController::class, 'index'])->name('config.wa');
+        Route::post('config/wa/logout', [ConfigWaController::class, 'logout'])->name('config.wa.logout');
     });
 });
 

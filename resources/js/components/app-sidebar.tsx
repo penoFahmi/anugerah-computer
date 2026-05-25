@@ -37,7 +37,7 @@ const mainNavItems: NavItem[] = [
         href: '/services',
         icon: Wrench,
         items: [
-            { title: 'Servis & cek ', href: '/services/today' },
+            { title: 'Servis & cek ', href: '/services' },
             { title: 'Status', href: '/services/history' },
             { title: 'Klaim & Garansi Servis', href: '/services/warranty' },
         ],
@@ -86,7 +86,7 @@ const footerNavItems: NavItem[] = [
     },
     {
         title: 'WhatsApp Gateway',
-        href: '/config-app/config-wa',
+        href: '/config/wa',
         icon: MessageCircle,
     },
     {

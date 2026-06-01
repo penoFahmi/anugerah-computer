@@ -12,12 +12,12 @@ class RoleSeeder extends Seeder
     public function run(): void
     {
         // Gunakan firstOrCreate agar tidak error jika dijalankan ulang
-        $adminRole = Role::firstOrCreate(['name' => 'admin']);
+        $administratorRole = Role::firstOrCreate(['name' => 'administrator']);
         $teknisiRole = Role::firstOrCreate(['name' => 'teknisi']);
         $pegawaiRole = Role::firstOrCreate(['name' => 'pegawai']);
 
-        // Buat Admin
-        $admin = User::firstOrCreate(
+        // Buat Administrator
+        $administrator = User::firstOrCreate(
             ['email' => 'admin@anugerah.com'],
             [
                 'name' => 'Peno Admin',
@@ -26,7 +26,7 @@ class RoleSeeder extends Seeder
                 'is_active' => true,
             ]
         );
-        $admin->assignRole($adminRole);
+        $administrator->assignRole($administratorRole);
 
         // 3. Buat Akun Teknisi
         $teknisi = User::create([

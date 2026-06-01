@@ -19,21 +19,23 @@ return new class extends Migration
             $table->enum('direction', ['outbound', 'inbound']); 
             $table->text('message'); // Teks chat original
             
-            // --- METRIK LEVENSHTEIN DISTANCE (Lapisan Pertama) ---
-            $table->integer('ld_distance_score')->nullable(); 
-            $table->string('ld_matched_keyword')->nullable(); 
-            $table->boolean('is_ld_successful')->nullable(); 
+            // --- METRIK PENGANALAN POLA: FASTTEXT + SVM (Lapisan Pertama) ---
+            $table->float('svm_confidence_score')->nullable(); // Skor Probabilitas (0.00 - 1.00)
+            $table->string('svm_predicted_intent')->nullable(); // Hasil tebakan awal SVM
+            $table->boolean('is_svm_successful')->nullable(); // True jika skor >= 0.75 (Threshold)
             
-            // --- METRIK LLM LARAVEL AI SDK (Lapisan Kedua) ---
-            $table->boolean('is_llm_triggered')->default(false); 
-            $table->text('llm_raw_response')->nullable(); 
-            $table->integer('llm_prompt_tokens')->nullable(); // Untuk Analisis Biaya/Token di Bab 4
+            // --- METRIK LLM LARAVEL AI SDK (Lapisan Kedua / Fallback) ---
+            $table->boolean('is_llm_triggered')->default(false); // True jika skor SVM < 0.75
+            $table->text('llm_raw_response')->nullable(); // Jawaban asli format JSON dari LLM
+            $table->integer('llm_prompt_tokens')->nullable(); // Untuk Analisis Biaya/Token di Bab 4 Skripsi
             $table->integer('llm_completion_tokens')->nullable(); 
             
-            // --- KESIMPULAN INTENT ---
-            // Niat: Setuju, Batal, Nego, atau Tidak Jelas
-            $table->enum('final_intent', ['approve', 'cancel', 'negotiate', 'unclear'])->nullable(); 
-            $table->enum('resolved_by', ['levenshtein', 'llm', 'human'])->nullable(); 
+            // --- KESIMPULAN AKHIR INTENT (Yang menentukan update status) ---
+            // Niat: Setuju, Batal, Tanya Status, Konsultasi Teknis, atau Tidak Jelas
+            $table->enum('final_intent', ['approve', 'cancel', 'status_inquiry', 'technical_consultation', 'unclear'])->nullable(); 
+            
+            // Pihak yang menyelesaikan/mendeteksi pesan ini
+            $table->enum('resolved_by', ['svm_lokal', 'llm_cloud', 'human_admin'])->nullable(); 
 
             $table->timestamps();
         });

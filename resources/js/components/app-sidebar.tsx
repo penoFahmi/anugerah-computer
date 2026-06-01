@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { 
     Activity, 
     CircleDollarSign, 
@@ -31,11 +31,13 @@ const mainNavItems: NavItem[] = [
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutDashboard,
+        roles: ['administrator', 'teknisi', 'pegawai'],
     },
     {
         title: 'Antrean Servis',
         href: '/services',
         icon: Wrench,
+        roles: ['administrator', 'teknisi', 'pegawai'],
         items: [
             { title: 'Servis & cek ', href: '/services' },
             { title: 'Status', href: '/services/history' },
@@ -46,6 +48,7 @@ const mainNavItems: NavItem[] = [
         title: 'Penjualan',
         href: '#',
         icon: ShoppingCart,
+        roles: ['administrator', 'teknisi', 'pegawai'],
         items: [
             { title: 'Kasir (POS)', href: '/sales/pos' },
             { title: 'Pembelian Bekas', href: '/sales/trade-in' },
@@ -56,6 +59,7 @@ const mainNavItems: NavItem[] = [
         title: 'Inventaris & Gudang',
         href: '#',
         icon: Package,
+        roles: ['administrator', 'teknisi', 'pegawai'],
         items: [
             { title: 'Katalog Produk', href: '/inventory/products' },
             { title: 'Stok Sparepart', href: '/inventory/spareparts' },
@@ -66,11 +70,13 @@ const mainNavItems: NavItem[] = [
         title: 'Manajemen Pelanggan',
         href: '/customers',
         icon: Users,
+        roles: ['administrator', 'teknisi', 'pegawai'],
     },
     {
         title: 'Keuangan',
         href: '#',
         icon: CircleDollarSign,
+        roles: ['administrator', 'teknisi', 'pegawai'],
         items: [
             { title: 'Arus Kas Harian', href: '/finance/cashflow' },
             { title: 'Laporan Laba Rugi', href: '/finance/income-statement' },
@@ -83,20 +89,48 @@ const footerNavItems: NavItem[] = [
         title: 'Pegawai',
         href: '/pegawai',
         icon: UserRoundCog,
+        roles: ['administrator'],
     },
     {
         title: 'WhatsApp Gateway',
         href: '/config/wa',
         icon: MessageCircle,
+        roles: ['administrator'],
     },
     {
         title: 'Log & Webhook',
         href: '#',
         icon: Activity,
+        roles: ['administrator', 'pegawai'],
     },
 ];
 
 export function AppSidebar() {
+    
+    // Ambil data auth dari props yang disediakan oleh Inertia
+    const { auth } = usePage().props as any;
+    const userRoles = auth.user?.roles || [];
+
+    // Fungsi untuk memeriksa apakah user memiliki salah satu role yang diizinkan
+    const hasRole = (allowedRoles?: string[]) => {
+        if (!allowedRoles) {
+            return true; // Jika tidak ada batasan role, tampilkan
+        }
+
+        return allowedRoles.some((role) => userRoles.includes(role));
+    };
+
+    // Filter menu berdasarkan role user
+    const filteredMainNav = mainNavItems
+        .filter((item) => hasRole(item.roles))
+        .map((item) => ({
+            ...item,
+            // Jika ada sub-menu, filter juga sub-menunya
+            items: item.items ? item.items.filter((sub) => hasRole(sub.roles)) : undefined,
+        }));
+
+    const filteredFooterNav = footerNavItems.filter((item) => hasRole(item.roles));
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
@@ -112,11 +146,11 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <NavMain items={filteredMainNav} />
             </SidebarContent>
 
             <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
+                <NavFooter items={filteredFooterNav} className="mt-auto" />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

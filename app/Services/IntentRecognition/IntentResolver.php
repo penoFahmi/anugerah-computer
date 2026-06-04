@@ -62,8 +62,7 @@ class IntentResolver
                 }
             }
         }
-
-        // Jika ditemukan kecocokan yang kuat
+        
         if ($matchedIntent !== 'unclear') {
             return [
                 'intent' => $matchedIntent,
@@ -93,7 +92,7 @@ class IntentResolver
                 'intent' => $intent,
                 'method' => 'llm',
                 'score'  => null, 
-                'raw'    => $reasoning, // Kita simpan alasannya sebagai raw response
+                'raw'    => $reasoning,
             ];
 
         } catch (\Exception $e) {

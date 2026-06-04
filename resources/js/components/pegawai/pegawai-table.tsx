@@ -1,10 +1,9 @@
 import { router, usePage } from '@inertiajs/react';
-import { MoreHorizontal, Pencil, Power, PowerOff, Trash2 } from 'lucide-react';
+import { Pencil, Power, PowerOff, Trash2 } from 'lucide-react'; // MoreHorizontal dihapus
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { destroy, toggleStatus } from '@/routes/pegawai';
 import type { Pegawai, PegawaiPagination } from '@/types';
@@ -21,6 +20,7 @@ export function PegawaiTable({ pegawais }: { pegawais: PegawaiPagination }) {
                     <TableRow>
                         <TableHead>Nama</TableHead>
                         <TableHead>Email</TableHead>
+                        <TableHead>No. Telepon</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
@@ -30,34 +30,50 @@ export function PegawaiTable({ pegawais }: { pegawais: PegawaiPagination }) {
                         <TableRow key={pegawai.id} className={!pegawai.is_active ? 'opacity-50' : ''}>
                             <TableCell className="font-medium">{pegawai.name}</TableCell>
                             <TableCell>{pegawai.email}</TableCell>
+                            <TableCell>{pegawai.phone_number || '-'}</TableCell>
                             <TableCell>
                                 <Badge variant={pegawai.is_active ? 'default' : 'secondary'}>
                                     {pegawai.is_active ? 'Aktif' : 'Nonaktif'}
                                 </Badge>
                             </TableCell>
                             <TableCell className="text-right">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="sm"><MoreHorizontal className="h-4 w-4" /></Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={() => setEditingPegawai(pegawai)}>
-                                            <Pencil className="mr-2 h-4 w-4" /> Edit
-                                        </DropdownMenuItem>
-                                        {auth.user.id !== pegawai.id && (
-                                            <DropdownMenuItem onClick={() => router.patch(toggleStatus.url(pegawai.id))}>
-                                                {pegawai.is_active ? <><PowerOff className="mr-2 h-4 w-4" /> Nonaktifkan</> : <><Power className="mr-2 h-4 w-4" /> Aktifkan</>}
-                                            </DropdownMenuItem>
-                                        )}
-                                        <DropdownMenuItem 
-                                            disabled={auth.user.id === pegawai.id}
-                                            onClick={() => confirm('Hapus pegawai?') && router.delete(destroy.url(pegawai.id))}
-                                            className="text-destructive"
+                                {/* Container Aksi Baru dengan Flexbox */}
+                                <div className="flex items-center justify-end gap-2">
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        onClick={() => setEditingPegawai(pegawai)}
+                                        title="Edit Pegawai"
+                                    >
+                                        <Pencil className="h-4 w-4 text-blue-500" />
+                                    </Button>
+
+                                    {auth.user.id !== pegawai.id && (
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            onClick={() => router.patch(toggleStatus.url(pegawai.id))}
+                                            title={pegawai.is_active ? "Nonaktifkan Pegawai" : "Aktifkan Pegawai"}
                                         >
-                                            <Trash2 className="mr-2 h-4 w-4" /> Hapus
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
+                                            {pegawai.is_active ? (
+                                                <PowerOff className="h-4 w-4 text-amber-500" />
+                                            ) : (
+                                                <Power className="h-4 w-4 text-green-500" />
+                                            )}
+                                        </Button>
+                                    )}
+
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        disabled={auth.user.id === pegawai.id}
+                                        onClick={() => confirm('Hapus pegawai?') && router.delete(destroy.url(pegawai.id))}
+                                        title="Hapus Pegawai"
+                                        className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
                             </TableCell>
                         </TableRow>
                     ))}

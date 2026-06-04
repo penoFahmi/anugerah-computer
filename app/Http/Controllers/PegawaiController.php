@@ -13,7 +13,7 @@ class PegawaiController extends Controller
     public function index(Request $request)
     {
         return Inertia::render('pegawai/list', [
-            'pegawais' => User::role('pegawai')
+            'pegawais' => User::role('pegawai', 'teknisi')
                 ->when($request->search, fn($q, $search) => 
                     $q->where('name', 'like', "%{$search}%")
                       ->orWhere('email', 'like', "%{$search}%")
@@ -45,6 +45,8 @@ class PegawaiController extends Controller
 
         $user->assignRole('pegawai');
 
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Pegawai berhasil ditambahkan.')]);
+
         return back();
     }
 
@@ -58,18 +60,26 @@ class PegawaiController extends Controller
 
         $pegawai->update($input);
 
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Pegawai berhasil diupdate.')]);
+
         return back();
     }
 
     public function destroy(User $pegawai)
     {
         $pegawai->delete();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Pegawai berhasil dihapus.')]);
+        
         return back();
     }
 
     public function toggleStatus(User $pegawai)
     {
         $pegawai->update(['is_active' => !$pegawai->is_active]);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Status Pegawai berhasil diubah.')]);
+
         return back();
     }
 }

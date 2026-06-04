@@ -7,7 +7,7 @@ use App\Http\Controllers\ServiceOrderController;
 use App\Http\Controllers\ConfigWaController;
 
 Route::inertia('/', 'welcome', [
-    'canRegister' => Features::enabled(Features::registration()),
+    // 'canRegister' => Features::enabled(Features::registration()),
 ])->name('home');
 
 Route::middleware(['auth', 'verified', 'is_active'])->group(function () {

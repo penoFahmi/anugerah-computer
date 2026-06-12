@@ -27,7 +27,7 @@ return new class extends Migration
             // --- METRIK LLM LARAVEL AI SDK (Lapisan Kedua / Fallback) ---
             $table->boolean('is_llm_triggered')->default(false); // True jika skor SVM < 0.75
             $table->text('llm_raw_response')->nullable(); // Jawaban asli format JSON dari LLM
-            $table->integer('llm_prompt_tokens')->nullable(); // Untuk Analisis Biaya/Token di Bab 4 Skripsi
+            $table->integer('llm_prompt_tokens')->nullable(); // Untuk Analisis Biaya
             $table->integer('llm_completion_tokens')->nullable(); 
             
             // --- KESIMPULAN AKHIR INTENT (Yang menentukan update status) ---

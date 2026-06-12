@@ -13,7 +13,7 @@ class PegawaiController extends Controller
     public function index(Request $request)
     {
         return Inertia::render('pegawai/list', [
-            'pegawais' => User::role('pegawai', 'teknisi')
+            'pegawais' => User::role('pegawai')
                 ->when($request->search, fn($q, $search) => 
                     $q->where('name', 'like', "%{$search}%")
                       ->orWhere('email', 'like', "%{$search}%")

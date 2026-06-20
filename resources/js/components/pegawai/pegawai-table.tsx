@@ -1,109 +1,250 @@
-import { router, usePage } from '@inertiajs/react';
-import { Pencil, Power, PowerOff, Trash2 } from 'lucide-react'; // MoreHorizontal dihapus
+import { router } from '@inertiajs/react';
+import {
+    Pencil,
+    Trash2,
+    ShieldAlert,
+    ShieldCheck,
+    KeyRound,
+} from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { destroy, toggleStatus } from '@/routes/pegawai';
-import type { Pegawai, PegawaiPagination } from '@/types';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import type { PaginatedPegawai, Pegawai } from '@/types/pegawai';
+import { PegawaiAlert } from './pegawai-alert';
 import { PegawaiForm } from './pegawai-form';
 
-export function PegawaiTable({ pegawais }: { pegawais: PegawaiPagination }) {
-    const [editingPegawai, setEditingPegawai] = useState<Pegawai | null>(null);
-    const auth = usePage().props.auth as any;
+export function PegawaiTable({ pegawais }: { pegawais: PaginatedPegawai }) {
+    const [editPegawai, setEditPegawai] = useState<Pegawai | null>(null);
+    const [alertConfig, setAlertConfig] = useState<{
+        open: boolean;
+        type: 'delete' | 'toggle_status' | 'reset_password' | null;
+        pegawai: Pegawai | null;
+    }>({
+        open: false,
+        type: null,
+        pegawai: null,
+    });
+
+    const triggerAlert = (
+        type: 'delete' | 'toggle_status' | 'reset_password',
+        pegawai: Pegawai,
+    ) => {
+        setAlertConfig({ open: true, type, pegawai });
+    };
+
+    const getRelativeUrl = (absoluteUrl: string | null) => {
+        if (!absoluteUrl) return null;
+        try {
+            const url = new URL(absoluteUrl);
+            return url.pathname + url.search;
+        } catch {
+            return absoluteUrl;
+        }
+    };
+
+    // Fungsi Parser Label Pagination agar Bersih dari tag aneh Laravel
+    const parsePaginationLabel = (label: string) => {
+        const lowerLabel = label.toLowerCase();
+        if (lowerLabel.includes('prev')) return '‹ Sebelumnya';
+        if (lowerLabel.includes('next')) return 'Selanjutnya ›';
+        return label;
+    };
 
     return (
-        <div className="space-y-4">
+        <>
             <Table>
                 <TableHeader>
-                    <TableRow>
+                    <TableRow className="bg-muted/50">
                         <TableHead>Nama</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>No. Telepon</TableHead>
+                        <TableHead>Role</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {pegawais.data.map((pegawai) => (
-                        <TableRow key={pegawai.id} className={!pegawai.is_active ? 'opacity-50' : ''}>
-                            <TableCell className="font-medium">{pegawai.name}</TableCell>
-                            <TableCell>{pegawai.email}</TableCell>
-                            <TableCell>{pegawai.phone_number || '-'}</TableCell>
-                            <TableCell>
-                                <Badge variant={pegawai.is_active ? 'default' : 'secondary'}>
-                                    {pegawai.is_active ? 'Aktif' : 'Nonaktif'}
-                                </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                                {/* Container Aksi Baru dengan Flexbox */}
-                                <div className="flex items-center justify-end gap-2">
-                                    <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        onClick={() => setEditingPegawai(pegawai)}
-                                        title="Edit Pegawai"
-                                    >
-                                        <Pencil className="h-4 w-4 text-blue-500" />
-                                    </Button>
-
-                                    {auth.user.id !== pegawai.id && (
-                                        <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            onClick={() => router.patch(toggleStatus.url(pegawai.id))}
-                                            title={pegawai.is_active ? "Nonaktifkan Pegawai" : "Aktifkan Pegawai"}
-                                        >
-                                            {pegawai.is_active ? (
-                                                <PowerOff className="h-4 w-4 text-amber-500" />
-                                            ) : (
-                                                <Power className="h-4 w-4 text-green-500" />
-                                            )}
-                                        </Button>
-                                    )}
-
-                                    <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        disabled={auth.user.id === pegawai.id}
-                                        onClick={() => confirm('Hapus pegawai?') && router.delete(destroy.url(pegawai.id))}
-                                        title="Hapus Pegawai"
-                                        className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </div>
+                    {pegawais.data.length === 0 ? (
+                        <TableRow>
+                            <TableCell
+                                colSpan={6}
+                                className="py-8 text-center text-muted-foreground"
+                            >
+                                Tidak ada data pegawai yang ditemukan.
                             </TableCell>
                         </TableRow>
-                    ))}
+                    ) : (
+                        pegawais.data.map((p) => (
+                            <TableRow key={p.id}>
+                                <TableCell className="font-medium">
+                                    {p.name}
+                                </TableCell>
+                                <TableCell>{p.email}</TableCell>
+                                <TableCell>{p.phone_number || '-'}</TableCell>
+                                <TableCell>
+                                    <Badge
+                                        variant={
+                                            p.role === 'administrator'
+                                                ? 'destructive'
+                                                : p.role === 'teknisi'
+                                                  ? 'default'
+                                                  : 'secondary'
+                                        }
+                                        className="capitalize shadow-none"
+                                    >
+                                        {p.role}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell>
+                                    <Badge
+                                        variant={
+                                            p.is_active
+                                                ? 'outline'
+                                                : 'secondary'
+                                        }
+                                        className={`shadow-none ${p.is_active ? 'border-green-600 bg-green-50 text-green-700' : ''}`}
+                                    >
+                                        {p.is_active ? 'Aktif' : 'Nonaktif'}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    {/* Hapus efek hover agar tombol selalu tampil */}
+                                    <div className="flex justify-end gap-1">
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-8 w-8 text-slate-500"
+                                            onClick={() =>
+                                                triggerAlert(
+                                                    'reset_password',
+                                                    p,
+                                                )
+                                            }
+                                            title="Reset Password"
+                                        >
+                                            <KeyRound className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-8 w-8 text-blue-600"
+                                            onClick={() => setEditPegawai(p)}
+                                            title="Edit Data"
+                                        >
+                                            <Pencil className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className={`h-8 w-8 ${p.is_active ? 'text-amber-600' : 'text-emerald-600'}`}
+                                            onClick={() =>
+                                                triggerAlert('toggle_status', p)
+                                            }
+                                            title="Ubah Status"
+                                        >
+                                            {p.is_active ? (
+                                                <ShieldAlert className="h-4 w-4" />
+                                            ) : (
+                                                <ShieldCheck className="h-4 w-4" />
+                                            )}
+                                        </Button>
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-8 w-8 text-destructive"
+                                            onClick={() =>
+                                                triggerAlert('delete', p)
+                                            }
+                                            title="Hapus Akun"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ))
+                    )}
                 </TableBody>
             </Table>
 
-            {/* Pagination */}
-            <div className="flex items-center justify-between px-2 text-sm text-muted-foreground">
-                <span>Total {pegawais.total} pegawai</span>
-                <div className="flex gap-1">
-                    {pegawais.links.map((link, i) => (
-                        <Button 
-                            key={i} 
-                            variant={link.active ? 'default' : 'outline'} 
-                            size="sm" 
-                            disabled={!link.url}
-                            onClick={() => router.visit(link.url!, { preserveScroll: true })}
-                            dangerouslySetInnerHTML={{ __html: link.label }}
-                        />
-                    ))}
+            <div className="flex flex-col items-center justify-between gap-4 border-t px-4 py-3 text-sm text-muted-foreground sm:flex-row">
+                <div>
+                    Menampilkan {pegawais.from || 0} - {pegawais.to || 0} dari{' '}
+                    {pegawais.total} pegawai
+                </div>
+                <div className="flex flex-wrap gap-1">
+                    {pegawais.links.map((link, idx) => {
+                        const relativeUrl = getRelativeUrl(link.url);
+                        const labelHtml = parsePaginationLabel(link.label);
+
+                        return (
+                            <Button
+                                key={idx}
+                                variant={link.active ? 'default' : 'outline'}
+                                size="sm"
+                                disabled={!relativeUrl}
+                                onClick={() =>
+                                    relativeUrl &&
+                                    router.get(
+                                        relativeUrl,
+                                        {},
+                                        {
+                                            preserveState: true,
+                                            preserveScroll: true,
+                                        },
+                                    )
+                                }
+                                className={`h-8 px-3 ${link.active ? 'pointer-events-none' : ''}`}
+                            >
+                                <span
+                                    dangerouslySetInnerHTML={{
+                                        __html: labelHtml,
+                                    }}
+                                />
+                            </Button>
+                        );
+                    })}
                 </div>
             </div>
 
-            {/* Modal Edit */}
-            <Dialog open={!!editingPegawai} onOpenChange={() => setEditingPegawai(null)}>
+            <Dialog
+                open={!!editPegawai}
+                onOpenChange={(val) => !val && setEditPegawai(null)}
+            >
                 <DialogContent>
-                    <DialogHeader><DialogTitle>Edit Pegawai</DialogTitle></DialogHeader>
-                    {editingPegawai && <PegawaiForm pegawai={editingPegawai} onSuccess={() => setEditingPegawai(null)} />}
+                    <DialogHeader>
+                        <DialogTitle>Edit Registrasi Pegawai</DialogTitle>
+                    </DialogHeader>
+                    <PegawaiForm
+                        key={editPegawai?.id}
+                        pegawai={editPegawai}
+                        onSuccess={() => setEditPegawai(null)}
+                    />
                 </DialogContent>
             </Dialog>
-        </div>
+
+            <PegawaiAlert
+                open={alertConfig.open}
+                onOpenChange={(val) =>
+                    setAlertConfig((prev) => ({ ...prev, open: val }))
+                }
+                type={alertConfig.type}
+                pegawai={alertConfig.pegawai}
+            />
+        </>
     );
 }

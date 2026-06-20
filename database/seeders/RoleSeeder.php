@@ -11,16 +11,16 @@ class RoleSeeder extends Seeder
 {
     public function run(): void
     {
-        // Gunakan firstOrCreate agar tidak error jika dijalankan ulang
+        // Gunakan firstOrCreate untuk memastikan tidak ada duplikasi role jika seeder dijalankan lebih dari sekali
         $administratorRole = Role::firstOrCreate(['name' => 'administrator']);
         $teknisiRole = Role::firstOrCreate(['name' => 'teknisi']);
         $pegawaiRole = Role::firstOrCreate(['name' => 'pegawai']);
 
-        // Buat Administrator
+        // Data dummy untuk administrator
         $administrator = User::firstOrCreate(
-            ['email' => 'admin@anugerah.com'],
+            ['email' => 'administrator@anugerah.com'],
             [
-                'name' => 'Peno Admin',
+                'name' => 'Peno',
                 'phone_number' => '081234567890',
                 'password' => Hash::make('password'),
                 'is_active' => true,
@@ -28,12 +28,28 @@ class RoleSeeder extends Seeder
         );
         $administrator->assignRole($administratorRole);
 
-        // 3. Buat Akun Teknisi
-        $teknisi = User::create([
-            'name' => 'Budi Teknisi',
-            'email' => 'teknisi@anugerah.com',
-            'password' => Hash::make('password'),
-        ]);
+        // Data dummy untuk teknisi
+        $teknisi = User::firstOrCreate(
+            ['email' => 'teknisi@anugerah.com'],
+            [
+                'name' => 'Putra Hermanto',
+                'phone_number' => '081234567891',
+                'password' => Hash::make('password'),
+                'is_active' => true,
+            ]
+        );
         $teknisi->assignRole($teknisiRole);
+
+        // Data dummy untuk pegawai/kasir
+        $pegawai = User::firstOrCreate(
+            ['email' => 'pegawai@anugerah.com'],
+            [
+                'name' => 'Gita',
+                'phone_number' => '081234567892',
+                'password' => Hash::make('password'),
+                'is_active' => false,
+            ]
+        );
+        $pegawai->assignRole($pegawaiRole);;
     }
 }

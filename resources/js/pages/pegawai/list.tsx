@@ -35,7 +35,7 @@ export default function PegawaiList({ pegawais, roles, filters }: any) {
         search: filters.search ?? '',
         status: filters.status ?? 'all',
         role: filters.role ?? 'all',
-        per_page: filters.per_page ?? '10',
+        per_page: filters.per_page ?? '5',
     });
 
     useEffect(() => {
@@ -57,7 +57,7 @@ export default function PegawaiList({ pegawais, roles, filters }: any) {
         if (newFilters.search) query.search = newFilters.search;
         if (newFilters.status !== 'all') query.status = newFilters.status;
         if (newFilters.role !== 'all') query.role = newFilters.role;
-        if (newFilters.per_page !== '10') query.per_page = newFilters.per_page;
+        if (newFilters.per_page !== '5') query.per_page = newFilters.per_page;
 
         router.get(index.url(), query, { preserveState: true, replace: true });
     };
@@ -76,7 +76,7 @@ export default function PegawaiList({ pegawais, roles, filters }: any) {
             search: '',
             status: 'all',
             role: 'all',
-            per_page: '10',
+            per_page: '5',
         };
         setFilterState(defaultFilters);
         router.get(index.url(), {}, { preserveState: true, replace: true });
@@ -182,7 +182,7 @@ export default function PegawaiList({ pegawais, roles, filters }: any) {
                     {(filterState.search ||
                         filterState.status !== 'all' ||
                         filterState.role !== 'all' ||
-                        filterState.per_page !== '10') && (
+                        filterState.per_page !== '5') && (
                         <Button
                             variant="ghost"
                             size="icon"

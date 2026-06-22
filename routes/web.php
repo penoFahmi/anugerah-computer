@@ -5,6 +5,7 @@ use Laravel\Fortify\Features;
 use App\Http\Controllers\PegawaiController;
 use App\Http\Controllers\ServiceOrderController;
 use App\Http\Controllers\ConfigWaController;
+use App\Http\Controllers\TrashController;
 
 Route::inertia('/', 'welcome', [
     // 'canRegister' => Features::enabled(Features::registration()),
@@ -22,6 +23,10 @@ Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
         Route::patch('pegawai/{pegawai}/toggle-status', [PegawaiController::class, 'toggleStatus'])
             ->name('pegawai.toggle-status');
         Route::patch('/pegawai/{pegawai}/reset-password', [PegawaiController::class, 'resetPassword'])->name('pegawai.reset-password');
+
+        Route::get('/sampah', [TrashController::class, 'index'])->name('trash.index');
+        Route::post('/sampah/{type}/{id}/restore', [TrashController::class, 'restore'])->name('trash.restore');
+        Route::delete('/sampah/{type}/{id}/force-delete', [TrashController::class, 'forceDelete'])->name('trash.force-delete');
 
         Route::get('config/wa', [ConfigWaController::class, 'index'])->name('config.wa');
         Route::post('config/wa/logout', [ConfigWaController::class, 'logout'])->name('config.wa.logout');

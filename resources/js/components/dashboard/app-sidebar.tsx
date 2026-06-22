@@ -1,19 +1,20 @@
 import { Link, usePage } from '@inertiajs/react';
-import { 
-    Activity, 
-    CircleDollarSign, 
-    LayoutDashboard, 
-    MessageCircle, 
-    Package, 
-    ShoppingCart, 
-    Users, 
-    UserRoundCog, 
-    Wrench
+import {
+    Activity,
+    CircleDollarSign,
+    LayoutDashboard,
+    MessageCircle,
+    Package,
+    ShoppingCart,
+    Users,
+    UserRoundCog,
+    Wrench,
+    Trash2,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
-import { NavFooter } from '@/components/nav-footer';
-import { NavMain } from '@/components/nav-main';
-import { NavUser } from '@/components/nav-user';
+import { NavFooter } from '@/components/dashboard/nav-footer';
+import { NavMain } from '@/components/dashboard/nav-main';
+import { NavUser } from '@/components/dashboard/nav-user';
 import {
     Sidebar,
     SidebarContent,
@@ -103,10 +104,15 @@ const footerNavItems: NavItem[] = [
         icon: Activity,
         roles: ['administrator', 'pegawai'],
     },
+    {
+        title: 'Sampah & Arsip',
+        href: '/sampah',
+        icon: Trash2,
+        roles: ['administrator', 'teknisi'],
+    },
 ];
 
 export function AppSidebar() {
-    
     // Ambil data auth dari props yang disediakan oleh Inertia
     const { auth } = usePage().props as any;
     const userRoles = auth.user?.roles || [];
@@ -126,10 +132,14 @@ export function AppSidebar() {
         .map((item) => ({
             ...item,
             // Jika ada sub-menu, filter juga sub-menunya
-            items: item.items ? item.items.filter((sub) => hasRole(sub.roles)) : undefined,
+            items: item.items
+                ? item.items.filter((sub) => hasRole(sub.roles))
+                : undefined,
         }));
 
-    const filteredFooterNav = footerNavItems.filter((item) => hasRole(item.roles));
+    const filteredFooterNav = footerNavItems.filter((item) =>
+        hasRole(item.roles),
+    );
 
     return (
         <Sidebar collapsible="icon" variant="inset">

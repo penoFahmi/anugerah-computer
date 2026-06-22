@@ -14,10 +14,10 @@ return new class extends Migration
         Schema::create('devices', function (Blueprint $table) {
             $table->id();
             $table->foreignId('customer_id')->constrained()->cascadeOnDelete();
-            $table->string('device_type')->default('Laptop'); // Laptop, PC, Printer
-            $table->string('brand')->nullable(); // Asus, Acer, Lenovo
-            $table->string('model')->nullable(); // ROG, IdeaPad
-            $table->string('serial_number')->nullable()->unique(); // Bukti validasi garansi fisik
+            $table->string('device_type')->default('Laptop');
+            $table->string('brand')->nullable();
+            $table->string('model')->nullable();
+            $table->string('serial_number')->nullable()->unique();
             $table->timestamps();
             $table->softDeletes();
         });

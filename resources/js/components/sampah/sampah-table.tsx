@@ -31,6 +31,7 @@ export function TrashTable({ trashItems }: { trashItems: PaginatedTrash }) {
     // Fixer Absolute to Relative URL untuk mengatasi Bug CORS Inertia
     const getRelativeUrl = (absoluteUrl: string | null) => {
         if (!absoluteUrl) return null;
+        
         try {
             const url = new URL(absoluteUrl);
             return url.pathname + url.search;

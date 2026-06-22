@@ -11,9 +11,17 @@ Route::inertia('/', 'welcome', [
     // 'canRegister' => Features::enabled(Features::registration()),
 ])->name('home');
 
+// Routes untuk user yang sudah login, verified, dan aktif
 Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
-    Route::resource('services', ServiceOrderController::class)->except(['create', 'edit']);
+
+    Route::get('/services', [ServiceOrderController::class, 'index'])->name('services.index');
+    Route::post('/services', [ServiceOrderController::class, 'store'])->name('services.store');
+    Route::get('/api/search-customer', [ServiceOrderController::class, 'searchCustomer'])->name('api.search-customer');
+
+    Route::patch('/services/{serviceOrder}', [ServiceOrderController::class, 'update'])->name('services.update');
+    Route::post('/services/{serviceOrder}/trigger-wa', [ServiceOrderController::class, 'triggerWhatsappOffer'])->name('services.trigger-wa');
+    
 });
 
 // Routes untuk administrator

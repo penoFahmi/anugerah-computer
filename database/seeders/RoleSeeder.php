@@ -18,7 +18,7 @@ class RoleSeeder extends Seeder
 
         // Data dummy untuk administrator
         $administrator = User::firstOrCreate(
-            ['email' => 'administrator@anugerah.com'],
+            ['email' => 'penofahmi@gmail.com'],
             [
                 'name' => 'Peno',
                 'phone_number' => '081234567890',
@@ -51,5 +51,27 @@ class RoleSeeder extends Seeder
             ]
         );
         $pegawai->assignRole($pegawaiRole);;
+
+        $pegawai2 = User::firstOrCreate(
+            ['email' => 'pegawai2@anugerah.com'],
+            [
+                'name' => 'Dewi',
+                'phone_number' => '081234567893',
+                'password' => Hash::make('password'),
+                'is_active' => true,
+            ]
+        );
+        $pegawai2->assignRole($pegawaiRole);
+
+        $pegawai3 = User::firstOrCreate(
+            ['email' => 'pegawai3@anugerah.com'],
+            [
+                'name' => 'Rizky',
+                'phone_number' => '081234567894',
+                'password' => Hash::make('password'),
+                'is_active' => true,
+            ]
+        );
+        $pegawai3->assignRole($pegawaiRole);
     }
 }

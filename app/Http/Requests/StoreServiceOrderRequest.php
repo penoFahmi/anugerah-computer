@@ -8,25 +8,34 @@ class StoreServiceOrderRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // Pastikan ini true agar request diizinkan
+        // Pastikan hanya user yang login yang bisa menambah servisan
+        return auth()->check();
     }
 
     public function rules(): array
     {
         return [
-            // Validasi Data Pelanggan
-            'customer_name'  => ['required', 'string', 'max:255'],
-            'customer_phone' => ['required', 'string', 'max:20'], // Penting untuk WA
+            // Identitas Pelanggan
+            'phone' => ['required', 'string', 'max:25'],
+            // Nama wajib diisi JIKA ini pelanggan baru (customer_id kosong)
+            'name' => ['required_without:customer_id', 'nullable', 'string', 'max:150'],
+            'customer_id' => ['nullable', 'exists:customers,id'],
+
+            // Identitas Perangkat
+            'device_id' => ['nullable', 'exists:devices,id'],
+            // Jenis perangkat wajib JIKA ini laptop baru (device_id kosong)
+            'device_type' => ['required_without:device_id', 'nullable', 'string', 'max:50'],
+            'brand' => ['nullable', 'string', 'max:50'],
+            'model' => ['nullable', 'string', 'max:100'],
+
+            // Detail Servis
+            'complaint' => ['required', 'string'],
+            'equipments' => ['nullable', 'array'],
             
-            // Validasi Data Unit
-            'device_type'    => ['nullable', 'string', 'max:50'],
-            'brand'          => ['required', 'string', 'max:100'],
-            'model'          => ['required', 'string', 'max:100'],
-            
-            // Validasi Data Servis
-            'complaint'             => ['required', 'string'],
-            'equipments'            => ['nullable', 'string'], // Bawaan: tas, charger
+            // Pengondisian Teknisi & Biaya
             'is_technician_on_site' => ['boolean'],
+            'estimated_cost' => ['nullable', 'numeric', 'min:0'],
+            'down_payment' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 }

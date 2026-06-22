@@ -17,8 +17,9 @@ return new class extends Migration
             $table->string('warranty_code')->unique(); 
             
             $table->date('start_date');
-            $table->date('end_date');
-            $table->enum('status', ['active', 'claimed', 'expired', 'void'])->default('active');
+            $table->date('end_date')->index();
+            
+            $table->string('status', 30)->default('active')->index();
             $table->text('notes')->nullable();
             
             $table->timestamps();

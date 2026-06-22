@@ -116,17 +116,21 @@ class ServiceOrderController extends Controller
 
             DB::commit();
 
-            return redirect()->back()->with('toast', [
+            Inertia::flash('toast', [
                 'type' => 'success',
                 'message' => 'Servisan baru berhasil didaftarkan dengan Nota: ' . $orderNumber
             ]);
 
+            return redirect()->route('services.index');
+
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()->with('toast', [
+            Inertia::flash('toast', [
                 'type' => 'error',
                 'message' => 'Gagal mendaftarkan servis: ' . $e->getMessage()
             ]);
+
+            return back()->withInput();
         }
     }
 
@@ -168,10 +172,12 @@ class ServiceOrderController extends Controller
             'technician_notes' => $validated['technician_notes'] ?? $serviceOrder->technician_notes,
         ]);
 
-        return redirect()->back()->with('toast', [
+        Inertia::flash('toast', [
             'type' => 'success',
             'message' => 'Data operasional nota ' . $serviceOrder->order_number . ' berhasil diperbarui.'
         ]);
+
+        return redirect()->back();
     }
 
     // 5. Trigger Pengiriman Penawaran WA & Standby AI
@@ -179,10 +185,11 @@ class ServiceOrderController extends Controller
     {
         // Validasi Keamanan: Pastikan estimasi biaya sudah diisi oleh teknisi
         if ($serviceOrder->estimated_cost <= 0) {
-            return redirect()->back()->with('toast', [
+            Inertia::flash('toast', [
                 'type' => 'error',
                 'message' => 'Gagal: Estimasi biaya harus diisi terlebih dahulu sebelum mengirim penawaran ke pelanggan.'
             ]);
+            return redirect()->back();
         }
 
         // 1. Ubah status menjadi Menunggu Konfirmasi
@@ -194,9 +201,11 @@ class ServiceOrderController extends Controller
         // App\Services\WaGateway::sendOffer($serviceOrder);
         // App\Models\ChatLog::create([...]);
 
-        return redirect()->back()->with('toast', [
+        Inertia::flash('toast', [
             'type' => 'success',
             'message' => 'Penawaran WA terkirim! Sistem AI kini siaga menunggu balasan pelanggan.'
         ]);
+
+        return redirect()->back();
     }
 }

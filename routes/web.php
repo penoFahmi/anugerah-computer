@@ -6,6 +6,7 @@ use App\Http\Controllers\PegawaiController;
 use App\Http\Controllers\ServiceOrderController;
 use App\Http\Controllers\ConfigWaController;
 use App\Http\Controllers\TrashController;
+use App\Http\Controllers\CustomerController;
 
 Route::inertia('/', 'welcome', [
     // 'canRegister' => Features::enabled(Features::registration()),
@@ -21,7 +22,10 @@ Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
 
     Route::patch('/services/{serviceOrder}', [ServiceOrderController::class, 'update'])->name('services.update');
     Route::post('/services/{serviceOrder}/trigger-wa', [ServiceOrderController::class, 'triggerWhatsappOffer'])->name('services.trigger-wa');
-    
+
+    Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
+    Route::delete('/customers/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy');
+
 });
 
 // Routes untuk administrator

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Customer;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -44,6 +45,27 @@ class TrashController extends Controller
             $trashItems = $trashItems->merge($users);
         }
 
+        // Sampah customer
+        $customerQuery = Customer::onlyTrashed();
+        if ($typeFilter === 'all' || $typeFilter === 'customer') {
+            if ($search) {
+                $customerQuery->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%");
+                });
+            }
+            $customers = $customerQuery->get()->map(function ($customer) {
+                return [
+                    'id' => $customer->id,
+                    'type' => 'customer',
+                    'category_label' => 'Pelanggan',
+                    'data_info' => $customer->name . ' (' . $customer->phone . ')',
+                    'deleted_timestamp' => $customer->deleted_at,
+                    'deleted_at' => $customer->deleted_at->format('d M Y, H:i'),
+                ];
+            });
+            $trashItems = $trashItems->merge($customers);
+        }
         // Nanti tambahkan $customersQuery, $servicesQuery di sini dengan pola yang sama...
 
         // 2. Sorting Global (Terbaru dihapus di atas)
@@ -72,20 +94,20 @@ class TrashController extends Controller
     public function restore(Request $request, $type, $id)
     {
         // Logika Universal: Cek tipe data apa yang mau dipulihkan
-        if ($type === 'pegawai') {
+        if ($type === 'pegawai' || $type === 'customer') {
             $record = User::onlyTrashed()->findOrFail($id);
 
             // Proteksi: Cek apakah email sudah dipakai oleh pegawai baru
             if (User::where('email', $record->email)->exists()) {
                 Inertia::flash('toast', [
                     'type' => 'error',
-                    'message' => 'Gagal memulihkan! Email pegawai ini sudah digunakan oleh akun lain yang aktif.'
+                    'message' => 'Gagal memulihkan! Email ' . ucfirst($type) . ' ini sudah digunakan oleh akun lain yang aktif.'
                 ]);
                 return back();
             }
 
             $record->restore();
-            $message = 'Data Pegawai berhasil dipulihkan.';
+            $message = 'Data ' . ucfirst($type) . ' berhasil dipulihkan.';
         }
         // else if ($type === 'servis') { ... } 
 
@@ -100,10 +122,10 @@ class TrashController extends Controller
     public function forceDelete(Request $request, $type, $id)
     {
         // Logika Universal: Cek tipe data apa yang mau dihapus permanen
-        if ($type === 'pegawai') {
+        if ($type === 'pegawai' || $type === 'customer') {
             $record = User::onlyTrashed()->findOrFail($id);
             $record->forceDelete();
-            $message = 'Data Pegawai dihapus secara permanen.';
+            $message = 'Data ' . ucfirst($type) . ' dihapus secara permanen.';
         }
 
         Inertia::flash('toast', [

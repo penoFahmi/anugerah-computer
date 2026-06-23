@@ -77,11 +77,17 @@ export function CustomerTable({ customers }: { customers: PaginatedCustomer }) {
                                 <TableCell>{customer.phone || '-'}</TableCell>
                                 <TableCell>
                                     {customer.service_orders_count > 0 ? (
-                                        <Badge variant="secondary" className="font-normal">
-                                            {customer.service_orders_count} Riwayat Servis
+                                        <Badge
+                                            variant="secondary"
+                                            className="font-normal"
+                                        >
+                                            {customer.service_orders_count}{' '}
+                                            Riwayat Servis
                                         </Badge>
                                     ) : (
-                                        <span className="text-muted-foreground">-</span>
+                                        <span className="text-muted-foreground">
+                                            -
+                                        </span>
                                     )}
                                 </TableCell>
                                 <TableCell className="text-right">

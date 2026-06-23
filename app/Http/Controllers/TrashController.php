@@ -94,7 +94,7 @@ class TrashController extends Controller
     public function restore(Request $request, $type, $id)
     {
         // Logika Universal: Cek tipe data apa yang mau dipulihkan
-        if ($type === 'pegawai' || $type === 'customer') {
+        if ($type === 'pegawai') {
             $record = User::onlyTrashed()->findOrFail($id);
 
             // Proteksi: Cek apakah email sudah dipakai oleh pegawai baru
@@ -109,6 +109,23 @@ class TrashController extends Controller
             $record->restore();
             $message = 'Data ' . ucfirst($type) . ' berhasil dipulihkan.';
         }
+
+        else if ($type === 'customer') {
+            $record = Customer::onlyTrashed()->findOrFail($id);
+            
+            // Proteksi: Cek apakah No WA sudah dipakai oleh pelanggan baru
+            if (Customer::where('phone', $record->phone)->whereNull('deleted_at')->exists()) {
+                return back()->with('toast', [
+                    'type' => 'error', 
+                    'message' => 'Gagal memulihkan! Nomor WhatsApp ini sudah dipakai oleh pelanggan lain yang aktif.'
+                ]);
+            }
+            
+            $record->restore();
+            $message = 'Data Pelanggan berhasil dipulihkan.';
+        } else {
+            abort(404, 'Tipe data tidak dikenali sistem.');
+        }
         // else if ($type === 'servis') { ... } 
 
         Inertia::flash('toast', [
@@ -122,10 +139,17 @@ class TrashController extends Controller
     public function forceDelete(Request $request, $type, $id)
     {
         // Logika Universal: Cek tipe data apa yang mau dihapus permanen
-        if ($type === 'pegawai' || $type === 'customer') {
+        if ($type === 'pegawai') {
             $record = User::onlyTrashed()->findOrFail($id);
             $record->forceDelete();
             $message = 'Data ' . ucfirst($type) . ' dihapus secara permanen.';
+        }
+        else if ($type === 'customer') {
+            $record = Customer::onlyTrashed()->findOrFail($id);
+            $record->forceDelete();
+            $message = 'Data Pelanggan beserta riwayat servisnya dihapus permanen.';
+        } else {
+            abort(404, 'Tipe data tidak dikenali sistem.');
         }
 
         Inertia::flash('toast', [

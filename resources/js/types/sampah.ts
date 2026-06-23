@@ -1,6 +1,6 @@
 export interface TrashItem {
     id: number;
-    type: 'pegawai' | 'servis' | 'pelanggan' | 'perangkat';
+    type: 'pegawai' | 'servis' | 'customer' | 'perangkat';
     category_label: string;
     data_info: string;
     deleted_at: string;

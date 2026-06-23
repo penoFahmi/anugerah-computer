@@ -24,8 +24,6 @@ Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
     Route::post('/services/{serviceOrder}/trigger-wa', [ServiceOrderController::class, 'triggerWhatsappOffer'])->name('services.trigger-wa');
 
     Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
-    Route::delete('/customers/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy');
-
 });
 
 // Routes untuk administrator
@@ -35,6 +33,8 @@ Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
         Route::patch('pegawai/{pegawai}/toggle-status', [PegawaiController::class, 'toggleStatus'])
             ->name('pegawai.toggle-status');
         Route::patch('/pegawai/{pegawai}/reset-password', [PegawaiController::class, 'resetPassword'])->name('pegawai.reset-password');
+
+        Route::delete('/customers/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy');
 
         Route::get('/sampah', [TrashController::class, 'index'])->name('trash.index');
         Route::post('/sampah/{type}/{id}/restore', [TrashController::class, 'restore'])->name('trash.restore');

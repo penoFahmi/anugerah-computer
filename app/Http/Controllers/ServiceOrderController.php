@@ -24,6 +24,11 @@ class ServiceOrderController extends Controller
         // 1. Bangun Query Utama dengan Relasi (Eager Loading) agar performa cepat
         $query = ServiceOrder::query()->with(['customer', 'device']);
 
+        $query = ServiceOrder::query()->with([
+            'customer' => fn($q) => $q->withTrashed(),
+            'device' => fn($q) => $q->withTrashed(),
+        ]);
+
         // 2. Filter Pencarian (Cari di Nota, Nama Pelanggan, atau No WA)
         if ($search) {
             $query->where(function ($q) use ($search) {

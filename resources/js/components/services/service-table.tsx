@@ -1,13 +1,5 @@
 import { router } from '@inertiajs/react';
-import {
-    Settings2,
-    Clock,
-    Wrench,
-    CheckCircle,
-    XCircle,
-    Printer,
-} from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Eye, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Table,
@@ -22,14 +14,9 @@ import type { PaginatedServiceOrders, ServiceListItem } from '@/types/service';
 interface Props {
     serviceOrders: PaginatedServiceOrders;
     onOpenDetail: (service: ServiceListItem) => void;
-    selectedId?: number | null; // Tambahan untuk Highlight baris
 }
 
-export function ServiceTable({
-    serviceOrders,
-    onOpenDetail,
-    selectedId,
-}: Props) {
+export function ServiceTable({ serviceOrders, onOpenDetail }: Props) {
     const getRelativeUrl = (absoluteUrl: string | null) => {
         if (!absoluteUrl) return null;
         try {
@@ -37,49 +24,6 @@ export function ServiceTable({
             return url.pathname + url.search;
         } catch {
             return absoluteUrl;
-        }
-    };
-
-    const getStatusConfig = (status: string) => {
-        switch (status) {
-            case 'waiting_checking':
-            case 'waiting_approval':
-                return {
-                    variant: 'secondary' as const,
-                    icon: Clock,
-                    colorClass: 'text-amber-600 bg-amber-50',
-                };
-            case 'in_progress':
-                return {
-                    variant: 'default' as const,
-                    icon: Wrench,
-                    colorClass: 'text-blue-600 bg-blue-50',
-                };
-            case 'approved':
-            case 'completed':
-                return {
-                    variant: 'default' as const,
-                    icon: CheckCircle,
-                    colorClass: 'text-emerald-600 bg-emerald-50',
-                };
-            case 'cancelled':
-                return {
-                    variant: 'destructive' as const,
-                    icon: XCircle,
-                    colorClass: '',
-                };
-            case 'taken':
-                return {
-                    variant: 'outline' as const,
-                    icon: CheckCircle,
-                    colorClass: 'text-slate-500',
-                };
-            default:
-                return {
-                    variant: 'outline' as const,
-                    icon: Clock,
-                    colorClass: '',
-                };
         }
     };
 
@@ -92,119 +36,108 @@ export function ServiceTable({
     };
 
     return (
-        <div className="flex flex-col space-y-4">
-            <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-                <Table>
-                    <TableHeader>
-                        <TableRow className="bg-slate-50/50">
-                            <TableHead className="w-[160px]">
-                                No. Nota & Waktu
-                            </TableHead>
-                            <TableHead>Pelanggan & Perangkat</TableHead>
-                            <TableHead className="text-center">
-                                Status
-                            </TableHead>
-                            <TableHead className="text-right">Aksi</TableHead>
+        <div className="flex flex-col space-y-0">
+            <Table>
+                <TableHeader className="border-b bg-slate-50/80">
+                    <TableRow>
+                        <TableHead className="w-[180px]">
+                            No. Nota & Waktu
+                        </TableHead>
+                        <TableHead>Pelanggan</TableHead>
+                        <TableHead>Perangkat & Keluhan</TableHead>
+                        <TableHead className="text-right">
+                            Estimasi Biaya
+                        </TableHead>
+                        <TableHead className="w-[120px] text-right">
+                            Aksi
+                        </TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {serviceOrders.data.length === 0 ? (
+                        <TableRow>
+                            <TableCell
+                                colSpan={5}
+                                className="h-32 bg-slate-50/30 text-center font-medium text-muted-foreground"
+                            >
+                                Wadah ini kosong. Tidak ada antrean di status
+                                ini.
+                            </TableCell>
                         </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {serviceOrders.data.length === 0 ? (
-                            <TableRow>
-                                <TableCell
-                                    colSpan={4}
-                                    className="h-32 text-center font-medium text-muted-foreground"
-                                >
-                                    Tidak ada data servis yang ditemukan.
+                    ) : (
+                        serviceOrders.data.map((item: ServiceListItem) => (
+                            <TableRow
+                                key={item.id}
+                                className="group cursor-pointer transition-colors hover:bg-slate-50"
+                                onClick={() => onOpenDetail(item)}
+                            >
+                                <TableCell>
+                                    <div className="font-bold text-primary">
+                                        {item.order_number}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        {item.created_at}
+                                    </div>
+                                </TableCell>
+                                <TableCell>
+                                    <div className="font-semibold text-slate-900">
+                                        {item.customer_name}
+                                    </div>
+                                    <div className="font-mono text-xs text-slate-500">
+                                        {item.customer_phone}
+                                    </div>
+                                </TableCell>
+                                <TableCell>
+                                    <div className="text-sm font-semibold text-slate-800">
+                                        {item.device_name}
+                                    </div>
+                                    <div
+                                        className="max-w-[280px] truncate text-xs text-muted-foreground"
+                                        title={item.complaint}
+                                    >
+                                        {item.complaint}
+                                    </div>
+                                </TableCell>
+                                <TableCell className="text-right font-bold text-slate-700">
+                                    {Number(item.estimated_cost) > 0
+                                        ? formatCurrency(item.estimated_cost)
+                                        : '-'}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    <div
+                                        className="flex items-center justify-end gap-2"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-8 w-8 text-slate-500 hover:text-primary"
+                                            title="Cetak Nota"
+                                        >
+                                            <Printer className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant="secondary"
+                                            className="h-8 shadow-sm transition-all group-hover:bg-primary group-hover:text-primary-foreground"
+                                            onClick={() => onOpenDetail(item)}
+                                        >
+                                            <Eye className="mr-1.5 h-4 w-4" />{' '}
+                                            Buka
+                                        </Button>
+                                    </div>
                                 </TableCell>
                             </TableRow>
-                        ) : (
-                            serviceOrders.data.map((item: ServiceListItem) => {
-                                const statusConfig = getStatusConfig(
-                                    item.status,
-                                );
-                                const StatusIcon = statusConfig.icon;
-                                const isSelected = item.id === selectedId; // Logika Highlight
+                        ))
+                    )}
+                </TableBody>
+            </Table>
 
-                                return (
-                                    <TableRow
-                                        key={item.id}
-                                        // Efek Highlight menyala biru jika diklik
-                                        className={`cursor-pointer transition-colors hover:bg-slate-50/80 ${isSelected ? 'border-l-4 border-l-primary bg-primary/5' : ''}`}
-                                        onClick={() => onOpenDetail(item)}
-                                    >
-                                        <TableCell>
-                                            <div className="font-bold text-primary">
-                                                {item.order_number}
-                                            </div>
-                                            <div className="text-xs text-muted-foreground">
-                                                {item.created_at}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="font-semibold text-slate-900">
-                                                {item.customer_name}{' '}
-                                                <span className="font-normal text-muted-foreground">
-                                                    ({item.customer_phone})
-                                                </span>
-                                            </div>
-                                            <div className="text-sm text-slate-700">
-                                                {item.device_name}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-center">
-                                            <Badge
-                                                variant={statusConfig.variant}
-                                                className={`mx-auto flex w-fit items-center justify-center gap-1.5 border-0 shadow-none ${statusConfig.colorClass}`}
-                                            >
-                                                <StatusIcon className="h-3.5 w-3.5" />
-                                                {item.status_label}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <div
-                                                className="flex items-center justify-end gap-2"
-                                                onClick={(e) =>
-                                                    e.stopPropagation()
-                                                }
-                                            >
-                                                <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    className="h-8 px-2 text-slate-500 hover:text-primary"
-                                                    title="Cetak Nota"
-                                                >
-                                                    <Printer className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    variant={
-                                                        isSelected
-                                                            ? 'default'
-                                                            : 'secondary'
-                                                    }
-                                                    className="h-8"
-                                                    onClick={() =>
-                                                        onOpenDetail(item)
-                                                    }
-                                                >
-                                                    <Settings2 className="mr-1.5 h-4 w-4" />{' '}
-                                                    Kelola
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                );
-                            })
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
-
-            {/* Pagination Controls */}
-            <div className="flex flex-col items-center justify-between gap-4 pt-2 text-sm text-muted-foreground sm:flex-row">
+            {/* Keamanan & Performa: Pagination Render */}
+            <div className="flex flex-col items-center justify-between gap-4 border-t bg-white p-4 text-sm text-muted-foreground sm:flex-row">
                 <div>
                     Menampilkan {serviceOrders.from || 0} -{' '}
-                    {serviceOrders.to || 0} dari {serviceOrders.total} data
+                    {serviceOrders.to || 0} dari {serviceOrders.total} antrean
                 </div>
                 <div className="flex flex-wrap gap-1">
                     {serviceOrders.links.map((link, idx) => {

@@ -10,26 +10,8 @@ export interface Customer {
     id: number;
     name: string;
     phone: string;
-    devices?: Device[]; // Data relasi laptop pelanggan
+    devices?: Device[]; 
 }
-
-export interface ServiceOrder {
-    id: number;
-    order_number: string;
-    customer_id: number;
-    device_id: number;
-    complaint: string;
-    equipments: string[] | null;
-    status: string;
-    is_technician_on_site: boolean;
-    estimated_cost: string | number | null;
-    down_payment: string | number | null;
-    final_cost: string | number | null;
-    technician_notes: string | null;
-    created_at: string;
-    // ... relasi lain bisa kita tambah nanti jika diperlukan
-}
-
 
 export interface ServiceListItem {
     id: number;
@@ -40,7 +22,7 @@ export interface ServiceListItem {
     complaint: string;
     status: string;
     status_label: string;
-    estimated_cost: string | number;
+    estimated_cost: string | number | null;
     created_at: string;
 }
 
@@ -72,5 +54,7 @@ export interface ServiceIndexProps {
         search: string;
         status: string;
         per_page: string | number;
+        date?: string;
+        type?: string;
     };
 }

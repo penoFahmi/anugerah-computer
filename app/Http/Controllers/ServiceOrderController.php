@@ -16,13 +16,13 @@ class ServiceOrderController extends Controller
 {
 
     public function index(Request $request)
+    
     {
         $search = $request->input('search');
-        $statusFilter = $request->input('status', 'all'); // Default 'all' untuk tab Semua
+        $statusFilter = $request->input('status', 'all');
         $perPage = $request->input('per_page', 10);
-
-        // 1. Bangun Query Utama dengan Relasi (Eager Loading) agar performa cepat
-        $query = ServiceOrder::query()->with(['customer', 'device']);
+        $dateFilter = $request->input('date');
+        $typeFilter = $request->input('type');
 
         $query = ServiceOrder::query()->with([
             'customer' => fn($q) => $q->withTrashed(),
@@ -33,10 +33,26 @@ class ServiceOrderController extends Controller
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('order_number', 'like', "%{$search}%")
-                  ->orWhereHas('customer', function ($qCustomer) use ($search) {
-                      $qCustomer->where('name', 'like', "%{$search}%")
-                                ->orWhere('phone', 'like', "%{$search}%");
-                  });
+                    ->orWhereHas('customer', function ($qCustomer) use ($search) {
+                        $qCustomer->where('name', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        if ($dateFilter) {
+            match ($dateFilter) {
+                'today' => $query->whereDate('created_at', today()),
+                'this_week' => $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]),
+                'this_month' => $query->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year),
+                default => null, // Abaikan jika input tidak dikenali (mencegah SQL/Logic Injection)
+            };
+        }
+
+        // 3. Validasi & Eksekusi Filter Tipe Perangkat (Eager Loaded Scope)
+        if ($typeFilter && in_array($typeFilter, ['laptop', 'pc', 'printer'])) {
+            $query->whereHas('device', function ($q) use ($typeFilter) {
+                $q->where('device_type', $typeFilter);
             });
         }
 
@@ -69,6 +85,8 @@ class ServiceOrderController extends Controller
             'filters' => [
                 'search' => $search ?? '',
                 'status' => $statusFilter,
+                'date' => $dateFilter ?? '',
+                'type' => $typeFilter ?? '',
                 'per_page' => $perPage,
             ]
         ]);
@@ -102,9 +120,9 @@ class ServiceOrderController extends Controller
             $nextSequence = $lastOrder ? (int) substr($lastOrder->order_number, -3) + 1 : 1;
             $orderNumber = $datePrefix . str_pad($nextSequence, 3, '0', STR_PAD_LEFT);
 
-            $status = $request->is_technician_on_site 
-                        ? ServiceStatus::APPROVED 
-                        : ServiceStatus::WAITING_CHECKING;
+            $status = $request->is_technician_on_site
+                ? ServiceStatus::APPROVED
+                : ServiceStatus::WAITING_CHECKING;
 
             $serviceOrder = ServiceOrder::create([
                 'order_number' => $orderNumber,
@@ -127,7 +145,6 @@ class ServiceOrderController extends Controller
             ]);
 
             return redirect()->route('services.index');
-
         } catch (\Exception $e) {
             DB::rollBack();
             Inertia::flash('toast', [

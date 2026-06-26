@@ -1,15 +1,21 @@
-import { router } from '@inertiajs/react';
 import { Wifi, WifiOff, LogOut } from 'lucide-react';
+import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { logout } from '@/routes/config/wa';
+import { WaAlert } from './wa-alert';
 
 export function WaStatusCard({ waStatus }: { waStatus: any }) {
+    const [alertConfig, setAlertConfig] = useState<{
+        open: boolean;
+        type: 'logout' | null;
+    }>({
+        open: false,
+        type: null,
+    });
+
     const handleLogout = () => {
-        if (confirm('Putuskan koneksi WhatsApp? Sistem akan otomatis membuat QR Code baru.')) {
-            router.post(logout.url());
-        }
+        setAlertConfig({ open: true, type: 'logout' });
     };
 
     return (
@@ -28,14 +34,29 @@ export function WaStatusCard({ waStatus }: { waStatus: any }) {
                     )}
                 </div>
                 <p className="text-sm text-muted-foreground">Nomor Aktif:</p>
-                <p className="font-mono text-xl">{waStatus.phoneNumber ?? '-'}</p>
+                <p className="font-mono text-xl">
+                    {waStatus.phoneNumber ?? '-'}
+                </p>
             </div>
 
             {waStatus.isConnected && (
-                <Button variant="destructive" size="sm" className="mt-6 w-full" onClick={handleLogout}>
+                <Button
+                    variant="destructive"
+                    size="sm"
+                    className="mt-6 w-full"
+                    onClick={handleLogout}
+                >
                     <LogOut className="mr-2 h-4 w-4" /> Putuskan Hubungan
                 </Button>
             )}
+
+            <WaAlert
+                open={alertConfig.open}
+                onOpenChange={(val) =>
+                    setAlertConfig((prev) => ({ ...prev, open: val }))
+                }
+                type={alertConfig.type}
+            />
         </div>
     );
 }

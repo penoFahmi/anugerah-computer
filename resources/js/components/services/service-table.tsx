@@ -1,5 +1,4 @@
-import { Link, usePage } from '@inertiajs/react';
-import { router } from '@inertiajs/react';
+import { Link, usePage, router } from '@inertiajs/react';
 import { Printer, Pencil, Send, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -26,39 +25,20 @@ interface ServiceTableProps {
 }
 
 export function ServiceTable({ serviceOrders, onProcessClick }: ServiceTableProps) {
-    // Mengambil data user yang login dari shared props Inertia untuk fitur keamanan tombol hapus
     const { auth } = usePage().props as any;
-    const isAdmin = auth.user?.roles || ['administrator'].includes(auth.user?.roles);
+    const isAdmin = auth.user?.roles?.includes('administrator') || auth.user?.role === 'administrator';
 
-    // Handler untuk cetak nota cerdas
     const handlePrint = (item: ServiceListItem) => {
         const isFinished = ['completed', 'taken'].includes(item.status);
-
-        if (isFinished) {
-            toast.info(`Membuka Nota Pelunasan / Kuitansi untuk ${item.order_number}`);
-            window.open(`/services/${item.id}/print-receipt`, '_blank');
-        } else {
-            toast.info(`Membuka Nota Tanda Terima Perangkat untuk ${item.order_number}`);
-            window.open(`/services/${item.id}/print-ticket`, '_blank');
-        }
+        toast.info(`Membuka berkas cetak dokumen untuk ${item.order_number}`);
+        window.open(`/services/${item.id}/${isFinished ? 'print-receipt' : 'print-ticket'}`, '_blank');
     };
 
-    // Handler untuk pemicu WA Manual / Penawaran AI
     const handlePrintWaManual = (item: ServiceListItem) => {
-        if (item.status === 'waiting_checking') {
-            toast.success('Mengirim pengingat antrean aman ke pelanggan.');
-        } else if (item.status === 'waiting_approval') {
-            toast.success('Mengirim ulang rincian biaya bongkar. Sistem AI siaga.');
-        } else if (item.status === 'completed') {
-            toast.success('Mengirim pesan pemberitahuan laptop selesai diperbaiki.');
-        }
-        
-        router.post(`/services/${item.id}/trigger-wa-offer`, {}, {
-            preserveScroll: true,
-        });
+        toast.success('Pemberitahuan manual/AI berhasil dipicu ke gateway WhatsApp.');
+        router.post(`/services/${item.id}/trigger-wa-offer`, {}, { preserveScroll: true });
     };
 
-    // Handler untuk hapus data (Soft Delete)
     const handleDelete = (item: ServiceListItem) => {
         if (confirm(`Apakah Anda yakin ingin membuang Nota ${item.order_number} ke tempat sampah?`)) {
             router.delete(`/services/${item.id}`, {
@@ -68,50 +48,45 @@ export function ServiceTable({ serviceOrders, onProcessClick }: ServiceTableProp
         }
     };
 
-    // Format Rupiah sederhana
     const formatCurrency = (value: string | number | null) => {
-        if (!value || Number(value) === 0) {
-return '-';
-}
-
+        if (!value || Number(value) === 0) return '-';
         return new Intl.NumberFormat('id-ID', {
             style: 'currency',
             currency: 'IDR',
-            maximumFractionDigits: 0
+            maximumFractionDigits: 0,
         }).format(Number(value));
     };
 
-    // Render Badge Warna Cerah sesuai kesepakatan UI
     const renderStatusBadge = (status: string, label: string) => {
         switch (status) {
             case 'waiting_checking':
                 return (
-                    <Badge className="bg-pink-100 text-pink-700 hover:bg-pink-100 border border-pink-300 px-2.5 py-1 text-xs font-bold rounded-md shadow-sm">
-                         {label}
+                    <Badge className="rounded-md border border-pink-300 bg-pink-100 px-2.5 py-0.5 text-xs font-semibold text-pink-700 shadow-sm hover:bg-pink-100 dark:border-pink-900/50 dark:bg-pink-950/40 dark:text-pink-300">
+                        {label}
                     </Badge>
                 );
             case 'waiting_approval':
                 return (
-                    <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100 border border-orange-300 px-2.5 py-1 text-xs font-bold rounded-md shadow-sm">
-                         {label}
+                    <Badge className="rounded-md border border-orange-300 bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-700 shadow-sm hover:bg-orange-100 dark:border-orange-900/50 dark:bg-orange-950/40 dark:text-orange-300">
+                        {label}
                     </Badge>
                 );
             case 'in_progress':
                 return (
-                    <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border border-blue-300 px-2.5 py-1 text-xs font-bold rounded-md shadow-sm">
-                         {label}
+                    <Badge className="rounded-md border border-blue-300 bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-700 shadow-sm hover:bg-blue-100 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-300">
+                        {label}
                     </Badge>
                 );
             case 'completed':
             case 'taken':
                 return (
-                    <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border border-emerald-300 px-2.5 py-1 text-xs font-bold rounded-md shadow-sm">
-                         {label}
+                    <Badge className="rounded-md border border-emerald-300 bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 shadow-sm hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300">
+                        {label}
                     </Badge>
                 );
             default:
                 return (
-                    <Badge variant="outline" className="px-2.5 py-1 text-xs font-bold rounded-md shadow-sm">
+                    <Badge variant="outline" className="rounded-md px-2.5 py-0.5 text-xs font-semibold shadow-sm">
                         {label}
                     </Badge>
                 );
@@ -120,122 +95,100 @@ return '-';
 
     return (
         <TooltipProvider>
-            <div className="w-full">
-                {/* AREA TABEL KONVENSIONAL */}
-                <div className="overflow-x-auto">
+            <div className="flex w-full flex-col h-full">
+                <div className="overflow-x-auto w-full">
                     <Table className="w-full border-collapse">
-                        <TableHeader className="bg-slate-50">
-                            <TableRow>
-                                <TableHead className="w-[50px] text-center font-bold text-slate-700">No</TableHead>
-                                <TableHead className="font-bold text-slate-700">Nota & Waktu</TableHead>
-                                <TableHead className="font-bold text-slate-700">Pelanggan & Kontak</TableHead>
-                                <TableHead className="font-bold text-slate-700">Perangkat & Keluhan</TableHead>
-                                <TableHead className="font-bold text-slate-700">Estimasi Biaya</TableHead>
-                                <TableHead className="text-center font-bold text-slate-700">Status</TableHead>
-                                <TableHead className="text-right font-bold text-slate-700 pr-6">Aksi</TableHead>
+                        <TableHeader>
+                            <TableRow className="bg-muted/50 hover:bg-muted/50">
+                                <TableHead className="w-[60px] text-center font-bold">No</TableHead>
+                                <TableHead className="font-bold whitespace-nowrap">Nota & Waktu</TableHead>
+                                <TableHead className="font-bold whitespace-nowrap">Pelanggan</TableHead>
+                                <TableHead className="font-bold min-w-[200px]">Perangkat & Keluhan</TableHead>
+                                <TableHead className="font-bold whitespace-nowrap">Estimasi Biaya</TableHead>
+                                <TableHead className="text-center font-bold whitespace-nowrap">Status</TableHead>
+                                <TableHead className="pr-4 text-right font-bold whitespace-nowrap">Aksi</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {serviceOrders.data.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} className="h-32 text-center text-muted-foreground font-medium">
+                                    <TableCell colSpan={7} className="h-32 text-center font-medium text-muted-foreground">
                                         Tidak ada data servisan yang ditemukan pada filter ini.
                                     </TableCell>
                                 </TableRow>
                             ) : (
                                 serviceOrders.data.map((item, index) => {
-                                    // Hitung nomor urut baris berdasarkan pagination halaman aktif
                                     const rowNumber = (serviceOrders.current_page - 1) * serviceOrders.per_page + index + 1;
-
                                     return (
-                                        <TableRow key={item.id} className="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
-                                            {/* Kolom 1: No */}
-                                            <TableCell className="text-center font-medium text-slate-500">{rowNumber}</TableCell>
-                                            
-                                            {/* Kolom 2: Nota & Waktu (Vertikal) */}
+                                        <TableRow key={item.id} className="transition-colors hover:bg-muted/30">
+                                            <TableCell className="text-center font-medium text-muted-foreground">{rowNumber}</TableCell>
                                             <TableCell className="py-3">
-                                                <div className="font-bold text-blue-600 tracking-wide text-sm">{item.order_number}</div>
-                                                <div className="text-xs text-slate-400 mt-0.5">{item.created_at} WIB</div>
+                                                <div className="text-sm font-bold tracking-wide text-primary">{item.order_number}</div>
+                                                <div className="mt-0.5 text-xs text-muted-foreground">{item.created_at}</div>
                                             </TableCell>
-                                            
-                                            {/* Kolom 3: Pelanggan & Kontak (Monospace untuk WA) */}
                                             <TableCell>
-                                                <div className="font-bold text-slate-800 text-sm">{item.customer_name}</div>
-                                                <a 
-                                                    href={`https://wa.me/${item.customer_phone.replace(/^0/, '62')}`} 
-                                                    target="_blank" 
+                                                <div className="text-sm font-bold">{item.customer_name}</div>
+                                                <a
+                                                    href={`https://wa.me/${item.customer_phone.replace(/^0/, '62')}`}
+                                                    target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="inline-block font-mono text-xs text-slate-500 hover:text-emerald-600 transition-colors mt-0.5 hover:underline"
+                                                    className="mt-0.5 inline-block font-mono text-xs text-muted-foreground transition-colors hover:text-emerald-600 hover:underline"
                                                 >
                                                     📱 {item.customer_phone}
                                                 </a>
                                             </TableCell>
-                                            
-                                            {/* Kolom 4: Keluhan Perangkat (Truncate + Hover Tooltip) */}
                                             <TableCell className="max-w-[280px]">
-                                                <div className="font-semibold text-slate-800 text-sm">{item.device_name}</div>
+                                                <div className="text-sm font-semibold">{item.device_name}</div>
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
-                                                        <div className="text-xs text-slate-500 truncate mt-0.5 cursor-help max-w-full">
+                                                        <div className="mt-0.5 max-w-full cursor-help truncate text-xs text-muted-foreground">
                                                             "{item.complaint}"
                                                         </div>
                                                     </TooltipTrigger>
-                                                    <TooltipContent side="bottom" className="max-w-sm bg-slate-900 text-white p-3 rounded-lg text-xs shadow-md">
-                                                        <p className="font-medium leading-relaxed">{item.complaint}</p>
+                                                    <TooltipContent side="bottom" className="max-w-sm p-3 text-xs shadow-md">
+                                                        <p className="leading-relaxed font-medium">{item.complaint}</p>
                                                     </TooltipContent>
                                                 </Tooltip>
                                             </TableCell>
-                                            
-                                            {/* Kolom 5: Estimasi Biaya */}
-                                            <TableCell className="font-medium text-slate-700 text-sm">
+                                            <TableCell className="text-sm font-medium whitespace-nowrap">
                                                 {formatCurrency(item.estimated_cost)}
                                             </TableCell>
-                                            
-                                            {/* Kolom 6: Status Badge */}
                                             <TableCell className="text-center">
                                                 {renderStatusBadge(item.status, item.status_label)}
                                             </TableCell>
-                                            
-                                            {/* Kolom 7: Deretan Tombol Eksekusi Aksi */}
-                                            <TableCell className="text-right pr-6 py-3">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    {/* Tombol Cetak */}
+                                            <TableCell className="py-3 pr-4 text-right">
+                                                <div className="flex items-center justify-end gap-1.5">
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
-                                                            <Button variant="outline" size="icon" className="h-8 w-8 text-slate-500 border-slate-200 hover:bg-slate-100" onClick={() => handlePrint(item)}>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => handlePrint(item)}>
                                                                 <Printer className="h-4 w-4" />
                                                             </Button>
                                                         </TooltipTrigger>
-                                                        <TooltipContent className="text-xs">
-                                                            {['completed', 'taken'].includes(item.status) ? 'Cetak Kuitansi Pelunasan' : 'Cetak Tanda Terima Perangkat'}
-                                                        </TooltipContent>
+                                                        <TooltipContent className="text-xs">Cetak Dokumen Nota</TooltipContent>
                                                     </Tooltip>
 
-                                                    {/* Tombol Edit/Proses */}
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
-                                                            <Button variant="outline" size="icon" className="h-8 w-8 text-blue-600 border-blue-200 bg-blue-50/50 hover:bg-blue-100" onClick={() => onProcessClick(item)}>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-950/30" onClick={() => onProcessClick(item)}>
                                                                 <Pencil className="h-4 w-4" />
                                                             </Button>
                                                         </TooltipTrigger>
-                                                        <TooltipContent className="text-xs">Ubah Status & Update Operasional</TooltipContent>
+                                                        <TooltipContent className="text-xs">Proses Operasional Perbaikan</TooltipContent>
                                                     </Tooltip>
 
-                                                    {/* Tombol WA Manual Dinamis */}
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
-                                                            <Button variant="outline" size="icon" className="h-8 w-8 text-emerald-600 border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100" onClick={() => handlePrintWaManual(item)}>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/30" onClick={() => handlePrintWaManual(item)}>
                                                                 <Send className="h-4 w-4" />
                                                             </Button>
                                                         </TooltipTrigger>
-                                                        <TooltipContent className="text-xs">Kirim WA Status / Picu Sistem AI</TooltipContent>
+                                                        <TooltipContent className="text-xs">Kirim Update WhatsApp</TooltipContent>
                                                     </Tooltip>
 
-                                                    {/* Tombol Hapus (Graceful Degradation - Hanya Administrator) */}
                                                     {isAdmin && (
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
-                                                                <Button variant="outline" size="icon" className="h-8 w-8 text-destructive border-red-200 bg-red-50/50 hover:bg-red-100" onClick={() => handleDelete(item)}>
+                                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => handleDelete(item)}>
                                                                     <Trash2 className="h-4 w-4" />
                                                                 </Button>
                                                             </TooltipTrigger>
@@ -252,48 +205,35 @@ return '-';
                     </Table>
                 </div>
 
-                {/* AREA NAVIGATION & PAGINATION (BAGIAN BAWAH) */}
+                {/* Navigasi Pagination Terjemahan Bersih Indonesia */}
                 {serviceOrders.data.length > 0 && (
-                    <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-100 bg-slate-50/30 px-4 py-4 gap-4 md:px-6">
-                        {/* Kiri: Teks Informasi */}
-                        <div className="text-xs font-medium text-slate-500">
-                            Menampilkan <span className="font-semibold text-slate-800">{serviceOrders.from}</span> sampai{' '}
-                            <span className="font-semibold text-slate-800">{serviceOrders.to}</span> dari{' '}
-                            <span className="font-semibold text-slate-800">{serviceOrders.total}</span> data servisan
+                    <div className="flex flex-col items-center justify-between gap-4 border-t bg-muted/20 px-4 py-4 sm:flex-row md:px-6 w-full mt-auto">
+                        <div className="text-xs font-medium text-muted-foreground text-center sm:text-left">
+                            Menampilkan <span className="font-semibold text-foreground">{serviceOrders.from}</span> sampai{' '}
+                            <span className="font-semibold text-foreground">{serviceOrders.to}</span> dari{' '}
+                            <span className="font-semibold text-foreground">{serviceOrders.total}</span> data servisan
                         </div>
 
-                        {/* Kanan: Navigasi Tombol Angka */}
-                        <div className="flex flex-wrap items-center gap-1.5">
+                        <div className="flex flex-wrap items-center justify-center gap-1.5">
                             {serviceOrders.links.map((link, idx) => {
-                                // Menyesuaikan teks label dari server agar rapi di UI
                                 let cleanLabel = link.label;
-
-                                if (cleanLabel.includes('Previous')) {
-cleanLabel = 'Sebelumnya';
-}
-
-                                if (cleanLabel.includes('Next')) {
-cleanLabel = 'Selanjutnya';
-}
+                                if (cleanLabel.includes('pagination.previous') || cleanLabel.toLowerCase().includes('previous')) {
+                                    cleanLabel = 'Sebelumnya';
+                                } else if (cleanLabel.includes('pagination.next') || cleanLabel.toLowerCase().includes('next')) {
+                                    cleanLabel = 'Selanjutnya';
+                                }
+                                cleanLabel = cleanLabel.replace(/&laquo;/g, '').replace(/&raquo;/g, '').trim();
 
                                 return (
                                     <Button
                                         key={idx}
                                         variant={link.active ? 'default' : 'outline'}
                                         size="sm"
-                                        className={`h-8 px-3 text-xs font-semibold ${
-                                            !link.url ? 'pointer-events-none opacity-40' : ''
-                                        } ${
-                                            link.active ? 'shadow-sm font-bold' : 'border-slate-200 hover:bg-slate-100 text-slate-600'
-                                        }`}
+                                        className={`h-8 px-3 text-xs font-semibold ${!link.url ? 'pointer-events-none opacity-40' : ''}`}
                                         asChild
                                     >
                                         {link.url ? (
-                                            <Link
-                                                href={link.url}
-                                                preserveScroll
-                                                preserveState
-                                            >
+                                            <Link href={link.url} preserveScroll preserveState>
                                                 {cleanLabel}
                                             </Link>
                                         ) : (

@@ -1,182 +1,140 @@
-import { Head, router } from '@inertiajs/react';
-import { Search, FilterX } from 'lucide-react';
-import { useState } from 'react';
+import { Head, router, usePage } from '@inertiajs/react';
+import { Plus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { useDebouncedCallback } from 'use-debounce';
-
-// Import Ekstraksi Komponen UI
+import Heading from '@/components/heading';
+import { ServiceFilterBar } from '@/components/services/service-filter-bar';
 import { ServiceFormModal } from '@/components/services/service-form-modal';
-import { ServicePageHeader } from '@/components/services/service-page-header';
-import { ServiceProcessModal } from '@/components/services/service-process-modal'; 
+import { ServiceProcessModal } from '@/components/services/service-process-modal';
 import { ServiceStatusTabs } from '@/components/services/service-status-tabs';
-
-// Import Komponen Inti (Yang akan kita buat selanjutnya)
 import { ServiceTable } from '@/components/services/service-table';
-
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/app-layout';
 import type { ServiceIndexProps, ServiceListItem } from '@/types/service';
 
 export default function ServicesIndex({ serviceOrders, filters }: ServiceIndexProps) {
-    // 1. State Modal Manajemen
+    const { flash } = usePage<ServiceIndexProps>().props;
+
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    
-    // State Modal Proses (Pengganti Sheet)
     const [selectedServiceToProcess, setSelectedServiceToProcess] = useState<ServiceListItem | null>(null);
 
-    // 2. State Filter
     const [filterState, setFilterState] = useState({
         search: filters.search ?? '',
-        status: filters.status ?? 'all', 
+        status: filters.status ?? 'all',
+        per_page: filters.per_page?.toString() ?? '5',
     });
 
-    // 3. Logika Pencarian & Filter ke Backend (Inertia)
-    const applyFilters = useDebouncedCallback((newFilters: typeof filterState) => {
-        const query: Record<string, string> = {};
+    useEffect(() => {
+        if (flash?.toast) {
+            if (flash.toast.type === 'success') toast.success(flash.toast.message);
+            if (flash.toast.type === 'error') toast.error(flash.toast.message);
+            if (flash.toast.type === 'warning') toast.warning(flash.toast.message);
+            if (flash.toast.type === 'info') toast.info(flash.toast.message);
+        }
+    }, [flash]);
 
-        if (newFilters.search) {
-query.search = newFilters.search;
-}
-
-        if (newFilters.status && newFilters.status !== 'all') {
-query.status = newFilters.status;
-}
-
-        router.get('/services', query, {
-            preserveState: true,
-            preserveScroll: true,
-            replace: true, // Tidak menumpuk history browser
-        });
+    const handleSearchDebounce = useDebouncedCallback((value: string) => {
+        applyFilters({ ...filterState, search: value });
     }, 400);
 
-    const handleSearchUpdate = (value: string) => {
-        const newFilters = { ...filterState, search: value };
+    const applyFilters = (newFilters: typeof filterState) => {
+        const query: Record<string, string> = {};
+
+        if (newFilters.search) query.search = newFilters.search;
+        if (newFilters.status !== 'all') query.status = newFilters.status;
+        if (newFilters.per_page !== '5') query.per_page = newFilters.per_page;
+
+        router.get('/services', query, { 
+            preserveState: true, 
+            preserveScroll: true,
+            replace: true 
+        });
+    };
+
+    const handleFilterChange = (key: keyof typeof filterState, value: string) => {
+        const newFilters = { ...filterState, [key]: value };
         setFilterState(newFilters);
         applyFilters(newFilters);
     };
 
-    const handleStatusUpdate = (statusVal: string) => {
-        const newFilters = { ...filterState, status: statusVal };
-        setFilterState(newFilters);
-        applyFilters.flush(); // Segera eksekusi jika tab diklik
-        applyFilters(newFilters);
-    };
-
-    const handleResetSearch = () => {
-        const newFilters = { ...filterState, search: '' };
-        setFilterState(newFilters);
-        applyFilters.flush();
-        applyFilters(newFilters);
+    const handleResetFilters = () => {
+        const defaultFilters = { search: '', status: 'all', per_page: '5' };
+        setFilterState(defaultFilters);
+        router.get('/services', {}, { preserveState: true, replace: true });
     };
 
     return (
         <>
             <Head title="Pusat Servis" />
-            <div className="flex flex-col space-y-6 p-4 md:p-6">
-                <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-                {/* KOMPONEN: Header Halaman */}
-                <ServicePageHeader
-                    title="Pusat Servis & Antrean"
-                    description="Manajemen pekerjaan teknisi dan konfirmasi pelanggan."
-                    onAcceptService={() => setIsCreateModalOpen(true)}
-                />
-                </div>
-<div className="relative min-h-[100vh] flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border">
-                {/* KOMPONEN: Tabs Filter Status */}
-                <ServiceStatusTabs 
-                    status={filterState.status} 
-                    onStatusChange={handleStatusUpdate} 
-                />
-</div>
-                {/* KARTU UTAMA: Kotak Pencarian & Tabel */}
-                <Card className="overflow-hidden border-slate-200 shadow-sm rounded-xl">
-                    <CardHeader className="border-b bg-slate-50/50 p-4 sm:px-6">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <div className="relative w-full sm:max-w-md">
-                                <Search className="absolute top-2.5 left-3 h-4 w-4 text-slate-400" />
-                                <Input
-                                    placeholder="Cari No. Nota, Nama, atau No. WA..."
-                                    className="h-10 border-slate-200 bg-white pl-9 shadow-sm focus-visible:ring-primary"
-                                    value={filterState.search}
-                                    onChange={(e) => handleSearchUpdate(e.target.value)}
-                                />
-                            </div>
-                            
-                            {filterState.search && (
-                                <Button variant="ghost" className="text-destructive hover:bg-red-50 hover:text-destructive" onClick={handleResetSearch}>
-                                    <FilterX className="mr-2 h-4 w-4" /> Reset Pencarian
-                                </Button>
-                            )}
+            
+            {/* 100% MENGIKUTI STRUKTUR DASHBOARD.TSX */}
+            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+                
+                {/* BAGIAN ATAS: Grid tumpuk vertikal (tanpa md:grid-cols-3 agar tidak gepeng ke samping) */}
+                <div className="grid auto-rows-min gap-4">
+                    
+                    {/* Placeholder 1 -> Diganti Header */}
+                    <div className="relative overflow-hidden rounded-xl">
+                        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                            <Heading
+                                title="Pusat Servis"
+                                description="Manajemen pekerjaan teknisi dan konfirmasi antrean pelanggan"
+                            />
+                            <Button size="sm" onClick={() => setIsCreateModalOpen(true)}>
+                                <Plus className="mr-2 h-4 w-4" /> Terima Servisan
+                            </Button>
                         </div>
-                    </CardHeader>
+                    </div>
 
-                    <CardContent className="p-0">
-                        {/* KOMPONEN: Tabel Konvensional */}
-                        <ServiceTable
-                            serviceOrders={serviceOrders}
-                            onProcessClick={(service) => setSelectedServiceToProcess(service)}
+                    {/* Placeholder 2 -> Diganti Tabs */}
+                    <div className="relative overflow-hidden rounded-xl">
+                        <ServiceStatusTabs
+                            status={filterState.status}
+                            onStatusChange={(val) => handleFilterChange('status', val)}
                         />
-                    </CardContent>
-                </Card>
+                    </div>
 
-                {/* MODAL 1: Form Terima Servisan Baru */}
-                <ServiceFormModal 
-                    isOpen={isCreateModalOpen} 
-                    onClose={() => setIsCreateModalOpen(false)} 
-                />
+                    {/* Placeholder 3 -> Diganti Filter Bar */}
+                    <div className="relative overflow-hidden rounded-xl">
+                        <ServiceFilterBar
+                            filterState={filterState}
+                            setFilterState={setFilterState}
+                            handleSearchDebounce={handleSearchDebounce}
+                            onPerPageChange={(val) => handleFilterChange('per_page', val)}
+                            onReset={handleResetFilters}
+                        />
+                    </div>
+                </div>
 
-                {/* MODAL 2: Modal Proses/Edit (Pengganti Sheet) */}
+                {/* BAGIAN BAWAH: min-h-[100vh] persis Dashboard -> Diganti Tabel */}
+                <div className="relative min-h-[100vh] flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border bg-card flex flex-col">
+                    <ServiceTable
+                        serviceOrders={serviceOrders}
+                        onProcessClick={(service) => setSelectedServiceToProcess(service)}
+                    />
+                </div>
+                
+            </div>
+
+            {/* Modals Tetap Diluar Agar Aman */}
+            <ServiceFormModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+            />
+            {selectedServiceToProcess && (
                 <ServiceProcessModal
                     isOpen={!!selectedServiceToProcess}
                     onClose={() => setSelectedServiceToProcess(null)}
                     service={selectedServiceToProcess}
                 />
-
-            </div>
+            )}
         </>
     );
 }
 
 ServicesIndex.layout = (page: React.ReactNode) => (
-    <AppLayout breadcrumbs={[{ title: 'Manajemen Servis', href: '/services' }]}>
+    <AppLayout breadcrumbs={[{ title: 'Servis', href: '/services' }]}>
         {page}
     </AppLayout>
 );
-
-// import { Head } from '@inertiajs/react';
-// import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
-// import { dashboard } from '@/routes';
-
-// export default function Dashboard() {
-//     return (
-//         <>
-//             <Head title="Dashboard" />
-//             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-//                 <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-//                     <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-//                         <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-//                     </div>
-//                     <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-//                         <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-//                     </div>
-//                     <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-//                         <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-//                     </div>
-//                 </div>
-//                 <div className="relative min-h-[100vh] flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border">
-//                     <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-//                 </div>
-//             </div>
-//         </>
-//     );
-// }
-
-// Dashboard.layout = {
-//     breadcrumbs: [
-//         {
-//             title: 'Dashboard',
-//             href: dashboard(),
-//         },
-//     ],
-// };

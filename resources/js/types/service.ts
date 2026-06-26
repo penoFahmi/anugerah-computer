@@ -57,4 +57,10 @@ export interface ServiceIndexProps {
         date?: string;
         type?: string;
     };
+    flash?: {
+        toast: {
+            type: 'success' | 'error' | 'warning' | 'info';
+            message: string;
+        } | null;
+    };
 }

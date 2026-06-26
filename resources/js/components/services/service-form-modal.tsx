@@ -95,14 +95,21 @@ export function ServiceFormModal({ isOpen, onClose }: Props) {
         }
 
         if (val.length >= 4) {
-            if (searchTimeout.current) clearTimeout(searchTimeout.current);
+            if (searchTimeout.current) {
+clearTimeout(searchTimeout.current);
+}
+
             setIsSearching(true);
             searchTimeout.current = setTimeout(async () => {
                 try {
                     const res = await fetch(
                         `/api/search-customer?phone=${val}`,
                     );
-                    if (!res.ok) throw new Error('Network response was not ok');
+
+                    if (!res.ok) {
+throw new Error('Network response was not ok');
+}
+
                     const json = await res.json();
                     setSuggestions(json);
                 } catch (e) {
@@ -130,6 +137,7 @@ export function ServiceFormModal({ isOpen, onClose }: Props) {
 
     const handleEquipmentToggle = (item: string) => {
         const current = [...data.equipments];
+
         if (current.includes(item)) {
             setData(
                 'equipments',

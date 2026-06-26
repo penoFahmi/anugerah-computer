@@ -1,9 +1,9 @@
 import { Head } from '@inertiajs/react';
 import Heading from '@/components/heading';
+import { TrashFilters } from '@/components/sampah/sampah-filters';
 import { TrashTable } from '@/components/sampah/sampah-table';
 import AppLayout from '@/layouts/app-layout';
 import type { TrashPageProps } from '@/types/sampah';
-import { TrashFilters } from '@/components/sampah/sampah-filters';
 
 export default function TrashList({ trashItems, filters }: TrashPageProps) {
     return (

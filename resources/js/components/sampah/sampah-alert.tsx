@@ -20,7 +20,9 @@ interface Props {
 }
 
 export function TrashAlert({ open, onOpenChange, action, item }: Props) {
-    if (!item) return null;
+    if (!item) {
+return null;
+}
 
     const handleConfirm = () => {
         if (action === 'restore') {

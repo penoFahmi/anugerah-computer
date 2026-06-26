@@ -3,9 +3,9 @@ import { RefreshCcw } from 'lucide-react';
 
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
-import AppLayout from '@/layouts/app-layout';
 import { WaQrCard } from '@/components/wa/wa-qr-card';
 import { WaStatusCard } from '@/components/wa/wa-status-card';
+import AppLayout from '@/layouts/app-layout';
 
 export default function ConfigWa({ waStatus }: { waStatus: any }) {
 

@@ -21,7 +21,9 @@ interface Props {
 }
 
 export function CustomerAlert({ open, onOpenChange, type, customer }: Props) {
-    if (!customer) return null;
+    if (!customer) {
+return null;
+}
 
     // Confirm password reset
     const handleConfirm = () => {

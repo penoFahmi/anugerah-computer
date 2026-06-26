@@ -26,16 +26,30 @@ export function TrashFilters({ filters }: { filters: TrashPageProps['filters'] }
 
     useEffect(() => {
         if (flash?.toast) {
-            if (flash.toast.type === 'success') toast.success(flash.toast.message);
-            if (flash.toast.type === 'error') toast.error(flash.toast.message);
+            if (flash.toast.type === 'success') {
+toast.success(flash.toast.message);
+}
+
+            if (flash.toast.type === 'error') {
+toast.error(flash.toast.message);
+}
         }
     }, [flash]);
 
     const applyFilters = (newFilters: typeof filterState) => {
         const query: Record<string, string> = {};
-        if (newFilters.search) query.search = newFilters.search;
-        if (newFilters.type !== 'all') query.type = newFilters.type;
-        if (newFilters.per_page !== '5') query.per_page = newFilters.per_page;
+
+        if (newFilters.search) {
+query.search = newFilters.search;
+}
+
+        if (newFilters.type !== 'all') {
+query.type = newFilters.type;
+}
+
+        if (newFilters.per_page !== '5') {
+query.per_page = newFilters.per_page;
+}
 
         router.get('/sampah', query, { preserveState: true, replace: true });
     };

@@ -20,7 +20,9 @@ interface Props {
 }
 
 export function PegawaiAlert({ open, onOpenChange, type, pegawai }: Props) {
-    if (!pegawai) return null;
+    if (!pegawai) {
+return null;
+}
 
     // Confirm password reset
     const handleConfirm = () => {

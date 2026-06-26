@@ -40,11 +40,17 @@ export default function PegawaiList({ pegawais, roles, filters }: any) {
 
     useEffect(() => {
         if (flash?.toast) {
-            if (flash.toast.type === 'success')
-                toast.success(flash.toast.message);
-            if (flash.toast.type === 'error') toast.error(flash.toast.message);
-            if (flash.toast.type === 'warning')
-                toast.warning(flash.toast.message);
+            if (flash.toast.type === 'success') {
+toast.success(flash.toast.message);
+}
+
+            if (flash.toast.type === 'error') {
+toast.error(flash.toast.message);
+}
+
+            if (flash.toast.type === 'warning') {
+toast.warning(flash.toast.message);
+}
         }
     }, [flash]);
 
@@ -54,10 +60,22 @@ export default function PegawaiList({ pegawais, roles, filters }: any) {
 
     const applyFilters = (newFilters: typeof filterState) => {
         const query: Record<string, string> = {};
-        if (newFilters.search) query.search = newFilters.search;
-        if (newFilters.status !== 'all') query.status = newFilters.status;
-        if (newFilters.role !== 'all') query.role = newFilters.role;
-        if (newFilters.per_page !== '5') query.per_page = newFilters.per_page;
+
+        if (newFilters.search) {
+query.search = newFilters.search;
+}
+
+        if (newFilters.status !== 'all') {
+query.status = newFilters.status;
+}
+
+        if (newFilters.role !== 'all') {
+query.role = newFilters.role;
+}
+
+        if (newFilters.per_page !== '5') {
+query.per_page = newFilters.per_page;
+}
 
         router.get(index.url(), query, { preserveState: true, replace: true });
     };

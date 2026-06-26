@@ -34,8 +34,14 @@ export default function ServicesIndex({ serviceOrders, filters }: ServiceIndexPr
     // 3. Logika Pencarian & Filter ke Backend (Inertia)
     const applyFilters = useDebouncedCallback((newFilters: typeof filterState) => {
         const query: Record<string, string> = {};
-        if (newFilters.search) query.search = newFilters.search;
-        if (newFilters.status && newFilters.status !== 'all') query.status = newFilters.status;
+
+        if (newFilters.search) {
+query.search = newFilters.search;
+}
+
+        if (newFilters.status && newFilters.status !== 'all') {
+query.status = newFilters.status;
+}
 
         router.get('/services', query, {
             preserveState: true,

@@ -48,9 +48,13 @@ export function PegawaiTable({ pegawais }: { pegawais: PaginatedPegawai }) {
     };
 
     const getRelativeUrl = (absoluteUrl: string | null) => {
-        if (!absoluteUrl) return null;
+        if (!absoluteUrl) {
+return null;
+}
+
         try {
             const url = new URL(absoluteUrl);
+
             return url.pathname + url.search;
         } catch {
             return absoluteUrl;
@@ -60,8 +64,15 @@ export function PegawaiTable({ pegawais }: { pegawais: PaginatedPegawai }) {
     // Fungsi Parser Label Pagination agar Bersih dari tag aneh Laravel
     const parsePaginationLabel = (label: string) => {
         const lowerLabel = label.toLowerCase();
-        if (lowerLabel.includes('prev')) return '‹ Sebelumnya';
-        if (lowerLabel.includes('next')) return 'Selanjutnya ›';
+
+        if (lowerLabel.includes('prev')) {
+return '‹ Sebelumnya';
+}
+
+        if (lowerLabel.includes('next')) {
+return 'Selanjutnya ›';
+}
+
         return label;
     };
 

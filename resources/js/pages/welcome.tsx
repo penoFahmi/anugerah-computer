@@ -1,8 +1,8 @@
 import { Head } from '@inertiajs/react';
 import { MapPin, Laptop, Wrench, RefreshCw, Phone, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { FloatingChatbot } from '@/components/chatbot/floating-chatbot';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { FloatingChatbot } from '@/components/chatbot/floating-chatbot';
 
 interface Product {
     id: number;

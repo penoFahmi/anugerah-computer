@@ -32,9 +32,13 @@ export function TrashTable({ trashItems }: { trashItems: PaginatedTrash }) {
     };
 
     const getRelativeUrl = (absoluteUrl: string | null) => {
-        if (!absoluteUrl) return null;
+        if (!absoluteUrl) {
+return null;
+}
+
         try {
             const url = new URL(absoluteUrl);
+
             return url.pathname + url.search;
         } catch {
             return absoluteUrl;
@@ -43,8 +47,15 @@ export function TrashTable({ trashItems }: { trashItems: PaginatedTrash }) {
 
     const parsePaginationLabel = (label: string) => {
         const lowerLabel = label.toLowerCase();
-        if (lowerLabel.includes('prev')) return '‹ Sebelumnya';
-        if (lowerLabel.includes('next')) return 'Selanjutnya ›';
+
+        if (lowerLabel.includes('prev')) {
+return '‹ Sebelumnya';
+}
+
+        if (lowerLabel.includes('next')) {
+return 'Selanjutnya ›';
+}
+
         return label;
     };
 
@@ -136,6 +147,7 @@ export function TrashTable({ trashItems }: { trashItems: PaginatedTrash }) {
                 <div className="flex flex-wrap gap-1">
                     {trashItems.links.map((link, idx) => {
                         const relativeUrl = getRelativeUrl(link.url);
+
                         return (
                             <Button
                                 key={idx}

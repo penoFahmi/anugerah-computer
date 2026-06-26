@@ -28,11 +28,17 @@ export default function CustomersList({ customers, filters }: CustomersPageProps
 
     useEffect(() => {
         if (flash?.toast) {
-            if (flash.toast.type === 'success')
-                toast.success(flash.toast.message);
-            if (flash.toast.type === 'error') toast.error(flash.toast.message);
-            if (flash.toast.type === 'warning')
-                toast.warning(flash.toast.message);
+            if (flash.toast.type === 'success') {
+toast.success(flash.toast.message);
+}
+
+            if (flash.toast.type === 'error') {
+toast.error(flash.toast.message);
+}
+
+            if (flash.toast.type === 'warning') {
+toast.warning(flash.toast.message);
+}
         }
     }, [flash]);
 
@@ -42,8 +48,14 @@ export default function CustomersList({ customers, filters }: CustomersPageProps
 
     const applyFilters = (newFilters: typeof filterState) => {
         const query: Record<string, string> = {};
-        if (newFilters.search) query.search = newFilters.search;
-        if (newFilters.per_page !== '10') query.per_page = newFilters.per_page;
+
+        if (newFilters.search) {
+query.search = newFilters.search;
+}
+
+        if (newFilters.per_page !== '10') {
+query.per_page = newFilters.per_page;
+}
 
         router.get(index.url(), query, { preserveState: true, replace: true });
     };

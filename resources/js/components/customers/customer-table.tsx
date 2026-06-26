@@ -11,8 +11,8 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { CustomerAlert } from './customer-alert';
 import type { PaginatedCustomer, Customer } from '@/types/customer';
+import { CustomerAlert } from './customer-alert';
 
 export function CustomerTable({ customers }: { customers: PaginatedCustomer }) {
     const [alertConfig, setAlertConfig] = useState<{
@@ -30,9 +30,13 @@ export function CustomerTable({ customers }: { customers: PaginatedCustomer }) {
     };
 
     const getRelativeUrl = (absoluteUrl: string | null) => {
-        if (!absoluteUrl) return null;
+        if (!absoluteUrl) {
+return null;
+}
+
         try {
             const url = new URL(absoluteUrl);
+
             return url.pathname + url.search;
         } catch {
             return absoluteUrl;
@@ -42,8 +46,15 @@ export function CustomerTable({ customers }: { customers: PaginatedCustomer }) {
     // Fungsi Parser Label Pagination agar Bersih dari tag aneh Laravel
     const parsePaginationLabel = (label: string) => {
         const lowerLabel = label.toLowerCase();
-        if (lowerLabel.includes('prev')) return '‹ Sebelumnya';
-        if (lowerLabel.includes('next')) return 'Selanjutnya ›';
+
+        if (lowerLabel.includes('prev')) {
+return '‹ Sebelumnya';
+}
+
+        if (lowerLabel.includes('next')) {
+return 'Selanjutnya ›';
+}
+
         return label;
     };
 

@@ -33,6 +33,7 @@ export function ServiceTable({ serviceOrders, onProcessClick }: ServiceTableProp
     // Handler untuk cetak nota cerdas
     const handlePrint = (item: ServiceListItem) => {
         const isFinished = ['completed', 'taken'].includes(item.status);
+
         if (isFinished) {
             toast.info(`Membuka Nota Pelunasan / Kuitansi untuk ${item.order_number}`);
             window.open(`/services/${item.id}/print-receipt`, '_blank');
@@ -69,7 +70,10 @@ export function ServiceTable({ serviceOrders, onProcessClick }: ServiceTableProp
 
     // Format Rupiah sederhana
     const formatCurrency = (value: string | number | null) => {
-        if (!value || Number(value) === 0) return '-';
+        if (!value || Number(value) === 0) {
+return '-';
+}
+
         return new Intl.NumberFormat('id-ID', {
             style: 'currency',
             currency: 'IDR',
@@ -263,8 +267,14 @@ export function ServiceTable({ serviceOrders, onProcessClick }: ServiceTableProp
                             {serviceOrders.links.map((link, idx) => {
                                 // Menyesuaikan teks label dari server agar rapi di UI
                                 let cleanLabel = link.label;
-                                if (cleanLabel.includes('Previous')) cleanLabel = 'Sebelumnya';
-                                if (cleanLabel.includes('Next')) cleanLabel = 'Selanjutnya';
+
+                                if (cleanLabel.includes('Previous')) {
+cleanLabel = 'Sebelumnya';
+}
+
+                                if (cleanLabel.includes('Next')) {
+cleanLabel = 'Selanjutnya';
+}
 
                                 return (
                                     <Button

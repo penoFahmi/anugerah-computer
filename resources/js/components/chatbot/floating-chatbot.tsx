@@ -37,7 +37,10 @@ export function FloatingChatbot() {
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!chatInput.trim()) return;
+
+        if (!chatInput.trim()) {
+return;
+}
 
         const userText = chatInput;
         setMessages((prev) => [...prev, { role: 'user', text: userText }]);

@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import { Loader2, Wrench, DollarSign, FileText, Send, Check } from 'lucide-react';
+import { useEffect } from 'react';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -12,8 +13,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
 import {
     Select,
     SelectContent,
@@ -21,7 +20,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { ServiceListItem } from '@/types/service';
+import { Textarea } from '@/components/ui/textarea';
+import type { ServiceListItem } from '@/types/service';
 
 interface ServiceProcessModalProps {
     isOpen: boolean;
@@ -51,7 +51,9 @@ export function ServiceProcessModal({ isOpen, onClose, service }: ServiceProcess
         }
     }, [isOpen, service]);
 
-    if (!service) return null;
+    if (!service) {
+return null;
+}
 
     // 3. Handler Submit untuk Update Standar (Mengubah Status / Biaya / Catatan)
     const handleSubmitUpdate = (e: React.FormEvent) => {
@@ -75,6 +77,7 @@ export function ServiceProcessModal({ isOpen, onClose, service }: ServiceProcess
         
         if (!costValue || costValue <= 0) {
             toast.error('Gagal: Nominal estimasi biaya harus diisi di atas Rp 0 sebelum memicu AI WhatsApp.');
+
             return;
         }
 

@@ -16,9 +16,12 @@ Route::inertia('/', 'welcome', [
 Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
 
-    Route::resource('services', ServiceOrderController::class);
-    Route::post('/services/{serviceOrder}/trigger-wa', [ServiceOrderController::class, 'triggerWhatsappOffer'])->name('services.trigger-wa');
+    Route::post('/services/{serviceOrder}/trigger-wa-offer', [ServiceOrderController::class, 'triggerWhatsappOffer'])->name('services.trigger-wa');
+    Route::get('/services/{serviceOrder}/print-ticket', [ServiceOrderController::class, 'printTicketPDF'])->name('services.print-ticket');
     Route::get('/api/search-customer', [ServiceOrderController::class, 'searchCustomer'])->name('api.search-customer');
+    Route::resource('services', ServiceOrderController::class)->only([
+        'index', 'store', 'show', 'update', 'destroy'
+    ]);
 
     Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
 });

@@ -47,7 +47,7 @@
 
     <div class="header text-center">
         <h2>ANUGERAH COMPUTER</h2>
-        <p>Jl. Raya Pembangunan No. 45, Palembang</p>
+        <p>Jalan Sepakat 2 Samping Blok E, Ayani 2</p>
         <p>WhatsApp: 0812-3456-7890</p>
     </div>
 

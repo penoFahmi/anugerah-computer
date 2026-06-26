@@ -9,127 +9,78 @@ use Illuminate\Support\Facades\Log;
 
 class WaGateway
 {
-    /**
-     * Mengirimkan Pesan Teks + Lampiran Dokumen PDF Nota ke Pelanggan
-     */
+    private static function getBaseUrl(): string
+    {
+        return 'http://127.0.0.1:3001';
+    }
+
+    // Ambil token untuk dikirim ke Node.js
+    private static function getToken(): string
+    {
+        return config('services.wa_gateway.token', 'anugerah2026');
+    }
+
     public static function sendReceiptWithPdf(ServiceOrder $order, string $pdfUrl): bool
     {
-        // 1. Ambil Token dan Endpoint dari config/services.php
-        $token = config('services.wa_gateway.token');
-        $endpoint = config('services.wa_gateway.endpoint_file', 'https://api.fonnte.com/send'); // Sesuaikan endpoint vendor
-
-        // 2. Susun template pesan teks otomatis pembuka struk
-        $message = "Halo Kak *{$order->customer->name}*,\n\n"
-                 . "Unit *{$order->device->brand} {$order->device->model}* telah berhasil didaftarkan di toko kami dengan "
-                 . "No. Nota: *{$order->order_number}*.\n\n"
-                 . "Berikut kami lampirkan dokumen digital resmi tanda terima unit perbaikan dalam format PDF.\n\n"
-                 . "Terima kasih banyak atas kepercayaan Anda.";
+        $endpoint = self::getBaseUrl() . '/send-document';
+        $message = "Halo Kak *{$order->customer->name}*,\n\nUnit *{$order->device->brand} {$order->device->model}* telah berhasil didaftarkan di toko kami dengan No. Nota: *{$order->order_number}*.\n\nBerikut lampiran tanda terima unit perbaikan dalam format PDF.\n\nTerima kasih banyak atas kepercayaan Anda.";
 
         try {
-            // 3. Tembak API Gateway membawa parameter Dokumen/Media
-            $response = Http::withHeaders([
-                'Authorization' => $token
-            ])->timeout(10)->post($endpoint, [
-                'target' => $order->customer->phone, // Berformat internasional 62... hasil mutator
-                'message' => $message,
-                'url' => $pdfUrl, // Link publik storage file PDF nota Anda
-                'filename' => "Nota-{$order->order_number}.pdf"
-            ]);
+            // TAMBAHAN HEADER X-Token
+            $response = Http::withHeaders(['X-Token' => self::getToken()])
+                ->timeout(10)
+                ->post($endpoint, [
+                    'phone' => $order->customer->phone,
+                    'caption' => $message,
+                    'document' => $pdfUrl,
+                    'filename' => "Nota-{$order->order_number}.pdf"
+                ]);
 
-            $isSuccess = $response->successful();
-
-            // 4. Catat riwayat keluar ini ke tabel Chat Logs agar NLP tidak bingung melacak percakapan
-            ChatLog::create([
-                'service_order_id' => $order->id,
-                'direction' => 'outbound',
-                'message' => "[Kirim Dokumen Nota PDF] " . $message,
-                'resolved_by' => 'system',
-                'final_intent' => 'send_receipt'
-            ]);
-
-            return $isSuccess;
-
+            if ($response->successful()) {
+                ChatLog::create([
+                    'service_order_id' => $order->id,
+                    'direction' => 'outbound',
+                    'message' => "[Dokumen PDF] " . $message,
+                    'resolved_by' => 'system',
+                    'final_intent' => 'send_receipt'
+                ]);
+                return true;
+            }
+            return false;
         } catch (\Exception $e) {
-            Log::error("Gagal mengirimkan PDF Nota WA: " . $e->getMessage());
+            Log::error("Baileys API - Gagal PDF: " . $e->getMessage());
             return false;
         }
     }
 
-    /**
-     * Mengirimkan pesan penawaran perbaikan via WhatsApp.
-     */
     public static function sendOffer(ServiceOrder $order): bool
     {
-        $token = config('services.wa_gateway.token');
-        $endpoint = config('services.wa_gateway.endpoint_text', 'https://api.fonnte.com/send');
-
+        $endpoint = self::getBaseUrl() . '/send-message';
         $formattedCost = 'Rp ' . number_format($order->estimated_cost, 0, ',', '.');
-
-        $message = "Halo Kak *{$order->customer->name}*,\n\n"
-                 . "Untuk perbaikan unit *{$order->device->brand} {$order->device->model}* (Nota: *{$order->order_number}*), "
-                 . "estimasi biayanya adalah sekitar *{$formattedCost}*.\n\n"
-                 . "Apakah Anda setuju untuk melanjutkan perbaikan dengan biaya tersebut?\n\n"
-                 . "Silakan balas *SETUJU* atau *TIDAK*.\n\n"
-                 . "Terima kasih.";
+        $message = "Halo Kak *{$order->customer->name}*,\n\nUntuk perbaikan unit *{$order->device->brand} {$order->device->model}* (Nota: *{$order->order_number}*), estimasi biayanya adalah sekitar *{$formattedCost}*.\n\nApakah Anda setuju untuk melanjutkan perbaikan dengan biaya tersebut?\n\nSilakan balas *SETUJU* atau *TIDAK*.\n\nTerima kasih.";
 
         try {
-            $response = Http::withHeaders([
-                'Authorization' => $token
-            ])->timeout(10)->post($endpoint, [
-                'target' => $order->customer->phone,
-                'message' => $message,
-            ]);
+            // TAMBAHAN HEADER X-Token
+            $response = Http::withHeaders(['X-Token' => self::getToken()])
+                ->timeout(10)
+                ->post($endpoint, [
+                    'phone' => $order->customer->phone,
+                    'message' => $message,
+                ]);
 
-            $isSuccess = $response->successful();
-
-            ChatLog::create([
-                'service_order_id' => $order->id,
-                'direction' => 'outbound',
-                'message' => $message,
-                'resolved_by' => 'system',
-                'final_intent' => 'send_offer'
-            ]);
-
-            return $isSuccess;
-
-        } catch (\Exception $e) {
-            Log::error("Gagal mengirimkan penawaran WA untuk nota {$order->order_number}: " . $e->getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Mengirimkan pesan teks sederhana.
-     */
-    public static function sendMessage(string $phone, string $message, ?int $serviceOrderId = null, string $intent = 'notification'): bool
-    {
-        $token = config('services.wa_gateway.token');
-        $endpoint = config('services.wa_gateway.endpoint_text', 'https://api.fonnte.com/send');
-
-        try {
-            $response = Http::withHeaders([
-                'Authorization' => $token
-            ])->timeout(10)->post($endpoint, [
-                'target' => $phone,
-                'message' => $message,
-            ]);
-
-            $isSuccess = $response->successful();
-
-            if ($isSuccess) {
+            if ($response->successful()) {
                 ChatLog::create([
-                    'service_order_id' => $serviceOrderId,
+                    'service_order_id' => $order->id,
                     'direction' => 'outbound',
                     'message' => $message,
                     'resolved_by' => 'system',
-                    'final_intent' => $intent
+                    'final_intent' => 'send_offer'
                 ]);
+                return true;
             }
-
-            return $isSuccess;
-
+            return false;
         } catch (\Exception $e) {
-            Log::error("Gagal mengirimkan pesan WA ke {$phone}: " . $e->getMessage());
+            Log::error("Baileys API - Gagal Offer: " . $e->getMessage());
             return false;
         }
     }

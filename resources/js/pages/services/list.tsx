@@ -6,6 +6,7 @@ import { useDebouncedCallback } from 'use-debounce';
 // Import Ekstraksi Komponen UI
 import { ServiceFormModal } from '@/components/services/service-form-modal';
 import { ServicePageHeader } from '@/components/services/service-page-header';
+import { ServiceProcessModal } from '@/components/services/service-process-modal'; 
 import { ServiceStatusTabs } from '@/components/services/service-status-tabs';
 
 // Import Komponen Inti (Yang akan kita buat selanjutnya)
@@ -16,7 +17,6 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/app-layout';
 import type { ServiceIndexProps, ServiceListItem } from '@/types/service';
-import { ServiceProcessModal } from '@/components/services/service-process-modal'; 
 
 export default function ServicesIndex({ serviceOrders, filters }: ServiceIndexProps) {
     // 1. State Modal Manajemen
@@ -68,20 +68,21 @@ export default function ServicesIndex({ serviceOrders, filters }: ServiceIndexPr
         <>
             <Head title="Pusat Servis" />
             <div className="flex flex-col space-y-6 p-4 md:p-6">
-                
+                <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 {/* KOMPONEN: Header Halaman */}
                 <ServicePageHeader
                     title="Pusat Servis & Antrean"
                     description="Manajemen pekerjaan teknisi dan konfirmasi pelanggan."
                     onAcceptService={() => setIsCreateModalOpen(true)}
                 />
-
+                </div>
+<div className="relative min-h-[100vh] flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border">
                 {/* KOMPONEN: Tabs Filter Status */}
                 <ServiceStatusTabs 
                     status={filterState.status} 
                     onStatusChange={handleStatusUpdate} 
                 />
-
+</div>
                 {/* KARTU UTAMA: Kotak Pencarian & Tabel */}
                 <Card className="overflow-hidden border-slate-200 shadow-sm rounded-xl">
                     <CardHeader className="border-b bg-slate-50/50 p-4 sm:px-6">
@@ -136,3 +137,40 @@ ServicesIndex.layout = (page: React.ReactNode) => (
         {page}
     </AppLayout>
 );
+
+// import { Head } from '@inertiajs/react';
+// import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
+// import { dashboard } from '@/routes';
+
+// export default function Dashboard() {
+//     return (
+//         <>
+//             <Head title="Dashboard" />
+//             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+//                 <div className="grid auto-rows-min gap-4 md:grid-cols-3">
+//                     <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
+//                         <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
+//                     </div>
+//                     <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
+//                         <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
+//                     </div>
+//                     <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
+//                         <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
+//                     </div>
+//                 </div>
+//                 <div className="relative min-h-[100vh] flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border">
+//                     <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
+//                 </div>
+//             </div>
+//         </>
+//     );
+// }
+
+// Dashboard.layout = {
+//     breadcrumbs: [
+//         {
+//             title: 'Dashboard',
+//             href: dashboard(),
+//         },
+//     ],
+// };

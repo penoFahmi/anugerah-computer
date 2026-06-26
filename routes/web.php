@@ -16,12 +16,9 @@ Route::inertia('/', 'welcome', [
 Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
 
-    Route::get('/services', [ServiceOrderController::class, 'index'])->name('services.index');
-    Route::post('/services', [ServiceOrderController::class, 'store'])->name('services.store');
-    Route::get('/api/search-customer', [ServiceOrderController::class, 'searchCustomer'])->name('api.search-customer');
-
-    Route::patch('/services/{serviceOrder}', [ServiceOrderController::class, 'update'])->name('services.update');
+    Route::resource('services', ServiceOrderController::class);
     Route::post('/services/{serviceOrder}/trigger-wa', [ServiceOrderController::class, 'triggerWhatsappOffer'])->name('services.trigger-wa');
+    Route::get('/api/search-customer', [ServiceOrderController::class, 'searchCustomer'])->name('api.search-customer');
 
     Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
 });

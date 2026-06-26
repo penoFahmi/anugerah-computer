@@ -39,10 +39,17 @@ class ConfigWaController extends Controller
     public function logout()
     {
         try {
-            // Beri timeout 3 detik agar Laravel tidak hang menunggu Node.js restart
-            Http::timeout(3)->post("{$this->gatewayUrl}/logout");
-        } catch (\Exception $e) {}
-        
+            // Ambil token dari config/services.php
+            // Catatan: Ubah 'services.wa_gateway.token' sesuai dengan key yang kamu buat di services.php
+            $token = config('services.wa_gateway.token');
+
+            Http::withHeaders([
+                'X-Token' => $token
+            ])->timeout(3)->post("{$this->gatewayUrl}/logout");
+        } catch (\Exception $e) {
+            // Error handling opsional
+        }
+
         return back();
     }
 }

@@ -36,7 +36,11 @@ return [
     ],
 
     'wa_gateway' => [
-        'token' => env('WA_GATEWAY_TOKEN'),
-    ],
+    'token' => env('WA_GATEWAY_TOKEN'),
+    'endpoint_file' => env('WA_GATEWAY_URL_FILE', 'https://api.fonnte.com/send'),
+],
 
+'nlp' => [
+    'endpoint' => env('NLP_SERVICE_ENDPOINT', 'http://127.0.0.1:8000/resolve-intent'),
+],
 ];

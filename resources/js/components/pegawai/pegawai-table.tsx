@@ -23,6 +23,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { PaginatedPegawai, Pegawai } from '@/types/pegawai';
 import { PegawaiAlert } from './pegawai-alert';
 import { PegawaiForm } from './pegawai-form';
@@ -69,6 +70,7 @@ export function PegawaiTable({ pegawais }: { pegawais: PaginatedPegawai }) {
             <Table>
                 <TableHeader>
                     <TableRow className="bg-muted/50">
+                        <TableHead className="text-center">No</TableHead>
                         <TableHead>Nama</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>No. Telepon</TableHead>
@@ -90,6 +92,9 @@ export function PegawaiTable({ pegawais }: { pegawais: PaginatedPegawai }) {
                     ) : (
                         pegawais.data.map((p) => (
                             <TableRow key={p.id}>
+                                <TableCell className="text-center">
+                                    {(pegawais.current_page - 1) * pegawais.per_page + pegawais.data.indexOf(p) + 1}
+                                </TableCell>
                                 <TableCell className="font-medium">
                                     {p.name}
                                 </TableCell>
@@ -122,8 +127,9 @@ export function PegawaiTable({ pegawais }: { pegawais: PaginatedPegawai }) {
                                     </Badge>
                                 </TableCell>
                                 <TableCell className="text-right">
-                                    {/* Hapus efek hover agar tombol selalu tampil */}
                                     <div className="flex justify-end gap-1">
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
                                         <Button
                                             size="icon"
                                             variant="ghost"
@@ -134,19 +140,31 @@ export function PegawaiTable({ pegawais }: { pegawais: PaginatedPegawai }) {
                                                     p,
                                                 )
                                             }
-                                            title="Reset Password"
                                         >
                                             <KeyRound className="h-4 w-4" />
                                         </Button>
+                                        </TooltipTrigger>
+                                            <TooltipContent className="text-xs">
+                                                Reset Password Pegawai
+                                            </TooltipContent>
+                                        </Tooltip>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
                                         <Button
                                             size="icon"
                                             variant="ghost"
                                             className="h-8 w-8 text-blue-600"
                                             onClick={() => setEditPegawai(p)}
-                                            title="Edit Data"
                                         >
                                             <Pencil className="h-4 w-4" />
                                         </Button>
+                                        </TooltipTrigger>
+                                            <TooltipContent className="text-xs">
+                                                Edit Data Pegawai
+                                            </TooltipContent>
+                                        </Tooltip>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
                                         <Button
                                             size="icon"
                                             variant="ghost"
@@ -154,7 +172,6 @@ export function PegawaiTable({ pegawais }: { pegawais: PaginatedPegawai }) {
                                             onClick={() =>
                                                 triggerAlert('toggle_status', p)
                                             }
-                                            title="Ubah Status"
                                         >
                                             {p.is_active ? (
                                                 <ShieldAlert className="h-4 w-4" />
@@ -162,17 +179,31 @@ export function PegawaiTable({ pegawais }: { pegawais: PaginatedPegawai }) {
                                                 <ShieldCheck className="h-4 w-4" />
                                             )}
                                         </Button>
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            className="h-8 w-8 text-destructive"
-                                            onClick={() =>
-                                                triggerAlert('delete', p)
-                                            }
-                                            title="Hapus Akun"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                        </TooltipTrigger>
+                                            <TooltipContent className="text-xs">
+                                                {p.is_active ? 'Nonaktifkan Akun' : 'Aktifkan Akun'}
+                                            </TooltipContent>
+                                        </Tooltip>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    className="h-8 w-8 text-destructive"
+                                                    onClick={() =>
+                                                        triggerAlert(
+                                                            'delete',
+                                                            p,
+                                                        )   
+                                                    }
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent className="text-xs">
+                                                Hapus Akun
+                                            </TooltipContent>
+                                        </Tooltip>
                                     </div>
                                 </TableCell>
                             </TableRow>

@@ -28,7 +28,7 @@ interface ServiceTableProps {
 export function ServiceTable({ serviceOrders, onProcessClick }: ServiceTableProps) {
     // Mengambil data user yang login dari shared props Inertia untuk fitur keamanan tombol hapus
     const { auth } = usePage().props as any;
-    const isAdmin = auth?.user?.role === 'administrator';
+    const isAdmin = auth.user?.roles || ['administrator'].includes(auth.user?.roles);
 
     // Handler untuk cetak nota cerdas
     const handlePrint = (item: ServiceListItem) => {
@@ -83,26 +83,26 @@ export function ServiceTable({ serviceOrders, onProcessClick }: ServiceTableProp
             case 'waiting_checking':
                 return (
                     <Badge className="bg-pink-100 text-pink-700 hover:bg-pink-100 border border-pink-300 px-2.5 py-1 text-xs font-bold rounded-md shadow-sm">
-                        🔴 {label}
+                         {label}
                     </Badge>
                 );
             case 'waiting_approval':
                 return (
                     <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100 border border-orange-300 px-2.5 py-1 text-xs font-bold rounded-md shadow-sm">
-                        🟠 {label}
+                         {label}
                     </Badge>
                 );
             case 'in_progress':
                 return (
                     <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border border-blue-300 px-2.5 py-1 text-xs font-bold rounded-md shadow-sm">
-                        🔵 {label}
+                         {label}
                     </Badge>
                 );
             case 'completed':
             case 'taken':
                 return (
                     <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border border-emerald-300 px-2.5 py-1 text-xs font-bold rounded-md shadow-sm">
-                        🟢 {label}
+                         {label}
                     </Badge>
                 );
             default:

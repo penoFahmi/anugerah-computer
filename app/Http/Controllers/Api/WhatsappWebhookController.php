@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Services\WaGateway;
 use App\Http\Controllers\Controller;
 use App\Models\ServiceOrder;
 use App\Models\ChatLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use App\Services\IntentRecognition\IntentResolver;
+use Illuminate\Support\Facades\Validator;
+use App\Ai\Agents\IntentAnalyzer;
 use App\Ai\Agents\CustomerService;
 use Illuminate\Support\Facades\Http;
 
@@ -94,44 +96,22 @@ class WhatsappWebhookController extends Controller
             }
         }
 
-        // --- 7. PROSES NLP (LEVENSHTEIN & LLM) ---
+        // nanti ke nlp kita yang berjalan di python di port setting nanti
+
+        // 7. Jika ada tiket servis, lanjutkan ke Intent Recognition chatbot
         try {
-            // Panggil Service Class yang baru saja kita buat
-            $resolver = new IntentResolver();
-            $resolution = $resolver->resolve($originalMessage);
-
-            // Update Chat Log dengan Metrik untuk Skripsi
+            $intent = (new IntentAnalyzer)->prompt($originalMessage);
             $chatLog->update([
-                'is_ld_successful' => ($resolution['method'] === 'levenshtein'),
-                'is_llm_triggered' => ($resolution['method'] === 'llm'),
-                'ld_distance_score' => $resolution['score'] ?? null,
-                'ld_matched_keyword' => $resolution['match'] ?? null,
-                'llm_raw_response' => $resolution['raw'] ?? null,
-                'final_intent' => $resolution['intent'],
-                'resolved_by' => $resolution['method'],
+                'final_intent' => $intent,
             ]);
+            $serviceOrder->update([
+                'last_customer_message' => $originalMessage,
+            ]);
+            
 
-            // Eksekusi Tindakan berdasarkan Niat (Intent)
-            $newStatus = $serviceOrder->status;
-            if ($resolution['intent'] === 'approve') {
-                $serviceOrder->update(['status' => 'approved']);
-                $newStatus = 'approved';
-                // TODO: Kirim notifikasi WA "Terima kasih, unit sedang dikerjakan"
-            } elseif ($resolution['intent'] === 'cancel') {
-                $serviceOrder->update(['status' => 'cancelled']);
-                $newStatus = 'cancelled';
-                // TODO: Kirim notifikasi WA "Baik, servis dibatalkan. Silakan ambil unit Anda"
-            }
+        }
 
-            return response()->json([
-                'status' => 'success',
-                'intent' => $resolution['intent'],
-                'method' => $resolution['method'],
-                'new_status' => $newStatus,
-                'chat_log_id' => $chatLog->id,
-            ], 200);
-
-        } catch (\Throwable $e) {
+        catch (\Throwable $e) {
             Log::error('Webhook AI Error: ' . $e->getMessage());
             
             $chatLog->update([
@@ -141,5 +121,7 @@ class WhatsappWebhookController extends Controller
 
             return response()->json(['error' => 'Internal Server Error'], 500);
         }
+
+        return response()->json(['status' => 'processed'], 200);
     }
 }

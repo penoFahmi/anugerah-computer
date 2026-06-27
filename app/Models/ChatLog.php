@@ -2,15 +2,17 @@
 
 namespace App\Models;
 
+use App\Events\NewChatMessage;
+use App\Events\ChatRequiresHuman;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 #[Fillable([
-    'service_order_id', 'wa_message_id', 'direction', 'message', 
-    'svm_confidence_score', 'svm_predicted_intent', 'is_svm_successful',
-    'is_llm_triggered', 'llm_raw_response', 'llm_prompt_tokens', 
-    'llm_completion_tokens', 'final_intent', 'resolved_by'
+    'service_order_id', 'wa_message_id', 'phone', 'sender_name', 'message_type', 
+    'direction', 'message', 'svm_confidence_score', 'svm_predicted_intent', 
+    'is_svm_successful', 'is_llm_triggered', 'llm_raw_response', 
+    'llm_prompt_tokens', 'llm_completion_tokens', 'final_intent', 'resolved_by'
 ])]
 class ChatLog extends Model
 {
@@ -29,5 +31,25 @@ class ChatLog extends Model
     public function serviceOrder()
     {
         return $this->belongsTo(ServiceOrder::class);
+    }
+
+    /**
+     * OTOMATISASI REAL-TIME (REVERB)
+     */
+    protected static function booted()
+    {
+        // 1. Setiap ada chat baru (Dari Pelanggan / AI / Kasir) -> Otomatis muncul di layar Live Chat!
+        static::created(function ($chatLog) {
+            if ($chatLog->service_order_id) {
+                broadcast(new NewChatMessage($chatLog));
+            }
+        });
+
+        // 2. Setiap kali AI nyerah (Job ngubah resolved_by jadi 'human') -> Otomatis bunyi Ting! di Kasir
+        static::updated(function ($chatLog) {
+            if ($chatLog->isDirty('resolved_by') && $chatLog->resolved_by === 'human') {
+                broadcast(new ChatRequiresHuman($chatLog));
+            }
+        });
     }
 }

@@ -6,9 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('chat_logs', function (Blueprint $table) {
@@ -16,10 +13,15 @@ return new class extends Migration
             $table->foreignId('service_order_id')->nullable()->constrained()->cascadeOnDelete();
             $table->string('wa_message_id')->unique()->nullable(); 
             
-            // FINAL FIX: String + Index
+            // --- KEBUTUHAN NLP & CS ---
+            $table->string('phone', 25)->nullable()->index();
+            $table->string('sender_name', 100)->nullable();
+            $table->string('message_type', 30)->default('text');
+            
             $table->string('direction', 20)->index(); 
             $table->text('message'); 
             
+            // NLP & AI Fields
             $table->decimal('svm_confidence_score', 5, 4)->nullable(); 
             $table->string('svm_predicted_intent')->nullable(); 
             $table->boolean('is_svm_successful')->nullable(); 

@@ -15,14 +15,14 @@ class WaGateway
     }
 
     // Ambil token untuk dikirim ke Node.js
-    private static function getToken(): string
+    private static function getToken(): string 
     {
         return config('services.wa_gateway.token', 'anugerah2026');
     }
 
     public static function sendReceiptWithPdf(ServiceOrder $order, string $pdfUrl): bool
     {
-        $endpoint = self::getBaseUrl() . '/send-document';
+        $endpoint = self::getBaseUrl() . '/send-document'; 
         $message = "Halo Kak *{$order->customer->name}*,\n\nUnit *{$order->device->brand} {$order->device->model}* telah berhasil didaftarkan di toko kami dengan No. Nota: *{$order->order_number}*.\n\nBerikut lampiran tanda terima unit perbaikan dalam format PDF.\n\nTerima kasih banyak atas kepercayaan Anda.";
 
         try {
@@ -39,8 +39,11 @@ class WaGateway
             if ($response->successful()) {
                 ChatLog::create([
                     'service_order_id' => $order->id,
+                    'phone' => $order->customer->phone,
+                    'sender_name' => 'System',
+                    'message_type' => 'document',
                     'direction' => 'outbound',
-                    'message' => "[Dokumen PDF] " . $message,
+                    'message' => "[Dokumen PDF Nota] " . $message,
                     'resolved_by' => 'system',
                     'final_intent' => 'send_receipt'
                 ]);
@@ -71,6 +74,9 @@ class WaGateway
             if ($response->successful()) {
                 ChatLog::create([
                     'service_order_id' => $order->id,
+                    'phone' => $order->customer->phone,
+                    'sender_name' => 'System',
+                    'message_type' => 'text',
                     'direction' => 'outbound',
                     'message' => $message,
                     'resolved_by' => 'system',
@@ -81,6 +87,41 @@ class WaGateway
             return false;
         } catch (\Exception $e) {
             Log::error("Baileys API - Gagal Offer: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    // =======================================================
+    // INI FUNGSI YANG HILANG DAN BIKIN JOB FAIL! KITA KEMBALIKAN!
+    // =======================================================
+    public static function sendMessage(string $phone, string $message, ?int $serviceOrderId = null, string $intent = 'notification'): bool
+    {
+        $endpoint = self::getBaseUrl() . '/send-message';
+
+        try {
+            $response = Http::withHeaders(['X-Token' => self::getToken()])
+                ->timeout(10)
+                ->post($endpoint, [
+                    'phone' => $phone,
+                    'message' => $message,
+                ]);
+
+            if ($response->successful()) {
+                ChatLog::create([
+                    'service_order_id' => $serviceOrderId,
+                    'phone' => $phone,
+                    'sender_name' => 'AI Assistant',
+                    'message_type' => 'text',
+                    'direction' => 'outbound',
+                    'message' => $message,
+                    'resolved_by' => 'system',
+                    'final_intent' => $intent
+                ]);
+                return true;
+            }
+            return false;
+        } catch (\Exception $e) {
+            Log::error("Baileys API - Gagal Send Message: " . $e->getMessage());
             return false;
         }
     }

@@ -15,8 +15,5 @@ class ServiceOrderCreated
      *
      * @param \App\Models\ServiceOrder $serviceOrder
      */
-    public function __construct(
-        public ServiceOrder $serviceOrder,
-    ) {
-    }
+    public function __construct(public ServiceOrder $serviceOrder,) {}
 }

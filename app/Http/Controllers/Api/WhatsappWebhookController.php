@@ -39,6 +39,9 @@ class WhatsappWebhookController extends Controller
         // 5. SIMPAN KE DB DULU DENGAN STATUS "PENDING"
         $chatLog = ChatLog::create([
             'service_order_id' => $serviceOrder?->id, 
+            'phone' => $rawPhone,
+            'sender_name' => $request->pushName ?? 'Pelanggan',
+            'message_type' => $request->type ?? 'text',
             'direction' => 'inbound',
             'message' => $originalMessage,
             'resolved_by' => 'pending', 

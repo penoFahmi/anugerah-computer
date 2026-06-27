@@ -14,6 +14,7 @@ use Inertia\Inertia;
 use Illuminate\Http\Request;
 use App\Services\WaGateway;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Spatie\Permission\Models\Role;
 
 class ServiceOrderController extends Controller
 {
@@ -36,7 +37,7 @@ class ServiceOrderController extends Controller
         if (!empty($filters['search'])) {
             $search = $filters['search'];
             $cleanSearch = preg_replace('/[^0-9]/', '', $search);
-            
+
             // Logika ubah awalan 0 jadi 62 untuk pencarian
             $searchPhone = $search;
             if (!empty($cleanSearch)) {
@@ -47,10 +48,10 @@ class ServiceOrderController extends Controller
 
             $query->where(function ($q) use ($search, $searchPhone) {
                 $q->where('order_number', 'like', "%{$search}%")
-                  ->orWhereHas('customer', function ($qCustomer) use ($search, $searchPhone) {
-                      $qCustomer->where('name', 'like', "%{$search}%")
-                                ->orWhere('phone', 'like', "%{$searchPhone}%");
-                  });
+                    ->orWhereHas('customer', function ($qCustomer) use ($search, $searchPhone) {
+                        $qCustomer->where('name', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$searchPhone}%");
+                    });
             });
         }
 
@@ -114,7 +115,7 @@ class ServiceOrderController extends Controller
         try {
             // Gunakan Transaction. Kalau ada error di tengah jalan, DB akan di-rollback!
             $serviceOrder = DB::transaction(function () use ($request) {
-                
+
                 // A. Cari pelanggan lama, atau buat baru kalau belum ada
                 $customer = Customer::firstOrCreate(
                     ['phone' => $request->phone],
@@ -134,19 +135,19 @@ class ServiceOrderController extends Controller
 
                 // C. Generate Nomor Antrean/Nota Aman dari Duplikat
                 $datePrefix = 'SRV-' . now()->format('Ymd') . '-';
-                
+
                 $lastOrder = ServiceOrder::where('order_number', 'like', $datePrefix . '%')
                     ->orderBy('order_number', 'desc')
                     ->lockForUpdate() // Kunci DB sedetik agar tidak ada tabrakan nomor antrean
                     ->first();
-                    
+
                 $nextSequence = $lastOrder ? (int) substr($lastOrder->order_number, -3) + 1 : 1;
                 $orderNumber = $datePrefix . str_pad($nextSequence, 3, '0', STR_PAD_LEFT);
 
                 // D. Tentukan status awal
-                $status = $request->is_technician_on_site 
-                            ? ServiceStatus::APPROVED 
-                            : ServiceStatus::WAITING_CHECKING;
+                $status = $request->is_technician_on_site
+                    ? ServiceStatus::APPROVED
+                    : ServiceStatus::WAITING_CHECKING;
 
                 // E. Simpan Servisan ke Database
                 return ServiceOrder::create([
@@ -173,7 +174,6 @@ class ServiceOrderController extends Controller
             ]);
 
             return redirect()->route('services.index');
-
         } catch (\Exception $e) {
             Inertia::flash('toast', [
                 'type' => 'error',
@@ -201,57 +201,113 @@ class ServiceOrderController extends Controller
         ]);
     }
 
-    /**
-     * 4. UPDATE: Mengubah Status / Harga dari Dashboard
+/**
+     * 4. UPDATE: Menyimpan Form Proses atau Form Edit Lengkap
      */
     public function update(UpdateServiceOrderRequest $request, ServiceOrder $serviceOrder)
     {
         $validated = $request->validated();
+        $user = auth()->user();
 
-        // Otomatis catat siapa teknisinya kalau status berubah jadi "Dikerjakan" atau "Selesai"
-        if (in_array($validated['status'], [ServiceStatus::IN_PROGRESS->value, ServiceStatus::COMPLETED->value]) && is_null($serviceOrder->technician_id)) {
-            $serviceOrder->technician_id = auth()->id();
-        }
+        // Menggunakan transaksi karena kita mungkin mengubah data di 3 tabel berbeda
+        DB::transaction(function () use ($validated, $request, $serviceOrder, $user) {
+            
+            // A. UPDATE PENUH (Hanya diproses jika form lengkap dan user adalah Admin/Pegawai)
+            if ($request->boolean('is_full_update') && $user->hasAnyRole(['administrator', 'pegawai'])) {
+                
+                // 1. Update Data Pelanggan
+                $serviceOrder->customer->update([
+                    'name' => $validated['name'],
+                    'phone' => $validated['phone'], // Mutator 628 otomatis berjalan
+                ]);
 
-        // Otomatis catat siapa kasirnya kalau status berubah jadi "Diambil"
-        if ($validated['status'] === ServiceStatus::TAKEN->value && is_null($serviceOrder->handed_over_by)) {
-            $serviceOrder->handed_over_by = auth()->id();
-        }
+                // 2. Update Data Perangkat
+                $serviceOrder->device->update([
+                    'device_type' => $validated['device_type'] ?? 'Laptop',
+                    'brand' => $validated['brand'],
+                    'model' => $validated['model'],
+                ]);
 
-        // Simpan update ke DB
-        $serviceOrder->update([
-            'status' => $validated['status'],
-            'estimated_cost' => $validated['estimated_cost'] ?? $serviceOrder->estimated_cost,
-            'technician_notes' => $validated['technician_notes'] ?? $serviceOrder->technician_notes,
-        ]);
+                // 3. Siapkan data Keluhan & Kelengkapan untuk diupdate ke tabel ServiceOrder
+                $updateData = [
+                    'complaint' => $validated['complaint'],
+                    'equipments' => $validated['equipments'] ?? [],
+                ];
+            } else {
+                $updateData = [];
+            }
+
+            // B. UPDATE OPERASIONAL (Berlaku untuk semua Role, termasuk Teknisi)
+            
+            // Auto-assign ID Teknisi jika status berubah jadi dikerjakan/selesai
+            if (in_array($validated['status'], [ServiceStatus::IN_PROGRESS->value, ServiceStatus::COMPLETED->value]) && is_null($serviceOrder->technician_id)) {
+                $updateData['technician_id'] = $user->id;
+            }
+
+            // Auto-assign ID Kasir penyerah jika status diambil
+            if ($validated['status'] === ServiceStatus::TAKEN->value && is_null($serviceOrder->handed_over_by)) {
+                $updateData['handed_over_by'] = $user->id;
+            }
+
+            // Gabungkan data operasional ke array update
+            $updateData['status'] = $validated['status'];
+            
+            // Jika form mengirimkan estimated_cost, gunakan itu. Jika tidak, pertahankan yang lama.
+            if (array_key_exists('estimated_cost', $validated)) {
+                $updateData['estimated_cost'] = $validated['estimated_cost'];
+            }
+            
+            if (array_key_exists('technician_notes', $validated)) {
+                $updateData['technician_notes'] = $validated['technician_notes'];
+            }
+
+            // EKSEKUSI UPDATE KE DATABASE (Mencegah error 'order_number' missing)
+            $serviceOrder->update($updateData);
+        });
 
         Inertia::flash('toast', [
             'type' => 'success',
-            'message' => 'Data operasional nota ' . $serviceOrder->order_number . ' berhasil diperbarui.'
+            'message' => 'Data nota ' . $serviceOrder->order_number . ' berhasil diperbarui.'
         ]);
 
         return redirect()->back();
     }
 
     /**
-     * 5. DESTROY: Menghapus Servisan
+     * DESTROY: Hanya administrator
      */
     public function destroy(ServiceOrder $serviceOrder)
     {
-        // KEAMANAN: Jangan izinkan hapus kalau unit sedang dibongkar/dikerjakan
-        if (in_array($serviceOrder->status->value, ['in_progress', 'completed', 'taken'])) {
+        // Cek role dulu
+        if (!auth()->user()->hasRole('administrator')) {
             Inertia::flash('toast', [
-                'type' => 'error',
-                'message' => 'Servisan yang sedang diproses atau selesai tidak dapat dihapus!'
+                'type'    => 'error',
+                'message' => 'Hanya administrator yang dapat menghapus data servisan.',
             ]);
             return redirect()->back();
         }
 
+        // Guard status
+        $blockedStatuses = [
+            ServiceStatus::IN_PROGRESS->value,
+            ServiceStatus::COMPLETED->value,
+            ServiceStatus::TAKEN->value,
+        ];
+
+        if (in_array($serviceOrder->status->value, $blockedStatuses)) {
+            Inertia::flash('toast', [
+                'type'    => 'error',
+                'message' => 'Servisan yang sedang diproses atau sudah selesai tidak dapat dihapus.',
+            ]);
+            return redirect()->back();
+        }
+
+        $orderNumber = $serviceOrder->order_number;
         $serviceOrder->delete();
 
         Inertia::flash('toast', [
-            'type' => 'info',
-            'message' => 'Servisan ' . $serviceOrder->order_number . ' telah dihapus.'
+            'type'    => 'info',
+            'message' => "Servisan {$orderNumber} telah dihapus.",
         ]);
 
         return redirect()->route('services.index');
@@ -263,7 +319,7 @@ class ServiceOrderController extends Controller
     public function searchCustomer(Request $request)
     {
         $phone = $request->query('phone');
-        
+
         // Baru cari ke DB kalau user udah ngetik minimal 4 angka
         if (strlen($phone) < 4) {
             return response()->json([]);
@@ -273,7 +329,7 @@ class ServiceOrderController extends Controller
             ->where('phone', 'like', "%{$phone}%")
             ->limit(5)
             ->get();
-            
+
         return response()->json($customers);
     }
 
@@ -293,7 +349,7 @@ class ServiceOrderController extends Controller
 
         // Ubah Status
         $serviceOrder->update(['status' => ServiceStatus::WAITING_APPROVAL]);
-        
+
         // Tembak Gateway WhatsApp
         WaGateway::sendOffer($serviceOrder);
 

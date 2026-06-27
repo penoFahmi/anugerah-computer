@@ -24,6 +24,10 @@ export interface ServiceListItem {
     status_label: string;
     estimated_cost: string | number | null;
     created_at: string;
+    device_type?: string;
+    brand?: string;
+    model?: string;
+    equipments?: string[];
 }
 
 export interface PaginationLink {

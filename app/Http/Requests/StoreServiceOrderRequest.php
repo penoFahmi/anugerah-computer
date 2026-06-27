@@ -17,13 +17,11 @@ class StoreServiceOrderRequest extends FormRequest
         return [
             // Identitas Pelanggan
             'phone' => ['required', 'string', 'max:25'],
-            // Nama wajib diisi JIKA ini pelanggan baru (customer_id kosong)
             'name' => ['required_without:customer_id', 'nullable', 'string', 'max:150'],
             'customer_id' => ['nullable', 'exists:customers,id'],
 
             // Identitas Perangkat
             'device_id' => ['nullable', 'exists:devices,id'],
-            // Jenis perangkat wajib JIKA ini laptop baru (device_id kosong)
             'device_type' => ['required_without:device_id', 'nullable', 'string', 'max:50'],
             'brand' => ['nullable', 'string', 'max:50'],
             'model' => ['nullable', 'string', 'max:100'],

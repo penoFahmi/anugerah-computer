@@ -7,7 +7,7 @@ use App\Services\WaGateway;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage; 
+use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class GenerateReceiptPdf implements ShouldQueue
@@ -32,16 +32,18 @@ class GenerateReceiptPdf implements ShouldQueue
         try {
             // 1. BUAT PDF
             $pdf = Pdf::loadView('pdf.service_receipt', ['order' => $serviceOrder]);
-            
-            $fileName = "nota-{$serviceOrder->order_number}.pdf";
-            $folderPath = "public/documents/receipts/";
-            
-            // 2. SIMPAN PDF KE STORAGE
-            Storage::put($folderPath . $fileName, $pdf->output());
-            Log::info("Nota PDF untuk {$serviceOrder->order_number} berhasil dibuat.");
 
-            // 3. KIRIM WA SETELAH PDF BENAR-BENAR TERSIMPAN (Tanpa perlu sleep!)
-            $publicPdfUrl = asset(Storage::url("documents/receipts/{$fileName}"));
+            $fileName = "nota-{$serviceOrder->order_number}.pdf";
+
+            $folderPath = "documents/receipts/";
+
+            // 2. SIMPAN PDF SECARA TEGAS KE DISK 'PUBLIC'
+            Storage::disk('public')->put($folderPath . $fileName, $pdf->output());
+            Log::info("Nota PDF untuk {$serviceOrder->order_number} berhasil dibuat di disk public.");
+
+            // 3. KIRIM WA
+            $publicPdfUrl = asset(Storage::url($folderPath . $fileName));
+
             WaGateway::sendReceiptWithPdf($serviceOrder, $publicPdfUrl);
 
         } catch (\Exception $e) {

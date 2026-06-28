@@ -63,6 +63,8 @@ return 'Selanjutnya ›';
         switch (type) {
             case 'pegawai':
                 return 'default';
+            case 'customer':
+                return 'primary';
             case 'servis':
                 return 'secondary';
             default:

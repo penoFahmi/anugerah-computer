@@ -184,7 +184,7 @@ class ServiceOrderController extends Controller
     }
 
     /**
-     * 3. SHOW: Menampilkan Detail 1 Servisan Penuh
+     * 3. SHOW: Menampilkan halaman detail full & Navigasi Cepat
      */
     public function show(ServiceOrder $serviceOrder)
     {
@@ -196,8 +196,26 @@ class ServiceOrderController extends Controller
             'handedOverBy:id,name'
         ]);
 
+        // AMBIL DATA NAVIGASI CEPAT (15 Servisan terakhir yang masih aktif)
+        $recentServices = ServiceOrder::with(['customer', 'device'])
+            ->where('id', '!=', $serviceOrder->id) // Kecualikan yang sedang dibuka
+            ->whereNotIn('status', ['taken', 'cancelled']) // Sembunyikan yang sudah diambil/batal
+            ->orderBy('updated_at', 'desc') // Urutkan dari yang terakhir diutak-atik
+            ->limit(15)
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'order_number' => $item->order_number,
+                    'customer_name' => $item->customer->name,
+                    'device_name' => $item->device->brand . ' ' . $item->device->model,
+                    'status_label' => $item->status->label(),
+                ];
+            });
+
         return Inertia::render('services/detail', [
             'serviceOrder' => $serviceOrder,
+            'recentServices' => $recentServices, // Kirim ke React
         ]);
     }
 
@@ -209,7 +227,6 @@ class ServiceOrderController extends Controller
         $validated = $request->validated();
         $user = auth()->user();
 
-        // Menggunakan transaksi karena kita mungkin mengubah data di 3 tabel berbeda
         DB::transaction(function () use ($validated, $request, $serviceOrder, $user) {
             
             // A. UPDATE PENUH (Hanya diproses jika form lengkap dan user adalah Admin/Pegawai)
@@ -261,7 +278,6 @@ class ServiceOrderController extends Controller
                 $updateData['technician_notes'] = $validated['technician_notes'];
             }
 
-            // EKSEKUSI UPDATE KE DATABASE (Mencegah error 'order_number' missing)
             $serviceOrder->update($updateData);
         });
 

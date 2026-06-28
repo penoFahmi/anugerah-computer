@@ -11,47 +11,51 @@ use Illuminate\Http\Request;
 
 class WhatsappWebhookController extends Controller
 {
-    public function handle(Request $request): JsonResponse 
+public function handle(Request $request): JsonResponse 
     {
-        // 1. Validasi Keamanan Token
-        $expectedToken = config('services.wa_gateway.token');
-        if ($request->header('X-Token') !== $expectedToken) {
-            return response()->json(['error' => 'Unauthorized Access'], 401);
+        try {
+            $expectedToken = config('services.wa_gateway.token');
+            if ($request->header('X-Token') !== $expectedToken) {
+                return response()->json(['error' => 'Unauthorized Access'], 401);
+            }
+
+            $rawPhone = $request->phone;
+            $originalMessage = trim($request->message);
+            $isFromMe = $request->boolean('isFromMe');
+            
+            $searchPhone = str_starts_with($rawPhone, '62') ? '0' . substr($rawPhone, 2) : $rawPhone;
+
+            // Cari nota
+            $serviceOrder = ServiceOrder::whereHas('customer', function ($query) use ($rawPhone, $searchPhone) {
+                $query->where('phone', $rawPhone)->orWhere('phone', $searchPhone);
+            })->where('status', 'waiting_approval')->latest()->first();
+
+            // SIMPAN KE DB
+            $chatLog = ChatLog::create([
+                'service_order_id' => $serviceOrder?->id, 
+                'phone' => $rawPhone,
+                // Jika dari Admin HP, beri nama "Admin". Jika dari pelanggan, pakai PushName.
+                'sender_name' => $isFromMe ? 'Admin (Via HP)' : ($request->pushName ?? 'Pelanggan'),
+                'message_type' => $request->type ?? 'text',
+                // Atur arah panah pesannya
+                'direction' => $isFromMe ? 'outbound' : 'inbound',
+                'message' => $originalMessage,
+                // Jika dari Admin, tandai selesai. Jika pelanggan, beri pending untuk AI.
+                'resolved_by' => $isFromMe ? 'human' : 'pending', 
+                'final_intent' => $isFromMe ? 'manual_reply' : 'analyzing',
+            ]);
+
+            // HANYA SURUH AI MIKIR JIKA INI PESAN DARI PELANGGAN!
+            if (!$isFromMe) {
+                ProcessInboundWaMessage::dispatch($chatLog, $serviceOrder, $rawPhone);
+            }
+
+            return response()->json(['status' => 'success'], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Webhook Error: ' . $e->getMessage());
+            // Tetap jawab Sukses agar Baileys tidak mengira gagal
+            return response()->json(['status' => 'error_recorded'], 200);
         }
-
-        // 2. Validasi Input Dasar
-        $request->validate([
-            'phone' => ['required', 'string'],
-            'message' => ['required', 'string', 'max:20000'],
-        ]);
-
-        $rawPhone = $request->phone;
-        $originalMessage = trim($request->message);
-        
-        // 3. Normalisasi Nomor HP untuk pencarian (62 jadi 0)
-        $searchPhone = str_starts_with($rawPhone, '62') ? '0' . substr($rawPhone, 2) : $rawPhone;
-
-        // 4. Cari Tiket Servis Aktif (Hanya yang statusnya waiting_approval)
-        $serviceOrder = ServiceOrder::whereHas('customer', function ($query) use ($rawPhone, $searchPhone) {
-            $query->where('phone', $rawPhone)->orWhere('phone', $searchPhone);
-        })->where('status', 'waiting_approval')->latest()->first();
-
-        // 5. SIMPAN KE DB DULU DENGAN STATUS "PENDING"
-        $chatLog = ChatLog::create([
-            'service_order_id' => $serviceOrder?->id, 
-            'phone' => $rawPhone,
-            'sender_name' => $request->pushName ?? 'Pelanggan',
-            'message_type' => $request->type ?? 'text',
-            'direction' => 'inbound',
-            'message' => $originalMessage,
-            'resolved_by' => 'pending', 
-            'final_intent' => 'analyzing',
-        ]);
-
-        // 6. LEMPAR TUGAS AI KE BACKGROUND JOB (Biar server tidak nunggu lama)
-        ProcessInboundWaMessage::dispatch($chatLog, $serviceOrder, $rawPhone);
-
-        // 7. LANGSUNG JAWAB OK KE SERVER WA SECARA INSTAN! ⚡
-        return response()->json(['status' => 'queued_for_processing'], 200);
     }
 }

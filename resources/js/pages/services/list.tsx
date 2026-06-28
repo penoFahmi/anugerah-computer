@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useDebouncedCallback } from 'use-debounce';
 import Heading from '@/components/heading';
+import { ServiceAlert } from '@/components/services/service-alert'; 
 import { ServiceFilterBar } from '@/components/services/service-filter-bar';
 import { ServiceFormModal } from '@/components/services/service-form-modal';
 import { ServiceProcessModal } from '@/components/services/service-process-modal';
@@ -19,7 +20,8 @@ export default function ServicesIndex({ serviceOrders, filters }: ServiceIndexPr
 
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [selectedServiceToProcess, setSelectedServiceToProcess] = useState<ServiceListItem | null>(null);
-    const [selectedServiceToChat, setSelectedServiceToChat] = useState<ServiceListItem | null>(null); // <--- STATE CHAT BARU
+    const [selectedServiceToChat, setSelectedServiceToChat] = useState<ServiceListItem | null>(null);
+    const [selectedServiceToDelete, setSelectedServiceToDelete] = useState<ServiceListItem | null>(null);
 
     const [filterState, setFilterState] = useState({
         search: filters.search ?? '',
@@ -93,6 +95,7 @@ export default function ServicesIndex({ serviceOrders, filters }: ServiceIndexPr
                         serviceOrders={serviceOrders}
                         onProcessClick={(service) => setSelectedServiceToProcess(service)}
                         onChatClick={(service) => setSelectedServiceToChat(service)} 
+                        onDeleteClick={(service) => setSelectedServiceToDelete(service)} 
                     />
                 </div>
             </div>
@@ -111,6 +114,14 @@ export default function ServicesIndex({ serviceOrders, filters }: ServiceIndexPr
                 isOpen={!!selectedServiceToChat} 
                 onClose={() => setSelectedServiceToChat(null)} 
                 service={selectedServiceToChat} 
+            />
+
+            {/* MODAL HAPUS */}
+            <ServiceAlert 
+                open={!!selectedServiceToDelete} 
+                onOpenChange={(val) => !val && setSelectedServiceToDelete(null)} 
+                type="delete" 
+                service={selectedServiceToDelete} 
             />
         </>
     );

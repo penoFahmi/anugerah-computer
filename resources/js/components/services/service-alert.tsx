@@ -18,7 +18,7 @@ interface Props {
     service: ServiceListItem | null;
 }
 
-export function ServisAlert({ open, onOpenChange, type, service }: Props) {
+export function ServiceAlert({ open, onOpenChange, type, service }: Props) {
     if (!service) return null;
 
     const handleConfirm = () => {

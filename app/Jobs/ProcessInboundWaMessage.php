@@ -27,14 +27,14 @@ class ProcessInboundWaMessage implements ShouldQueue
 
     /**
      * MENGAMBIL INGATAN MASA LALU (MEMORY)
-     * Mengambil 5 chat terakhir dari pelanggan ini agar AI paham konteks
+     * Mengambil 6 chat terakhir dari pelanggan ini agar AI paham konteks
      */
     private function getChatHistory(): array
     {
         $logs = ChatLog::where('phone', $this->rawPhone)
-            ->where('id', '<', $this->chatLog->id) // Ambil chat sebelum pesan yang sekarang
+            ->where('id', '<', $this->chatLog->id)
             ->latest()
-            ->take(6) // Ingat 6 pesan terakhir
+            ->take(6)
             ->get()
             ->reverse();
 
@@ -60,16 +60,19 @@ class ProcessInboundWaMessage implements ShouldQueue
                 // Berikan ingatan masa lalu ke Agen CS
                 $history = $this->getChatHistory();
                 
-                $agent = new CustomerService($history); // Agen sekarang punya ingatan!
+                $agent = new CustomerService($history);
                 $aiResponse = (string) $agent->prompt($originalMessage);
 
                 $this->chatLog->update([
                     'resolved_by' => 'agent_customer_service',
-                    'llm_raw_response' => $aiResponse,
+                    // Disimpan sebagai JSON array karena field di DB adalah JSON
+                    'llm_raw_response' => json_encode(['text' => $aiResponse]), 
                     'final_intent' => 'general_cs'
                 ]);
 
+                // Kirim balasan ke WA
                 WaGateway::sendMessage($this->rawPhone, $aiResponse, null, 'general_cs_reply');
+                
             } catch (\Throwable $e) {
                 Log::error('Job CS AI Error: ' . $e->getMessage());
                 $this->chatLog->update(['resolved_by' => 'human', 'final_intent' => 'unclear']);
@@ -91,31 +94,35 @@ class ProcessInboundWaMessage implements ShouldQueue
             $this->chatLog->update([
                 'resolved_by' => 'agent_intent_analyzer',
                 'final_intent' => $intent,
-                'llm_raw_response' => $reasoning 
+                'llm_raw_response' => json_encode(['reasoning' => $reasoning]) 
             ]);
 
+            // Update pesan terakhir pelanggan di tabel ServiceOrder
             $this->serviceOrder->update([
                 'last_customer_message' => $originalMessage,
             ]);
 
-            // 2. LOGIC PERUBAHAN STATUS
+            // 2. LOGIC PERUBAHAN STATUS & BALASAN OTOMATIS
             if ($intent === 'approve') {
                 $this->serviceOrder->update(['status' => ServiceStatus::APPROVED]);
                 $balasan = "Baik Kak, terima kasih atas konfirmasinya. Unit *{$this->serviceOrder->device->brand}* segera kami kerjakan. Kami akan kabari kembali jika sudah selesai. 🛠️";
+                
                 WaGateway::sendMessage($this->rawPhone, $balasan, $this->serviceOrder->id, 'intent_approve_reply');
                 
             } elseif ($intent === 'cancel') {
                 $this->serviceOrder->update(['status' => ServiceStatus::CANCELLED]);
                 $balasan = "Baik Kak, kami paham. Servis unit *{$this->serviceOrder->device->brand}* kami batalkan. Silakan datang ke toko untuk mengambil unit Anda. Terima kasih! 🙏";
+                
                 WaGateway::sendMessage($this->rawPhone, $balasan, $this->serviceOrder->id, 'intent_cancel_reply');
                 
             } else {
-                // Jika pelanggan nanya detail harga, beri ingatan ke Agen
+                // Jika pelanggan negosiasi harga atau bertanya di luar setuju/batal
                 $history = $this->getChatHistory();
                 $contextPrompt = "Info Sistem: Pelanggan tanya tentang nota " .
                     $this->serviceOrder->order_number . " (Unit: " . $this->serviceOrder->device->brand . "). Balas ramah pesan ini: '{$originalMessage}'";
 
                 $aiResponse = (string) (new CustomerService($history))->prompt($contextPrompt);
+                
                 WaGateway::sendMessage($this->rawPhone, $aiResponse, $this->serviceOrder->id, 'intent_negotiate_reply');
             }
         } catch (\Throwable $e) {

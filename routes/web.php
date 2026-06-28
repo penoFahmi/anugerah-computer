@@ -22,9 +22,9 @@ Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
     Route::post('/services/{serviceOrder}/trigger-wa', [ServiceOrderController::class, 'triggerWhatsappOffer'])->name('services.trigger-wa');
     Route::get('/services/{serviceOrder}/print-ticket', [ServiceOrderController::class, 'printTicketPDF'])->name('services.print-ticket');
     Route::get('/api/search-customer', [ServiceOrderController::class, 'searchCustomer'])->name('api.search-customer');
-    Route::resource('services', ServiceOrderController::class)->only([
+    Route::resource('services', ServiceOrderController::class)->parameters([
         'services' => 'serviceOrder'
-        ])->only([
+    ])->only([
         'index',
         'store',
         'show',

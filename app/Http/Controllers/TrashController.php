@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Customer;
+use App\Models\ServiceOrder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -66,6 +67,28 @@ class TrashController extends Controller
             });
             $trashItems = $trashItems->merge($customers);
         }
+
+        // Sampah servis
+        $serviceQuery = ServiceOrder::onlyTrashed();
+        if ($typeFilter === 'all' || $typeFilter === 'servis') {
+            if ($search) {
+                $serviceQuery->where(function ($q) use ($search) {
+                    $q->where('order_number', 'like', "%{$search}%")
+                        ->orWhere('customer_id', 'like', "%{$search}%");
+                });
+            }
+            $services = $serviceQuery->get()->map(function ($service) {
+                return [
+                    'id' => $service->id,
+                    'type' => 'servis',
+                    'category_label' => 'Servis',
+                    'data_info' => $service->order_number . ' (' . ($service->customer->name ?? 'N/A') . ')',
+                    'deleted_timestamp' => $service->deleted_at,
+                    'deleted_at' => $service->deleted_at->format('d M Y, H:i'),
+                ];
+            });
+            $trashItems = $trashItems->merge($services);
+        }
         // Nanti tambahkan $customersQuery, $servicesQuery di sini dengan pola yang sama...
 
         // 2. Sorting Global (Terbaru dihapus di atas)
@@ -123,7 +146,13 @@ class TrashController extends Controller
             
             $record->restore();
             $message = 'Data Pelanggan berhasil dipulihkan.';
-        } else {
+        } else if ($type === 'servis') {
+            $record = ServiceOrder::onlyTrashed()->findOrFail($id);
+            $record->restore();
+            $message = 'Data Servisan berhasil dipulihkan.';
+        }
+
+        else {
             abort(404, 'Tipe data tidak dikenali sistem.');
         }
         // else if ($type === 'servis') { ... } 
@@ -138,7 +167,6 @@ class TrashController extends Controller
 
     public function forceDelete(Request $request, $type, $id)
     {
-        // Logika Universal: Cek tipe data apa yang mau dihapus permanen
         if ($type === 'pegawai') {
             $record = User::onlyTrashed()->findOrFail($id);
             $record->forceDelete();
@@ -148,7 +176,13 @@ class TrashController extends Controller
             $record = Customer::onlyTrashed()->findOrFail($id);
             $record->forceDelete();
             $message = 'Data Pelanggan beserta riwayat servisnya dihapus permanen.';
-        } else {
+        } 
+        else if ($type === 'servis') {
+            $record = ServiceOrder::onlyTrashed()->findOrFail($id);
+            $record->forceDelete();
+            $message = 'Data Servisan dihapus permanen.';
+        }
+        else {
             abort(404, 'Tipe data tidak dikenali sistem.');
         }
 

@@ -8,6 +8,7 @@ use App\Http\Controllers\ConfigWaController;
 use App\Http\Controllers\TrashController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\NotificationController;
 
 Route::inertia('/', 'welcome', [
     // 'canRegister' => Features::enabled(Features::registration()),
@@ -33,6 +34,12 @@ Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
     ]);
 
     Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
+
+
+    // ROUTES UNTUK NOTIFIKASI
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
+    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy'])->name('notifications.destroy');
 });
 
 // Routes untuk administrator

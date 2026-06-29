@@ -42,6 +42,8 @@ class HandleInertiaRequests extends Middleware
                 // 'user' => $request->user(),
                 'user' => $request->user() ? array_merge($request->user()->toArray(), [
                     'roles' => $request->user()->getRoleNames(),
+                    'notifications' => $request->user()->notifications()->take(10)->get(),
+                    'unread_notifications_count' => $request->user()->unreadNotifications()->count(),
                 ]) : null,
 
             ],

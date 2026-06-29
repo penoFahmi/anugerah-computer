@@ -8,6 +8,7 @@ use App\Http\Requests\StoreServiceOrderRequest;
 use App\Http\Requests\UpdateServiceOrderRequest;
 use App\Models\Customer;
 use App\Models\Device;
+use App\Models\User;
 use App\Models\ServiceOrder;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -15,6 +16,8 @@ use Illuminate\Http\Request;
 use App\Services\WaGateway;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Spatie\Permission\Models\Role;
+use Illuminate\Support\Facades\Notification;
+use App\Notifications\NewServiceOrderNotification;
 
 class ServiceOrderController extends Controller
 {
@@ -166,6 +169,19 @@ class ServiceOrderController extends Controller
 
             // F. Jalankan Event (Bikin PDF & Kirim WA di Background)
             ServiceOrderCreated::dispatch($serviceOrder);
+
+             // =======================================================
+            // G. KIRIM NOTIFIKASI KE TEKNISI DAN ADMIN LAIN
+            // =======================================================
+            // Cari user yang jabatannya teknisi atau administrator, KECUALI yang sedang login (bikin servisan)
+            $usersToNotify = User::role(['teknisi', 'administrator'])
+                ->where('id', '!=', auth()->id())
+                ->get();
+
+            Notification::send(
+                $usersToNotify, 
+                new NewServiceOrderNotification($serviceOrder, auth()->user()->name)
+            );
 
             // G. Beri Notifikasi Sukses ke React
             Inertia::flash('toast', [

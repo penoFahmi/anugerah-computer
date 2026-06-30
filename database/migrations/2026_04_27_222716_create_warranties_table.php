@@ -20,6 +20,7 @@ return new class extends Migration
             $table->date('end_date')->index();
             
             $table->string('status', 30)->default('active')->index();
+            $table->integer('claim_count')->default(0);
             $table->text('notes')->nullable();
             
             $table->timestamps();

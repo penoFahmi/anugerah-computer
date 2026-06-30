@@ -4,112 +4,216 @@
     <meta charset="UTF-8">
     <title>Nota Tanda Terima - {{ $order->order_number }}</title>
     <style>
+        @page { 
+            margin: 15px; 
+        }
         body {
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 12px;
-            color: #333;
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            font-size: 11px;
+            color: #000;
             line-height: 1.4;
             margin: 0;
-            padding: 10px;
+            padding: 0;
+        }
+        .ticket { 
+            width: 100%; 
+            max-width: 320px; 
+            margin: 0 auto; 
         }
         .text-center { text-align: center; }
         .text-right { text-align: right; }
+        .text-left { text-align: left; }
         .bold { font-weight: bold; }
-        .header {
-            margin-bottom: 15px;
-            border-bottom: 1px dashed #000;
+        .uppercase { text-transform: uppercase; }
+        
+        .border-top { border-top: 1px dashed #000; }
+        .border-bottom { border-bottom: 1px dashed #000; }
+        .p-y { padding: 8px 0; }
+        .m-y { margin: 8px 0; }
+        
+        .header h2 { font-size: 16px; font-weight: bold; margin: 0 0 4px 0; letter-spacing: 1px; }
+        .header p { margin: 2px 0; font-size: 10px; }
+        
+        table { width: 100%; border-collapse: collapse; }
+        td { vertical-align: top; padding: 3px 0; font-size: 11px; }
+        
+        .w-30 { width: 30%; }
+        .w-5 { width: 5%; }
+        .w-65 { width: 65%; }
+        
+        .cost-table td { padding: 4px 0; }
+        .total-row td { 
+            font-weight: bold; 
+            font-size: 12px; 
+            border-top: 1px solid #000; 
+            padding-top: 6px; 
+            margin-top: 2px;
+        }
+        
+        .notes-box { 
+            border: 1px solid #000; 
+            padding: 6px; 
+            margin-top: 8px; 
+            font-size: 10px; 
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+
+        /* Tatanan untuk Blok Tanda Tangan */
+        .signature-block {
+            margin-top: 15px;
+            text-align: center;
+        }
+        .signature-block td {
+            width: 50%;
             padding-bottom: 5px;
         }
-        .header h2 { margin: 0; font-size: 16px; }
-        .header p { margin: 3px 0; font-size: 11px; }
-        .info-table, .item-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 15px;
-        }
-        .info-table td { padding: 2px 0; vertical-align: top; }
-        .item-table th {
-            border-bottom: 1px dashed #000;
-            border-top: 1px dashed #000;
-            padding: 5px 0;
-            text-align: left;
-        }
-        .item-table td { padding: 5px 0; vertical-align: top; }
-        .footer {
-            margin-top: 20px;
-            border-top: 1px dashed #000;
-            padding-top: 5px;
-            font-size: 10px;
-        }
+        
+        .footer { font-size: 9px; text-align: center; margin-top: 15px; }
     </style>
 </head>
 <body>
 
-    <div class="header text-center">
+@php
+    $isFinal = $order->final_cost > 0;
+    $cost = $isFinal ? $order->final_cost : $order->estimated_cost;
+    $dp = $order->down_payment ?? 0;
+    $remaining = $cost - $dp;
+    if ($remaining < 0) $remaining = 0;
+    
+    // Tentukan siapa kasirnya (Jika sudah diambil, tampilkan nama kasir yang menyerahkan)
+    $isTaken = $order->status->value === 'taken';
+    $picName = $isTaken ? ($order->handedOverBy->name ?? 'Kasir') : ($order->createdBy->name ?? 'Kasir');
+    $picRole = $isTaken ? 'Diserahkan Oleh,' : 'Penerima / Kasir,';
+@endphp
+
+<div class="ticket">
+    <!-- HEADER TOKO -->
+    <div class="header text-center border-bottom p-y">
         <h2>ANUGERAH COMPUTER</h2>
-        <p>Jalan Sepakat 2 Samping Blok E, Ayani 2</p>
+        <p>Jl. Sepakat 2 Samping Blok E, Ayani 2</p>
         <p>WhatsApp: 0812-3456-7890</p>
     </div>
 
-    <table class="info-table">
-        <tr>
-            <td class="bold" width="30%">No. Nota</td>
-            <td width="5%">:</td>
-            <td class="bold" width="65%">{{ $order->order_number }}</td>
-        </tr>
-        <tr>
-            <td>Tanggal</td>
-            <td>:</td>
-            <td>{{ $order->created_at->format('d M Y, H:i') }} WIB</td>
-        </tr>
-        <tr>
-            <td>Pelanggan</td>
-            <td>:</td>
-            <td>{{ $order->customer->name }} ({{ $order->customer->phone }})</td>
-        </tr>
-    </table>
+    <!-- INFORMASI NOTA -->
+    <div class="border-bottom p-y">
+        <table>
+            <tr>
+                <td class="w-30 bold">NO. NOTA</td>
+                <td class="w-5">:</td>
+                <td class="w-65 bold">{{ $order->order_number }}</td>
+            </tr>
+            <tr>
+                <td>Tanggal</td>
+                <td>:</td>
+                <td>{{ $order->created_at->format('d M Y, H:i') }}</td>
+            </tr>
+        </table>
+    </div>
 
-    <table class="item-table">
-        <thead>
+    <!-- INFORMASI PELANGGAN & UNIT -->
+    <div class="border-bottom p-y">
+        <table>
             <tr>
-                <th>Detail Unit Perbaikan & Keluhan</th>
+                <td class="w-30">Pelanggan</td>
+                <td class="w-5">:</td>
+                <td class="w-65 bold">{{ $order->customer->name }}</td>
             </tr>
-        </thead>
-        <tbody>
             <tr>
-                <td>
-                    <span class="bold">{{ $order->device->brand }} {{ $order->device->model }}</span> ({{ $order->device->device_type }})
-                    <br>
-                    <span style="font-style: italic;">Keluhan: "{{ $order->complaint }}"</span>
-                    @if($order->equipments)
-                        <br>
-                        <span style="font-size: 11px; color: #555;">Kelengkapan: {{ implode(', ', $order->equipments) }}</span>
-                    @endif
-                </td>
+                <td>No. WA</td>
+                <td>:</td>
+                <td>{{ $order->customer->phone }}</td>
             </tr>
-        </tbody>
-    </table>
+            <tr>
+                <td>Unit</td>
+                <td>:</td>
+                <td class="bold">{{ $order->device->brand }} {{ $order->device->model }} ({{ $order->device->device_type }})</td>
+            </tr>
+            <tr>
+                <td>Keluhan</td>
+                <td>:</td>
+                <td>{{ $order->complaint }}</td>
+            </tr>
+            @if(!empty($order->equipments) && is_array($order->equipments) && count($order->equipments) > 0)
+            <tr>
+                <td>Kelengkapan</td>
+                <td>:</td>
+                <td>{{ implode(', ', $order->equipments) }}</td>
+            </tr>
+            @endif
+        </table>
+    </div>
 
-    <table class="info-table" style="margin-top: 10px;">
-        @if($order->down_payment > 0)
+    <!-- STATUS SAAT INI -->
+    <div class="text-center border-bottom p-y">
+        <span>Status Unit Saat Ini:</span><br>
+        <span class="bold uppercase" style="font-size: 13px;">*** {{ $order->status->label() }} ***</span>
+    </div>
+
+    <!-- RINCIAN BIAYA (KALKULATOR) -->
+    <div class="border-bottom p-y">
+        <table class="cost-table">
             <tr>
-                <td width="65%" class="text-right">Uang Muka (DP):</td>
-                <td width="35%" class="text-right bold">Rp {{ number_format($order->down_payment, 0, ',', '.') }}</td>
+                <td width="60%">{{ $isFinal ? 'Biaya Akhir (Final)' : 'Estimasi Biaya' }}</td>
+                <td width="5%">:</td>
+                <td width="35%" class="text-right">Rp {{ number_format($cost, 0, ',', '.') }}</td>
             </tr>
-        @endif
+            <tr>
+                <td>Telah Dibayar (DP)</td>
+                <td>:</td>
+                <td class="text-right">Rp {{ number_format($dp, 0, ',', '.') }}</td>
+            </tr>
+            <tr class="total-row">
+                <td>SISA TAGIHAN</td>
+                <td>:</td>
+                <td class="text-right">Rp {{ number_format($remaining, 0, ',', '.') }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- CATATAN TEKNISI -->
+    @if($order->technician_notes)
+    <div class="notes-box">
+        <div class="bold" style="margin-bottom: 3px;">Catatan Teknisi:</div>
+        {{ $order->technician_notes }}
+    </div>
+    @endif
+
+    <!-- INFORMASI GARANSI -->
+    @if($isTaken && $order->warranty)
+    <div class="notes-box" style="border: 1px dashed #000; text-align: center;">
+        <div class="bold uppercase">*** BUKTI GARANSI ***</div>
+        <div style="margin: 3px 0;">Kode: <span class="bold">{{ $order->warranty->warranty_code }}</span></div>
+        <div>Berlaku s/d: <span class="bold">{{ $order->warranty->end_date->format('d M Y') }}</span></div>
+    </div>
+    @endif
+
+    <!-- BLOK TANDA TANGAN (SERAH TERIMA) -->
+    <table class="signature-block">
         <tr>
-            <td width="65%" class="text-right">Estimasi Biaya:</td>
-            <td width="35%" class="text-right bold">
-                {{ $order->estimated_cost > 0 ? 'Rp ' . number_format($order->estimated_cost, 0, ',', '.') : 'Menunggu Pengecekan' }}
+            <td>
+                Pelanggan,
+                <br><br><br><br>
+                ( {{ $order->customer->name }} )
+            </td>
+            <td>
+                {{ $picRole }}
+                <br><br><br><br>
+                ( {{ $picName }} )
             </td>
         </tr>
     </table>
 
-    <div class="footer text-center">
-        <p class="bold">TERIMA KASIH ATAS KEPERCAYAAN ANDA</p>
-        <p>Nota digital ini sah dan dikirim otomatis via WhatsApp Gateway.</p>
-        <p>Silakan simpan file PDF ini sebagai bukti pengambilan unit.</p>
+    <!-- FOOTER SYARAT & KETENTUAN -->
+    <div class="footer">
+        <div class="border-bottom" style="margin-bottom: 8px;"></div>
+        <p class="bold" style="font-size: 11px;">TERIMA KASIH</p>
+        <p>1. Harap bawa nota digital/fisik ini saat pengambilan barang.</p>
+        <p>2. Barang yang tidak diambil dalam waktu 3 bulan sejak selesai, di luar tanggung jawab kami.</p>
+        <p>3. Garansi berlaku sesuai ketentuan dengan menyertakan nota & kode garansi.</p>
+        <p style="margin-top: 10px;">-- Digenerate oleh Sistem --</p>
     </div>
+</div>
 
 </body>
 </html>

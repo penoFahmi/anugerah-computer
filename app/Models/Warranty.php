@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-#[Fillable(['service_order_id', 'warranty_code', 'start_date', 'end_date', 'status', 'notes'])]
+#[Fillable(['service_order_id', 'warranty_code', 'start_date', 'end_date', 'status', 'claim_count', 'notes'])]
 class Warranty extends Model
 {
     use HasFactory;
@@ -16,6 +16,7 @@ class Warranty extends Model
         return [
             'start_date' => 'date',
             'end_date' => 'date',
+            'claim_count' => 'integer',
         ];
     }
 

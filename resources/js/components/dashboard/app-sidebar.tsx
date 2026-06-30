@@ -41,8 +41,8 @@ const mainNavItems: NavItem[] = [
         roles: ['administrator', 'teknisi', 'pegawai'],
         items: [
             { title: 'Servis & cek ', href: '/services' },
-            { title: 'Status', href: '/services/history' },
-            { title: 'Klaim & Garansi Servis', href: '/services/warranty' },
+            { title: 'Status', href: '/history' },
+            { title: 'Klaim & Garansi Servis', href: '/garansi' },
         ],
     },
     {

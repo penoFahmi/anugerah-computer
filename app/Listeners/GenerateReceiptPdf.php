@@ -32,6 +32,8 @@ class GenerateReceiptPdf implements ShouldQueue
         try {
             // 1. BUAT PDF
             $pdf = Pdf::loadView('pdf.service_receipt', ['order' => $serviceOrder]);
+            $pdf = Pdf::loadView('pdf.service_receipt', ['order' => $serviceOrder])
+          ->setPaper([0, 0, 226.77, 600], 'portrait'); 
 
             $fileName = "nota-{$serviceOrder->order_number}.pdf";
 

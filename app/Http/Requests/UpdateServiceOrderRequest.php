@@ -19,7 +19,10 @@ class UpdateServiceOrderRequest extends FormRequest
         $rules = [
             'status' => ['required', Rule::enum(ServiceStatus::class)],
             'estimated_cost' => ['nullable', 'numeric', 'min:0'],
+            'final_cost' => ['nullable', 'numeric', 'min:0'],
             'technician_notes' => ['nullable', 'string', 'max:2000'],
+            'is_full_update' => ['nullable', 'boolean'],
+            'warranty_days' => ['nullable', 'integer', 'min:0', 'max:365'],
             'is_full_update' => ['nullable', 'boolean'],
         ];
 

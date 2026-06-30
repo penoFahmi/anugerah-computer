@@ -103,18 +103,41 @@ class ProcessInboundWaMessage implements ShouldQueue
             ]);
 
             // 2. LOGIC PERUBAHAN STATUS & BALASAN OTOMATIS
-            if ($intent === 'approve') {
-                $this->serviceOrder->update(['status' => ServiceStatus::APPROVED]);
-                $balasan = "Baik Kak, terima kasih atas konfirmasinya. Unit *{$this->serviceOrder->device->brand}* segera kami kerjakan. Kami akan kabari kembali jika sudah selesai. 🛠️";
+            if ($intent === 'approve' || $intent === 'cancel') {
                 
-                WaGateway::sendMessage($this->rawPhone, $balasan, $this->serviceOrder->id, 'intent_approve_reply');
-                
-            } elseif ($intent === 'cancel') {
-                $this->serviceOrder->update(['status' => ServiceStatus::CANCELLED]);
-                $balasan = "Baik Kak, kami paham. Servis unit *{$this->serviceOrder->device->brand}* kami batalkan. Silakan datang ke toko untuk mengambil unit Anda. Terima kasih! 🙏";
-                
-                WaGateway::sendMessage($this->rawPhone, $balasan, $this->serviceOrder->id, 'intent_cancel_reply');
-                
+                // =========================================================
+                // 🛡️ PAGAR PEMBATAS AI (SECURITY GUARDRAIL)
+                // Pastikan status HANYA 'waiting_approval'. Jika teknisi sudah mulai 
+                // kerja (in_progress) atau sudah selesai, blokir aksi otomatis AI!
+                // =========================================================
+                if ($this->serviceOrder->status->value !== ServiceStatus::WAITING_APPROVAL->value) {
+                    
+                    // 1. Beritahu pelanggan bahwa proses tidak bisa diubah otomatis
+                    $balasan = "Maaf Kak, unit Anda saat ini sudah masuk ke tahap proses lanjutan. Saya akan memanggilkan admin toko kami untuk membantu Anda secara langsung. Mohon tunggu sebentar ya. 🙏";
+                    WaGateway::sendMessage($this->rawPhone, $balasan, $this->serviceOrder->id, 'intent_rejected_by_guardrail');
+                    
+                    // 2. Lempar ke Kasir/Admin (Ini otomatis memicu lonceng Reverb berbunyi di web)
+                    $this->chatLog->update([
+                        'resolved_by' => 'human', 
+                        'final_intent' => 'needs_manual_override'
+                    ]);
+                    
+                    return; // HENTIKAN EKSEKUSI AI DI SINI! (Jangan ubah status DB)
+                }
+
+                // =========================================================
+                // JIKA AMAN (Status masih waiting_approval), JALANKAN AKSI
+                // =========================================================
+                if ($intent === 'approve') {
+                    $this->serviceOrder->update(['status' => ServiceStatus::APPROVED]);
+                    $balasan = "Baik Kak, terima kasih atas konfirmasinya. Unit *{$this->serviceOrder->device->brand}* segera kami kerjakan. Kami akan kabari kembali jika sudah selesai. 🛠️";
+                    WaGateway::sendMessage($this->rawPhone, $balasan, $this->serviceOrder->id, 'intent_approve_reply');
+                } else {
+                    $this->serviceOrder->update(['status' => ServiceStatus::CANCELLED]);
+                    $balasan = "Baik Kak, kami paham. Servis unit *{$this->serviceOrder->device->brand}* kami batalkan. Silakan datang ke toko untuk mengambil unit Anda. Terima kasih! 🙏";
+                    WaGateway::sendMessage($this->rawPhone, $balasan, $this->serviceOrder->id, 'intent_cancel_reply');
+                }
+
             } else {
                 // Jika pelanggan negosiasi harga atau bertanya di luar setuju/batal
                 $history = $this->getChatHistory();

@@ -7,6 +7,7 @@ use App\Http\Controllers\ServiceOrderController;
 use App\Http\Controllers\ConfigWaController;
 use App\Http\Controllers\TrashController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\WarrantyController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\NotificationController;
 
@@ -22,7 +23,7 @@ Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
     Route::post('/services/{serviceOrder}/chat', [ChatController::class, 'sendManual'])->name('chat.send');
     Route::post('/services/{serviceOrder}/trigger-wa', [ServiceOrderController::class, 'triggerWhatsappOffer'])->name('services.trigger-wa');
     Route::get('/services/{serviceOrder}/print-ticket', [ServiceOrderController::class, 'printTicketPDF'])->name('services.print-ticket');
-    Route::get('/api/search-customer', [ServiceOrderController::class, 'searchCustomer'])->name('api.search-customer');
+    Route::get('/services/{serviceOrder}/print-receipt', [ServiceOrderController::class, 'printTicketPDF'])->name('services.print-receipt');Route::get('/api/search-customer', [ServiceOrderController::class, 'searchCustomer'])->name('api.search-customer');
     Route::resource('services', ServiceOrderController::class)->parameters([
         'services' => 'serviceOrder'
     ])->only([
@@ -32,6 +33,11 @@ Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
         'update',
         'destroy'
     ]);
+
+    Route::resource('garansi', WarrantyController::class)->parameters([
+        'garansi' => 'warranty'
+    ])->only(['index', 'update']);
+    Route::post('/garansi/{warranty}/claim', [WarrantyController::class, 'claim'])->name('garansi.claim');
 
     Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
 

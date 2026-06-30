@@ -377,4 +377,37 @@ class ServiceOrderController extends Controller
                   ->setPaper([0, 0, 226.77, 600], 'portrait');
         return $pdf->stream("nota-{$serviceOrder->order_number}.pdf");
     }
+
+    /**
+     * 9. KANBAN BOARD: Halaman Papan Teknisi
+     */
+    public function kanban()
+    {
+        // Ambil semua servisan yang belum selesai/diambil/dibatalkan
+        $services = ServiceOrder::with(['customer', 'device'])
+            ->whereNotIn('status', ['taken', 'cancelled'])
+            ->orderBy('updated_at', 'desc')
+            ->get()
+            ->map(function ($service) {
+                return [
+                    'id' => $service->id,
+                    'order_number' => $service->order_number,
+                    'customer_name' => $service->customer->name,
+                    'customer_phone' => $service->customer->phone,
+                    'device_name' => $service->device->brand . ' ' . $service->device->model,
+                    'complaint' => $service->complaint,
+                    'status' => $service->status->value,
+                    'status_label' => $service->status->label(),
+                    'estimated_cost' => $service->estimated_cost,
+                    'final_cost' => $service->final_cost,
+                    'down_payment' => $service->down_payment,
+                    'technician_notes' => $service->technician_notes,
+                    'created_at' => $service->created_at->diffForHumans(), 
+                ];
+            });
+
+        return Inertia::render('services/kanban', [
+            'services' => $services
+        ]);
+    }
 }

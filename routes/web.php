@@ -33,6 +33,7 @@ Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
         'update',
         'destroy'
     ]);
+    Route::get('/kanban', [ServiceOrderController::class, 'kanban'])->name('kanban.index');
 
     Route::resource('garansi', WarrantyController::class)->parameters([
         'garansi' => 'warranty'

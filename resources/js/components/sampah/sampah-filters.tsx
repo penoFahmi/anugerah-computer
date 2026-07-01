@@ -1,7 +1,6 @@
-import { router, usePage } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import { Search, FilterX } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { toast } from 'sonner';
+import { useState } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 
 import { Button } from '@/components/ui/button';
@@ -15,41 +14,25 @@ import {
 } from '@/components/ui/select';
 import type { TrashPageProps } from '@/types/sampah';
 
-export function TrashFilters({ filters }: { filters: TrashPageProps['filters'] }) {
-    const { flash } = usePage<TrashPageProps>().props;
-
+export function TrashFilters({
+    filters,
+}: {
+    filters: TrashPageProps['filters'];
+}) {
+    // Sinkronisasi state lokal dengan parameter URL saat inisialisasi
     const [filterState, setFilterState] = useState({
         search: filters.search ?? '',
         type: filters.type ?? 'all',
         per_page: filters.per_page ?? '5',
     });
 
-    useEffect(() => {
-        if (flash?.toast) {
-            if (flash.toast.type === 'success') {
-toast.success(flash.toast.message);
-}
-
-            if (flash.toast.type === 'error') {
-toast.error(flash.toast.message);
-}
-        }
-    }, [flash]);
-
     const applyFilters = (newFilters: typeof filterState) => {
         const query: Record<string, string> = {};
 
-        if (newFilters.search) {
-query.search = newFilters.search;
-}
-
-        if (newFilters.type !== 'all') {
-query.type = newFilters.type;
-}
-
-        if (newFilters.per_page !== '5') {
-query.per_page = newFilters.per_page;
-}
+        // Abaikan parameter default agar URL tidak kotor
+        if (newFilters.search) query.search = newFilters.search;
+        if (newFilters.type !== 'all') query.type = newFilters.type;
+        if (newFilters.per_page !== '5') query.per_page = newFilters.per_page;
 
         router.get('/sampah', query, { preserveState: true, replace: true });
     };
@@ -58,7 +41,10 @@ query.per_page = newFilters.per_page;
         applyFilters({ ...filterState, search: value });
     }, 400);
 
-    const handleFilterChange = (key: keyof typeof filterState, value: string) => {
+    const handleFilterChange = (
+        key: keyof typeof filterState,
+        value: string,
+    ) => {
         const newFilters = { ...filterState, [key]: value };
         setFilterState(newFilters);
         applyFilters(newFilters);
@@ -67,8 +53,14 @@ query.per_page = newFilters.per_page;
     const resetFilters = () => {
         const defaultFilters = { search: '', type: 'all', per_page: '5' };
         setFilterState(defaultFilters);
-        router.get('/sampah', {}, { preserveState: true, replace: true });
+        applyFilters(defaultFilters);
     };
+
+    // Deteksi apakah ada filter yang sedang aktif
+    const isFiltered =
+        filterState.search ||
+        filterState.type !== 'all' ||
+        filterState.per_page !== '5';
 
     return (
         <div className="flex flex-col items-center gap-3 sm:flex-row">
@@ -114,10 +106,11 @@ query.per_page = newFilters.per_page;
                     <SelectItem value="all">Semua Kategori</SelectItem>
                     <SelectItem value="pegawai">Pegawai</SelectItem>
                     <SelectItem value="customer">Pelanggan</SelectItem>
+                    <SelectItem value="servis">Servis</SelectItem>
                 </SelectContent>
             </Select>
 
-            {(filterState.search || filterState.type !== 'all' || filterState.per_page !== '5') && (
+            {isFiltered && (
                 <Button
                     variant="ghost"
                     size="icon"

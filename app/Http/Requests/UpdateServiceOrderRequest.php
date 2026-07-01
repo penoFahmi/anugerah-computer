@@ -21,12 +21,11 @@ class UpdateServiceOrderRequest extends FormRequest
             'estimated_cost' => ['nullable', 'numeric', 'min:0'],
             'final_cost' => ['nullable', 'numeric', 'min:0'],
             'technician_notes' => ['nullable', 'string', 'max:2000'],
-            'is_full_update' => ['nullable', 'boolean'],
             'warranty_days' => ['nullable', 'integer', 'min:0', 'max:365'],
             'is_full_update' => ['nullable', 'boolean'],
         ];
 
-        // Validasi tambahan JIKA ini adalah form Edit Lengkap
+        // Validasi tambahan JIKA ini adalah form Edit Lengkap dari Front Office/Admin
         if ($this->boolean('is_full_update')) {
             $rules = array_merge($rules, [
                 'name' => ['required', 'string', 'max:150'],

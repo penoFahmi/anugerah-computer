@@ -20,14 +20,14 @@ interface Props {
 }
 
 export function TrashAlert({ open, onOpenChange, action, item }: Props) {
-    if (!item) {
-return null;
-}
+    if (!item) return null;
 
     const handleConfirm = () => {
+        const endpoint = `/sampah/${item.type}/${item.id}`;
+
         if (action === 'restore') {
             router.post(
-                `/sampah/${item.type}/${item.id}/restore`,
+                `${endpoint}/restore`,
                 {},
                 {
                     preserveScroll: true,
@@ -35,7 +35,7 @@ return null;
                 },
             );
         } else if (action === 'force_delete') {
-            router.delete(`/sampah/${item.type}/${item.id}/force-delete`, {
+            router.delete(`${endpoint}/force-delete`, {
                 preserveScroll: true,
                 onSuccess: () => onOpenChange(false),
             });

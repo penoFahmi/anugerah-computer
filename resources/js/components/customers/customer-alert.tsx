@@ -1,4 +1,5 @@
 import { router } from '@inertiajs/react';
+import { AlertTriangle } from 'lucide-react';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -9,26 +10,22 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-
-import { destroy } from '@/routes/customers';
 import type { Customer } from '@/types/customer';
 
 interface Props {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    type: 'delete' | 'toggle_status' | 'reset_password' | null;
+    type: 'delete' | null;
     customer: Customer | null;
 }
 
 export function CustomerAlert({ open, onOpenChange, type, customer }: Props) {
-    if (!customer) {
-return null;
-}
+    if (!customer) return null;
 
-    // Confirm password reset
     const handleConfirm = () => {
         if (type === 'delete') {
-            router.delete(destroy.url(customer.id), {
+            router.delete(`/customers/${customer.id}`, {
+                preserveScroll: true,
                 onSuccess: () => onOpenChange(false),
             });
         }
@@ -38,25 +35,21 @@ return null;
         <AlertDialog open={open} onOpenChange={onOpenChange}>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>
-                        {type === 'delete'
-                            ? 'Hapus Customer' : ''}
+                    <AlertDialogTitle className="flex items-center gap-2">
+                        {type === 'delete' && <AlertTriangle className="h-5 w-5 text-destructive" />}
+                        Hapus Pelanggan?
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                        {type === 'delete' ? `Apakah Anda yakin ingin menghapus "${customer.name}" secara permanen?` : ''}
+                        Apakah Anda yakin ingin menghapus pelanggan "{customer.name}"? Data riwayat servis (Service Orders) mereka tidak akan terhapus, namun data profil pelanggan ini akan masuk ke Tempat Sampah.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel>Batal</AlertDialogCancel>
                     <AlertDialogAction
                         onClick={handleConfirm}
-                        className={
-                            type === 'delete'
-                                ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
-                                : ''
-                        }
+                        className={type === 'delete' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
                     >
-                        Ya, Lanjutkan
+                        Ya, Hapus
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

@@ -14,29 +14,16 @@ class GenerateReceiptPdf implements ShouldQueue
 {
     use InteractsWithQueue;
 
-    /**
-     * Create the event listener.
-     */
-    public function __construct()
-    {
-        //
-    }
-
-    /**
-     * Handle the event.
-     */
     public function handle(ServiceOrderCreated $event): void
     {
         $serviceOrder = $event->serviceOrder;
 
         try {
-            // 1. BUAT PDF
-            $pdf = Pdf::loadView('pdf.service_receipt', ['order' => $serviceOrder]);
+            // 1. BUAT PDF (Menggunakan ukuran kertas struk kasir termal 80mm)
             $pdf = Pdf::loadView('pdf.service_receipt', ['order' => $serviceOrder])
-          ->setPaper([0, 0, 226.77, 600], 'portrait'); 
+                      ->setPaper([0, 0, 226.77, 600], 'portrait'); 
 
             $fileName = "nota-{$serviceOrder->order_number}.pdf";
-
             $folderPath = "documents/receipts/";
 
             // 2. SIMPAN PDF SECARA TEGAS KE DISK 'PUBLIC'
@@ -45,7 +32,6 @@ class GenerateReceiptPdf implements ShouldQueue
 
             // 3. KIRIM WA
             $publicPdfUrl = asset(Storage::url($folderPath . $fileName));
-
             WaGateway::sendReceiptWithPdf($serviceOrder, $publicPdfUrl);
 
         } catch (\Exception $e) {

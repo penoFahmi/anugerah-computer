@@ -8,16 +8,27 @@ use App\Enums\ServiceStatus;
 use App\Events\ServiceOrderCreated;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
+use Inertia\Response;
+use Illuminate\Http\RedirectResponse;
 
 class WarrantyController extends Controller
 {
-    public function index(Request $request)
+    /**
+     * Menampilkan daftar garansi (Aktif, Hangus/Void, atau Kedaluwarsa).
+     */
+    public function index(Request $request): Response
     {
         $filters = $request->only(['search', 'status', 'per_page']);
-        $perPage = $filters['per_page'] ?? 10;
+        $perPage = $filters['per_page'] ?? '10';
 
-        $query = Warranty::with(['serviceOrder.customer', 'serviceOrder.device']);
+        // OPTIMASI: Eager load dengan withTrashed() agar riwayat garansi tidak error 
+        // jika pelanggan atau perangkatnya sudah dimasukkan ke tempat sampah.
+        $query = Warranty::with([
+            'serviceOrder.customer' => fn($q) => $q->withTrashed(),
+            'serviceOrder.device' => fn($q) => $q->withTrashed()
+        ]);
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];
@@ -42,7 +53,8 @@ class WarrantyController extends Controller
             }
         }
 
-        $limit = $perPage === 'all' ? 500 : $perPage;
+        $limit = $perPage === 'all' ? 500 : (int) $perPage;
+        
         $warranties = $query->latest()->paginate($limit)->withQueryString();
 
         $warranties->through(function ($w) {
@@ -52,10 +64,10 @@ class WarrantyController extends Controller
             return [
                 'id' => $w->id,
                 'warranty_code' => $w->warranty_code,
-                'order_number' => $w->serviceOrder->order_number,
-                'customer_name' => $w->serviceOrder->customer->name,
-                'customer_phone' => $w->serviceOrder->customer->phone,
-                'device_name' => $w->serviceOrder->device->brand . ' ' . $w->serviceOrder->device->model,
+                'order_number' => $w->serviceOrder->order_number ?? '-',
+                'customer_name' => $w->serviceOrder->customer->name ?? 'N/A',
+                'customer_phone' => $w->serviceOrder->customer->phone ?? '-',
+                'device_name' => ($w->serviceOrder->device->brand ?? '') . ' ' . ($w->serviceOrder->device->model ?? ''),
                 'start_date' => $w->start_date->format('d M Y'),
                 'end_date' => $w->end_date->format('d M Y'),
                 'status' => $currentStatus,
@@ -74,11 +86,14 @@ class WarrantyController extends Controller
         ]);
     }
 
-    public function update(Request $request, Warranty $warranty)
+    /**
+     * Memperbarui status garansi (misalnya: dihanguskan secara manual/Void).
+     */
+    public function update(Request $request, Warranty $warranty): RedirectResponse
     {
         $validated = $request->validate([
-            'status' => 'required|in:active,void',
-            'notes' => 'required|string|max:1000',
+            'status' => ['required', 'in:active,void'],
+            'notes' => ['required', 'string', 'max:1000'],
         ]);
 
         $warranty->update($validated);
@@ -88,13 +103,17 @@ class WarrantyController extends Controller
             'message' => 'Status garansi ' . $warranty->warranty_code . ' berhasil dihanguskan.'
         ]);
 
-        return redirect()->back();
+        return back();
     }
 
-    public function claim(Request $request, Warranty $warranty)
+    /**
+     * Memproses klaim garansi.
+     * Akan menerbitkan pesanan servis (Service Order) baru dengan biaya Rp 0.
+     */
+    public function claim(Request $request, Warranty $warranty): RedirectResponse
     {
         $request->validate([
-            'complaint' => 'required|string',
+            'complaint' => ['required', 'string'],
         ]);
 
         try {
@@ -104,22 +123,23 @@ class WarrantyController extends Controller
 
                 $oldOrder = $warranty->serviceOrder;
 
-                // 2. Buat Nomor Nota Baru
+                // 2. Buat Nomor Nota Baru dengan prefix SRV
                 $datePrefix = 'SRV-' . now()->format('Ymd') . '-';
                 $lastOrder = ServiceOrder::where('order_number', 'like', $datePrefix . '%')
                     ->orderBy('order_number', 'desc')
-                    ->lockForUpdate()
+                    ->lockForUpdate() // Mencegah Race Condition
                     ->first();
                     
                 $nextSequence = $lastOrder ? (int) substr($lastOrder->order_number, -3) + 1 : 1;
-                $orderNumber = $datePrefix . str_pad($nextSequence, 3, '0', STR_PAD_LEFT);
+                // Strict Type Casting untuk str_pad
+                $orderNumber = $datePrefix . str_pad((string) $nextSequence, 3, '0', STR_PAD_LEFT);
 
                 // 3. Buat Nota Servisan Baru dengan harga Rp 0
                 $newOrder = ServiceOrder::create([
                     'order_number' => $orderNumber,
                     'customer_id' => $oldOrder->customer_id,
                     'device_id' => $oldOrder->device_id,
-                    'complaint' => $request->complaint,
+                    'complaint' => 'KLAIM GARANSI (' . $warranty->warranty_code . '): ' . $request->complaint,
                     'equipments' => $oldOrder->equipments, 
                     'status' => ServiceStatus::WAITING_CHECKING,
                     'is_technician_on_site' => false,
@@ -128,7 +148,7 @@ class WarrantyController extends Controller
                     'created_by' => auth()->id(),
                 ]);
 
-                // 4. Memicu Event PDF dan Notifikasi untuk Nota Baru
+                // 4. Memicu Event PDF dan Kirim WhatsApp untuk Nota Baru
                 ServiceOrderCreated::dispatch($newOrder);
             });
 
@@ -140,10 +160,13 @@ class WarrantyController extends Controller
             return redirect()->route('services.index');
 
         } catch (\Exception $e) {
+            Log::error('Gagal memproses klaim garansi: ' . $e->getMessage());
+            
             Inertia::flash('toast', [
                 'type' => 'error',
-                'message' => 'Gagal memproses klaim garansi: ' . $e->getMessage()
+                'message' => 'Terjadi kesalahan sistem saat memproses klaim garansi.'
             ]);
+            
             return back();
         }
     }

@@ -12,6 +12,9 @@ enum ServiceStatus: string
     case COMPLETED = 'completed';
     case TAKEN = 'taken';
 
+    /**
+     * Mengembalikan label yang ramah pengguna (User-Friendly Label).
+     */
     public function label(): string
     {
         return match($this) {

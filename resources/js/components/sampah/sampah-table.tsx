@@ -1,26 +1,19 @@
-import { router } from '@inertiajs/react';
 import { RefreshCcw, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-
+import Pagination from '@/components/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger,
-} from '@/components/ui/tooltip';
-import type { PaginatedTrash, TrashItem } from '@/types/sampah';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import type { PaginatedData } from '@/types/global';
+import type { TrashItem } from '@/types/sampah';
 import { TrashAlert } from './sampah-alert';
 
-export function TrashTable({ trashItems }: { trashItems: PaginatedTrash }) {
+interface Props {
+    trashItems: PaginatedData<TrashItem>;
+}
+
+export function TrashTable({ trashItems }: Props) {
     const [alertConfig, setAlertConfig] = useState<{
         open: boolean;
         action: 'restore' | 'force_delete' | null;
@@ -31,44 +24,12 @@ export function TrashTable({ trashItems }: { trashItems: PaginatedTrash }) {
         setAlertConfig({ open: true, action, item });
     };
 
-    const getRelativeUrl = (absoluteUrl: string | null) => {
-        if (!absoluteUrl) {
-return null;
-}
-
-        try {
-            const url = new URL(absoluteUrl);
-
-            return url.pathname + url.search;
-        } catch {
-            return absoluteUrl;
-        }
-    };
-
-    const parsePaginationLabel = (label: string) => {
-        const lowerLabel = label.toLowerCase();
-
-        if (lowerLabel.includes('prev')) {
-return '‹ Sebelumnya';
-}
-
-        if (lowerLabel.includes('next')) {
-return 'Selanjutnya ›';
-}
-
-        return label;
-    };
-
     const getBadgeVariant = (type: string) => {
         switch (type) {
-            case 'pegawai':
-                return 'default';
-            case 'customer':
-                return 'primary';
-            case 'servis':
-                return 'secondary';
-            default:
-                return 'outline';
+            case 'pegawai': return 'default';
+            case 'customer': return 'secondary';
+            case 'servis': return 'outline';
+            default: return 'outline';
         }
     };
 
@@ -142,36 +103,12 @@ return 'Selanjutnya ›';
                 </TableBody>
             </Table>
 
-            <div className="flex flex-col items-center justify-between gap-4 border-t px-4 py-3 text-sm text-muted-foreground sm:flex-row">
-                <div>
-                    Menampilkan {trashItems.from || 0} - {trashItems.to || 0} dari {trashItems.total} data
-                </div>
-                <div className="flex flex-wrap gap-1">
-                    {trashItems.links.map((link, idx) => {
-                        const relativeUrl = getRelativeUrl(link.url);
-
-                        return (
-                            <Button
-                                key={idx}
-                                variant={link.active ? 'default' : 'outline'}
-                                size="sm"
-                                disabled={!relativeUrl}
-                                onClick={() =>
-                                    relativeUrl &&
-                                    router.get(relativeUrl, {}, { preserveState: true, preserveScroll: true })
-                                }
-                                className={`h-8 px-3 ${link.active ? 'pointer-events-none' : ''}`}
-                            >
-                                <span
-                                    dangerouslySetInnerHTML={{
-                                        __html: parsePaginationLabel(link.label),
-                                    }}
-                                />
-                            </Button>
-                        );
-                    })}
-                </div>
-            </div>
+            <Pagination 
+                links={trashItems.links} 
+                from={trashItems.from} 
+                to={trashItems.to} 
+                total={trashItems.total} 
+            />
 
             <TrashAlert
                 open={alertConfig.open}

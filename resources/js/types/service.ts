@@ -1,3 +1,5 @@
+import type { PaginatedData, GlobalPageProps } from './global';
+
 export interface Device {
     id: number;
     device_type: string;
@@ -23,6 +25,9 @@ export interface ServiceListItem {
     status: string;
     status_label: string;
     estimated_cost: string | number | null;
+    final_cost?: string | number | null;
+    down_payment?: string | number | null;
+    technician_notes?: string | null;
     created_at: string;
     device_type?: string;
     brand?: string;
@@ -30,41 +35,13 @@ export interface ServiceListItem {
     equipments?: string[];
 }
 
-export interface PaginationLink {
-    url: string | null;
-    label: string;
-    active: boolean;
-}
-
-export interface PaginatedServiceOrders {
-    current_page: number;
-    data: ServiceListItem[];
-    first_page_url: string;
-    from: number | null;
-    last_page: number;
-    last_page_url: string;
-    links: PaginationLink[];
-    next_page_url: string | null;
-    path: string;
-    per_page: number;
-    prev_page_url: string | null;
-    to: number | null;
-    total: number;
-}
-
-export interface ServiceIndexProps {
-    serviceOrders: PaginatedServiceOrders;
+export interface ServiceIndexProps extends GlobalPageProps {
+    serviceOrders: PaginatedData<ServiceListItem>;
     filters: {
         search: string;
         status: string;
         per_page: string | number;
         date?: string;
         type?: string;
-    };
-    flash?: {
-        toast: {
-            type: 'success' | 'error' | 'warning' | 'info';
-            message: string;
-        } | null;
     };
 }

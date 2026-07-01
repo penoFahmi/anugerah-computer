@@ -7,13 +7,18 @@ use App\Models\Customer;
 use App\Models\ServiceOrder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Inertia\Response;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
-use Illuminate\Support\Facades\DB;
 
 class TrashController extends Controller
 {
-    public function index(Request $request)
+    /**
+     * Menampilkan daftar semua data yang dihapus (Soft Deletes).
+     * Menggabungkan Pegawai, Pelanggan, dan Pesanan Servis ke dalam satu koleksi paginasi.
+     */
+    public function index(Request $request): Response
     {
         $search = $request->input('search');
         $typeFilter = $request->input('type', 'all');
@@ -29,7 +34,7 @@ class TrashController extends Controller
             if ($search) {
                 $usersQuery->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%");
+                      ->orWhere('email', 'like', "%{$search}%");
                 });
             }
 
@@ -39,22 +44,24 @@ class TrashController extends Controller
                     'type' => 'pegawai',
                     'category_label' => 'Pegawai',
                     'data_info' => $user->name . ' (' . $user->email . ')',
-                    'deleted_timestamp' => $user->deleted_at, // Untuk sorting akurat
+                    'deleted_timestamp' => $user->deleted_at, // Dipertahankan untuk kebutuhan sorting
                     'deleted_at' => $user->deleted_at->format('d M Y, H:i'),
                 ];
             });
             $trashItems = $trashItems->merge($users);
         }
 
-        // Sampah customer
-        $customerQuery = Customer::onlyTrashed();
+        // 2. Kumpulkan Sampah: Pelanggan (Customer)
         if ($typeFilter === 'all' || $typeFilter === 'customer') {
+            $customerQuery = Customer::onlyTrashed();
+            
             if ($search) {
                 $customerQuery->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('phone', 'like', "%{$search}%");
+                      ->orWhere('phone', 'like', "%{$search}%");
                 });
             }
+
             $customers = $customerQuery->get()->map(function ($customer) {
                 return [
                     'id' => $customer->id,
@@ -68,15 +75,21 @@ class TrashController extends Controller
             $trashItems = $trashItems->merge($customers);
         }
 
-        // Sampah servis
-        $serviceQuery = ServiceOrder::onlyTrashed();
+        // 3. Kumpulkan Sampah: Pesanan Servis (Service Order)
         if ($typeFilter === 'all' || $typeFilter === 'servis') {
+            // OPTIMASI: Eager loading customer (termasuk yang di-trash) untuk mencegah N+1 Query Issue
+            $serviceQuery = ServiceOrder::onlyTrashed()
+                ->with(['customer' => fn($q) => $q->withTrashed()]);
+
             if ($search) {
                 $serviceQuery->where(function ($q) use ($search) {
                     $q->where('order_number', 'like', "%{$search}%")
-                        ->orWhere('customer_id', 'like', "%{$search}%");
+                      ->orWhereHas('customer', function($qCust) use ($search) {
+                          $qCust->where('name', 'like', "%{$search}%");
+                      });
                 });
             }
+
             $services = $serviceQuery->get()->map(function ($service) {
                 return [
                     'id' => $service->id,
@@ -89,12 +102,11 @@ class TrashController extends Controller
             });
             $trashItems = $trashItems->merge($services);
         }
-        // Nanti tambahkan $customersQuery, $servicesQuery di sini dengan pola yang sama...
 
-        // 2. Sorting Global (Terbaru dihapus di atas)
+        // 4. Sorting Global (Data yang paling baru dihapus berada di paling atas)
         $trashItems = $trashItems->sortByDesc('deleted_timestamp')->values();
 
-        // 3. Manual Pagination untuk Collection
+        // 5. Manual Pagination untuk Laravel Collection
         $page = Paginator::resolveCurrentPage() ?: 1;
         $paginatedItems = new LengthAwarePaginator(
             $trashItems->forPage($page, $limit)->values(),
@@ -114,81 +126,99 @@ class TrashController extends Controller
         ]);
     }
 
-    public function restore(Request $request, $type, $id)
+    /**
+     * Memulihkan data dari tempat sampah berdasarkan tipe entitasnya.
+     */
+    public function restore(Request $request, string $type, string|int $id): RedirectResponse
     {
-        // Logika Universal: Cek tipe data apa yang mau dipulihkan
-        if ($type === 'pegawai') {
-            $record = User::onlyTrashed()->findOrFail($id);
+        $message = '';
 
-            // Proteksi: Cek apakah email sudah dipakai oleh pegawai baru
-            if (User::where('email', $record->email)->exists()) {
-                Inertia::flash('toast', [
-                    'type' => 'error',
-                    'message' => 'Gagal memulihkan! Email ' . ucfirst($type) . ' ini sudah digunakan oleh akun lain yang aktif.'
-                ]);
-                return back();
-            }
+        switch ($type) {
+            case 'pegawai':
+                $record = User::onlyTrashed()->findOrFail($id);
 
-            $record->restore();
-            $message = 'Data ' . ucfirst($type) . ' berhasil dipulihkan.';
+                // Proteksi: Mencegah pemulihan jika email sudah didaur ulang untuk akun baru
+                if (User::where('email', $record->email)->exists()) {
+                    Inertia::flash('toast', [
+                        'type' => 'error',
+                        'message' => 'Gagal memulihkan! Email Pegawai ini sudah digunakan oleh akun lain yang aktif.'
+                    ]);
+                    return back();
+                }
+
+                $record->restore();
+                $message = 'Data Pegawai berhasil dipulihkan.';
+                break;
+
+            case 'customer':
+                $record = Customer::onlyTrashed()->findOrFail($id);
+                
+                // Proteksi: Mencegah pemulihan jika nomor telepon sudah didaur ulang
+                if (Customer::where('phone', $record->phone)->exists()) {
+                    Inertia::flash('toast', [
+                        'type' => 'error', 
+                        'message' => 'Gagal memulihkan! Nomor WhatsApp ini sudah dipakai oleh pelanggan lain yang aktif.'
+                    ]);
+                    return back();
+                }
+                
+                $record->restore();
+                $message = 'Data Pelanggan berhasil dipulihkan.';
+                break;
+
+            case 'servis':
+                $record = ServiceOrder::onlyTrashed()->findOrFail($id);
+                $record->restore();
+                $message = 'Data Pesanan Servis berhasil dipulihkan.';
+                break;
+
+            default:
+                abort(404, 'Tipe data tidak dikenali sistem.');
         }
-
-        else if ($type === 'customer') {
-            $record = Customer::onlyTrashed()->findOrFail($id);
-            
-            // Proteksi: Cek apakah No WA sudah dipakai oleh pelanggan baru
-            if (Customer::where('phone', $record->phone)->whereNull('deleted_at')->exists()) {
-                return back()->with('toast', [
-                    'type' => 'error', 
-                    'message' => 'Gagal memulihkan! Nomor WhatsApp ini sudah dipakai oleh pelanggan lain yang aktif.'
-                ]);
-            }
-            
-            $record->restore();
-            $message = 'Data Pelanggan berhasil dipulihkan.';
-        } else if ($type === 'servis') {
-            $record = ServiceOrder::onlyTrashed()->findOrFail($id);
-            $record->restore();
-            $message = 'Data Servisan berhasil dipulihkan.';
-        }
-
-        else {
-            abort(404, 'Tipe data tidak dikenali sistem.');
-        }
-        // else if ($type === 'servis') { ... } 
 
         Inertia::flash('toast', [
             'type' => 'success',
-            'message' => $message ?? 'Data berhasil dipulihkan.'
+            'message' => $message
         ]);
 
         return back();
     }
 
-    public function forceDelete(Request $request, $type, $id)
+    /**
+     * Menghapus data secara permanen dari basis data (Force Delete).
+     */
+    public function forceDelete(Request $request, string $type, string|int $id): RedirectResponse
     {
-        if ($type === 'pegawai') {
-            $record = User::onlyTrashed()->findOrFail($id);
-            $record->forceDelete();
-            $message = 'Data ' . ucfirst($type) . ' dihapus secara permanen.';
-        }
-        else if ($type === 'customer') {
-            $record = Customer::onlyTrashed()->findOrFail($id);
-            $record->forceDelete();
-            $message = 'Data Pelanggan beserta riwayat servisnya dihapus permanen.';
-        } 
-        else if ($type === 'servis') {
-            $record = ServiceOrder::onlyTrashed()->findOrFail($id);
-            $record->forceDelete();
-            $message = 'Data Servisan dihapus permanen.';
-        }
-        else {
-            abort(404, 'Tipe data tidak dikenali sistem.');
+        $message = '';
+
+        switch ($type) {
+            case 'pegawai':
+                $record = User::onlyTrashed()->findOrFail($id);
+                $record->forceDelete();
+                $message = 'Data Pegawai telah dihapus secara permanen.';
+                break;
+
+            case 'customer':
+                $record = Customer::onlyTrashed()->findOrFail($id);
+                // Relasi perangkat (devices) harus dikonfigurasi cascade jika ingin ikut terhapus,
+                // atau dihapus manual di sini jika menggunakan restrict.
+                $record->forceDelete();
+                $message = 'Data Pelanggan telah dihapus secara permanen.';
+                break;
+
+            case 'servis':
+                $record = ServiceOrder::onlyTrashed()->findOrFail($id);
+                $record->forceDelete();
+                $message = 'Data Pesanan Servis telah dihapus secara permanen.';
+                break;
+
+            default:
+                abort(404, 'Tipe data tidak dikenali sistem.');
         }
 
         Inertia::flash('toast', [
             'type' => 'success',
-            'message' => $message ?? 'Data berhasil dihapus permanen.'
+            'message' => $message
         ]);
 
         return back();

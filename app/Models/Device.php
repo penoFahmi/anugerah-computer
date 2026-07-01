@@ -12,11 +12,17 @@ class Device extends Model
 {
     use HasFactory, SoftDeletes;
 
+    /**
+     * Relasi ke entitas Customer (Pemilik perangkat).
+     */
     public function customer()
     {
         return $this->belongsTo(Customer::class);
     }
 
+    /**
+     * Relasi ke riwayat pesanan servis untuk perangkat ini.
+     */
     public function serviceOrders()
     {
         return $this->hasMany(ServiceOrder::class);

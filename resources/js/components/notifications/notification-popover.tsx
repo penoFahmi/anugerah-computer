@@ -1,10 +1,9 @@
 import { usePage, router } from '@inertiajs/react';
-import { useEcho, useEchoModel, useConnectionStatus } from '@laravel/echo-react';
+import { Bell, CheckCheck, Trash2, Wifi, WifiOff } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { Bell, CheckCheck, Trash2 } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { toast } from 'sonner';
 import 'dayjs/locale/id';
 
 import { Button } from '@/components/ui/button';
@@ -15,49 +14,15 @@ dayjs.locale('id');
 
 export function NotificationPopover() {
     const { auth } = usePage().props as any;
-    const statusKoneksi = useConnectionStatus(); // Cek status otomatis!
 
     const initialUnreadCount = auth?.user?.unread_notifications_count || 0;
     const initialNotifications = auth?.user?.notifications || [];
 
     const [hasUnread, setHasUnread] = useState(initialUnreadCount > 0);
     const [notifications, setNotifications] = useState<any[]>(initialNotifications);
-
-    // 1. HOOK DARI DOKUMENTASI UNTUK GLOBAL EVENT (CHAT)
-    useEcho('admin.notifications', 'ChatRequiresHuman', (e: any) => {
-        const msg = `Pelanggan butuh bantuan manual! (Nota: ${e.chatLog.service_order_id})`;
-        toast.warning(msg, { duration: 8000 });
-        
-        const tempNotif = {
-            id: Math.random().toString(),
-            data: { type: 'chat', message: msg },
-            created_at: new Date().toISOString(),
-            read_at: null,
-        };
-        setHasUnread(true);
-        setNotifications(prev => [tempNotif, ...prev]);
-    });
-
-    // 2. HOOK DARI DOKUMENTASI UNTUK NOTIFIKASI USER (DATABASE)
-    const { channel } = useEchoModel('App.Models.User', auth?.user?.id);
     
-    useEffect(() => {
-        if (auth?.user) {
-            channel().notification((notification: any) => {
-                toast.success(notification.message || "Pemberitahuan Baru");
-                
-                const formattedNotif = {
-                    id: notification.id,
-                    data: notification,
-                    created_at: new Date().toISOString(),
-                    read_at: null,
-                };
-
-                setHasUnread(true);
-                setNotifications(prev => [formattedNotif, ...prev]);
-            });
-        }
-    }, [auth?.user]);
+    // Status koneksi Reverb manual
+    const [wsStatus, setWsStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
 
     const markAllAsRead = () => {
         router.post('/notifications/read-all', {}, {
@@ -76,12 +41,81 @@ export function NotificationPopover() {
         });
     };
 
+    useEffect(() => {
+        // Jika window.Echo belum siap, tunggu sebentar (handling SSR Vite)
+        if (typeof window === 'undefined' || !window.Echo) {
+            setWsStatus('disconnected');
+            return;
+        }
+
+        // 1. PANTAU KONEKSI REVERB SECARA NATIVE
+        if (window.Echo.connector.pusher) {
+            window.Echo.connector.pusher.connection.bind('connected', () => setWsStatus('connected'));
+            window.Echo.connector.pusher.connection.bind('disconnected', () => setWsStatus('disconnected'));
+            window.Echo.connector.pusher.connection.bind('error', () => setWsStatus('disconnected'));
+        }
+
+        if (auth?.user) {
+            // 2. DENGARKAN NOTIF CS (GLOBAL)
+            window.Echo.private('admin.notifications')
+                .listen('ChatRequiresHuman', (e: any) => {
+                    const msg = `Pelanggan butuh bantuan manual! (Nota: ${e.chatLog?.service_order_id || 'Unknown'})`;
+                    toast.warning(msg, { duration: 8000 });
+                    
+                    const tempNotif = {
+                        id: Math.random().toString(),
+                        data: { type: 'chat', message: msg },
+                        created_at: new Date().toISOString(),
+                        read_at: null,
+                    };
+                    setHasUnread(true);
+                    setNotifications(prev => [tempNotif, ...prev]);
+                });
+
+            // 3. DENGARKAN NOTIF SERVISAN BARU (PRIVATE)
+            window.Echo.private(`App.Models.User.${auth.user.id}`)
+                .notification((notification: any) => {
+                    const pesan = notification.message || notification.data?.message || "Ada pemberitahuan baru!";
+                    toast.success(pesan);
+                    
+                    const formattedNotif = {
+                        id: notification.id || Math.random().toString(),
+                        data: notification.data || notification,
+                        created_at: notification.created_at || new Date().toISOString(),
+                        read_at: null,
+                    };
+
+                    setHasUnread(true);
+                    setNotifications(prev => [formattedNotif, ...prev]);
+                });
+        }
+
+        // CLEANUP SAAT KOMPONEN DITUTUP
+        return () => {
+            if (typeof window !== 'undefined' && window.Echo) {
+                window.Echo.leave('admin.notifications');
+                if (auth?.user) window.Echo.leave(`App.Models.User.${auth.user.id}`);
+            }
+        };
+    }, [auth?.user]);
+
     return (
         <div className="flex items-center gap-1">
+            {/* INDIKATOR RADAR REVERB */}
+            <div title={`Status Websocket: ${wsStatus}`} className="mr-1">
+                {wsStatus === 'connected' ? (
+                    <Wifi className="h-4 w-4 text-emerald-500" />
+                ) : wsStatus === 'connecting' ? (
+                    <Wifi className="h-4 w-4 text-yellow-500 animate-pulse" />
+                ) : (
+                    <WifiOff className="h-4 w-4 text-red-500" />
+                )}
+            </div>
+
             <Popover>
                 <PopoverTrigger asChild>
                     <Button variant="ghost" size="icon" className="relative h-9 w-9" onClick={() => setHasUnread(false)}>
-                        <Bell className={`h-5 w-5 ${statusKoneksi === 'connected' ? 'text-slate-700 dark:text-slate-300' : 'text-red-400'}`} />
+                        <Bell className="h-5 w-5 text-slate-700 dark:text-slate-300" />
                         {hasUnread && (
                             <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5 animate-pulse rounded-full border-2 border-background bg-red-500" />
                         )}
@@ -93,7 +127,7 @@ export function NotificationPopover() {
                         <div className="flex items-center justify-between border-b px-4 py-3 bg-muted/30">
                             <div>
                                 <h4 className="font-bold text-sm">Notifikasi</h4>
-                                <p className="text-[10px] text-muted-foreground mt-0.5">Status Reverb: {statusKoneksi}</p>
+                                <p className="text-[11px] text-muted-foreground mt-0.5">Pembaruan sistem & servis terbaru.</p>
                             </div>
                             {hasUnread && (
                                 <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-8 px-2 text-xs text-blue-600 hover:text-blue-700">

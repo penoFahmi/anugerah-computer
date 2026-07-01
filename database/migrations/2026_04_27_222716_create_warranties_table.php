@@ -13,14 +13,18 @@ return new class extends Migration
     {
         Schema::create('warranties', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('service_order_id')->constrained()->cascadeOnDelete();
-            $table->string('warranty_code')->unique(); 
             
+            // Jika service_order dihapus, data garansinya juga otomatis terhapus
+            $table->foreignId('service_order_id')->constrained()->cascadeOnDelete();
+            
+            $table->string('warranty_code')->unique(); 
             $table->date('start_date');
+            
+            // Index pada end_date sangat berguna untuk query Cron Job (misal: mencari garansi yang kedaluwarsa hari ini)
             $table->date('end_date')->index();
             
-            $table->string('status', 30)->default('active')->index();
-            $table->integer('claim_count')->default(0);
+            $table->string('status', 30)->default('active')->index(); // active, expired, void
+            $table->integer('claim_count')->default(0); // Melacak berapa kali customer klaim garansi ini
             $table->text('notes')->nullable();
             
             $table->timestamps();

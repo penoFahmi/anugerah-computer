@@ -25,10 +25,6 @@ class ProcessInboundWaMessage implements ShouldQueue
         public string $rawPhone
     ) {}
 
-    /**
-     * MENGAMBIL INGATAN MASA LALU (MEMORY)
-     * Mengambil 6 chat terakhir dari pelanggan ini agar AI paham konteks
-     */
     private function getChatHistory(): array
     {
         $logs = ChatLog::where('phone', $this->rawPhone)
@@ -57,20 +53,18 @@ class ProcessInboundWaMessage implements ShouldQueue
         // ==========================================
         if (!$this->serviceOrder) {
             try {
-                // Berikan ingatan masa lalu ke Agen CS
                 $history = $this->getChatHistory();
                 
                 $agent = new CustomerService($history);
                 $aiResponse = (string) $agent->prompt($originalMessage);
 
+                // FIX: Jangan pakai json_encode karena model sudah di-cast array!
                 $this->chatLog->update([
                     'resolved_by' => 'agent_customer_service',
-                    // Disimpan sebagai JSON array karena field di DB adalah JSON
-                    'llm_raw_response' => json_encode(['text' => $aiResponse]), 
+                    'llm_raw_response' => ['text' => $aiResponse], 
                     'final_intent' => 'general_cs'
                 ]);
 
-                // Kirim balasan ke WA
                 WaGateway::sendMessage($this->rawPhone, $aiResponse, null, 'general_cs_reply');
                 
             } catch (\Throwable $e) {
@@ -84,50 +78,41 @@ class ProcessInboundWaMessage implements ShouldQueue
         // KONDISI 2: ADA TIKET (TUNGGU KONFIRMASI)
         // ==========================================
         try {
-            // 1. Panggil Agent IntentAnalyzer (Tebak Setuju / Batal)
             $agent = new IntentAnalyzer();
-            $analysis = $agent->prompt($originalMessage)->toArray();
+            // Analisis intent pelanggan
+            $analysis = $agent->prompt($originalMessage);
+            
+            // Konversi output struktur ke array jika berbentuk object
+            $analysisData = is_array($analysis) ? $analysis : (method_exists($analysis, 'toArray') ? $analysis->toArray() : (array) $analysis);
 
-            $intent = $analysis['intent'] ?? 'unclear';
-            $reasoning = $analysis['reasoning'] ?? 'Tidak ada alasan';
+            $intent = $analysisData['intent'] ?? 'unclear';
+            $reasoning = $analysisData['reasoning'] ?? 'Tidak ada alasan';
 
+            // FIX: Array murni
             $this->chatLog->update([
                 'resolved_by' => 'agent_intent_analyzer',
                 'final_intent' => $intent,
-                'llm_raw_response' => json_encode(['reasoning' => $reasoning]) 
+                'llm_raw_response' => ['reasoning' => $reasoning] 
             ]);
 
-            // Update pesan terakhir pelanggan di tabel ServiceOrder
             $this->serviceOrder->update([
                 'last_customer_message' => $originalMessage,
             ]);
 
-            // 2. LOGIC PERUBAHAN STATUS & BALASAN OTOMATIS
+            // LOGIKA PEMBATASAN
             if ($intent === 'approve' || $intent === 'cancel') {
                 
-                // =========================================================
-                // 🛡️ PAGAR PEMBATAS AI (SECURITY GUARDRAIL)
-                // Pastikan status HANYA 'waiting_approval'. Jika teknisi sudah mulai 
-                // kerja (in_progress) atau sudah selesai, blokir aksi otomatis AI!
-                // =========================================================
                 if ($this->serviceOrder->status->value !== ServiceStatus::WAITING_APPROVAL->value) {
-                    
-                    // 1. Beritahu pelanggan bahwa proses tidak bisa diubah otomatis
                     $balasan = "Maaf Kak, unit Anda saat ini sudah masuk ke tahap proses lanjutan. Saya akan memanggilkan admin toko kami untuk membantu Anda secara langsung. Mohon tunggu sebentar ya. 🙏";
                     WaGateway::sendMessage($this->rawPhone, $balasan, $this->serviceOrder->id, 'intent_rejected_by_guardrail');
                     
-                    // 2. Lempar ke Kasir/Admin (Ini otomatis memicu lonceng Reverb berbunyi di web)
                     $this->chatLog->update([
                         'resolved_by' => 'human', 
                         'final_intent' => 'needs_manual_override'
                     ]);
-                    
-                    return; // HENTIKAN EKSEKUSI AI DI SINI! (Jangan ubah status DB)
+                    return; 
                 }
 
-                // =========================================================
-                // JIKA AMAN (Status masih waiting_approval), JALANKAN AKSI
-                // =========================================================
                 if ($intent === 'approve') {
                     $this->serviceOrder->update(['status' => ServiceStatus::APPROVED]);
                     $balasan = "Baik Kak, terima kasih atas konfirmasinya. Unit *{$this->serviceOrder->device->brand}* segera kami kerjakan. Kami akan kabari kembali jika sudah selesai. 🛠️";
@@ -139,7 +124,6 @@ class ProcessInboundWaMessage implements ShouldQueue
                 }
 
             } else {
-                // Jika pelanggan negosiasi harga atau bertanya di luar setuju/batal
                 $history = $this->getChatHistory();
                 $contextPrompt = "Info Sistem: Pelanggan tanya tentang nota " .
                     $this->serviceOrder->order_number . " (Unit: " . $this->serviceOrder->device->brand . "). Balas ramah pesan ini: '{$originalMessage}'";

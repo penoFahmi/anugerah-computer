@@ -11,6 +11,9 @@ class Warranty extends Model
 {
     use HasFactory;
 
+    /**
+     * Konversi tipe data atribut secara otomatis (Type Casting).
+     */
     protected function casts(): array
     {
         return [
@@ -20,6 +23,9 @@ class Warranty extends Model
         ];
     }
 
+    /**
+     * Relasi ke entitas ServiceOrder (Pesanan servis yang mendasari garansi ini).
+     */
     public function serviceOrder()
     {
         return $this->belongsTo(ServiceOrder::class);

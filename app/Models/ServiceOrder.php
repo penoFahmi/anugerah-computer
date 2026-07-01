@@ -29,7 +29,7 @@ class ServiceOrder extends Model
     use HasFactory, SoftDeletes;
 
     /**
-     * Konversi tipe data secara otomatis
+     * Konversi tipe data atribut secara otomatis (Type Casting).
      */
     protected function casts(): array
     {
@@ -44,21 +44,20 @@ class ServiceOrder extends Model
     }
 
     /**
-     * LOCAL SCOPE: Logika Pencarian (Search)
-     * Ini yang dipanggil di Controller pakai ->search($kataKunci)
+     * Local Scope: Menyaring pesanan berdasarkan kata kunci pencarian.
+     * Mencakup pencarian berdasarkan Nomor Order, Nama Pelanggan, atau Nomor Telepon.
      */
     public function scopeSearch($query, $search)
     {
-        // Kalau kolom search kosong, kembalikan query apa adanya
+        // Lewati filter jika kata kunci pencarian kosong
         if (empty($search)) {
             return $query;
         }
 
-        // Bersihkan input, ambil angkanya saja untuk ngecek nomor HP
+        // Ekstraksi angka untuk pencocokan nomor telepon (mengakomodasi format mutator)
         $cleanSearch = preg_replace('/[^0-9]/', '', $search);
         $searchPhone = $search;
 
-        // Logika mutator nomor HP (ubah 0 atau 8 jadi 62) untuk pencarian
         if (!empty($cleanSearch)) {
             if (str_starts_with($cleanSearch, '0')) {
                 $searchPhone = '62' . substr($cleanSearch, 1);
@@ -69,19 +68,22 @@ class ServiceOrder extends Model
             }
         }
 
-        // Lakukan pencarian ke order_number, nama customer, atau phone customer
+        // Aplikasikan klausa pencarian dengan relasi bersarang
         return $query->where(function ($q) use ($search, $searchPhone) {
             $q->where('order_number', 'like', "%{$search}%")
-                ->orWhereHas('customer', function ($qCustomer) use ($search, $searchPhone) {
-                    $qCustomer->where('name', 'like', "%{$search}%")
-                        ->orWhere('phone', 'like', "%{$searchPhone}%");
-                });
+              ->orWhereHas('customer', function ($qCustomer) use ($search, $searchPhone) {
+                  $qCustomer->where('name', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$searchPhone}%");
+              });
         });
     }
 
-    /**
-     * RELASI DATABASE
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Relasi Model
+    |--------------------------------------------------------------------------
+    */
+
     public function customer()
     {
         return $this->belongsTo(Customer::class);

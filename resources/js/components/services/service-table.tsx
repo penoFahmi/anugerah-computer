@@ -1,14 +1,16 @@
-import { Link, usePage, router } from '@inertiajs/react';
+import { router, usePage, Link } from '@inertiajs/react';
 import { Printer, Pencil, Send, Trash2, MessageSquare, FolderPen } from 'lucide-react';
 import { toast } from 'sonner';
+import Pagination from '@/components/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import type { PaginatedServiceOrders, ServiceListItem } from '@/types/service';
+import type { PaginatedData } from '@/types/global';
+import type { ServiceListItem } from '@/types/service';
 
 interface ServiceTableProps {
-    serviceOrders: PaginatedServiceOrders;
+    serviceOrders: PaginatedData<ServiceListItem>;
     onProcessClick: (service: ServiceListItem) => void;
     onChatClick: (service: ServiceListItem) => void;
     onDeleteClick: (service: ServiceListItem) => void;
@@ -18,7 +20,6 @@ export function ServiceTable({ serviceOrders, onProcessClick, onChatClick, onDel
     const { auth } = usePage().props as any;
     const isAdmin = auth.user?.roles?.includes('administrator') || auth.user?.role === 'administrator';
     const isPegawai = auth.user?.roles?.includes('pegawai');
-    const isTeknisi = auth.user?.roles?.includes('teknisi');
 
     const handlePrint = (item: ServiceListItem) => {
         const isFinished = ['completed', 'taken'].includes(item.status);
@@ -29,7 +30,8 @@ export function ServiceTable({ serviceOrders, onProcessClick, onChatClick, onDel
         toast.loading('Memicu sistem WA...');
         router.post(`/services/${item.id}/trigger-wa`, {}, { 
             preserveScroll: true,
-            onSuccess: () => toast.success('Pemberitahuan berhasil dipicu ke WhatsApp.'),
+            onSuccess: () => { toast.dismiss(); toast.success('Pemberitahuan berhasil dipicu ke WhatsApp.'); },
+            onError: () => { toast.dismiss(); toast.error('Gagal memicu WA.'); }
         });
     };
 
@@ -40,31 +42,13 @@ export function ServiceTable({ serviceOrders, onProcessClick, onChatClick, onDel
 
     const renderStatusBadge = (status: string, label: string) => {
         switch (status) {
-            case 'waiting_checking': return <Badge className="bg-pink-100 text-pink-700 border-pink-300 shadow-none hover:bg-pink-100">{label}</Badge>;
-            case 'waiting_approval': return <Badge className="bg-orange-100 text-orange-700 border-orange-300 shadow-none hover:bg-orange-100">{label}</Badge>;
-            case 'in_progress': return <Badge className="bg-blue-100 text-blue-700 border-blue-300 shadow-none hover:bg-blue-100">{label}</Badge>;
+            case 'waiting_checking': return <Badge className="bg-pink-100 text-pink-700 border-pink-300 shadow-none">{label}</Badge>;
+            case 'waiting_approval': return <Badge className="bg-orange-100 text-orange-700 border-orange-300 shadow-none">{label}</Badge>;
+            case 'in_progress': return <Badge className="bg-blue-100 text-blue-700 border-blue-300 shadow-none">{label}</Badge>;
             case 'completed':
-            case 'taken': return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-300 shadow-none hover:bg-emerald-100">{label}</Badge>;
+            case 'taken': return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-300 shadow-none">{label}</Badge>;
             default: return <Badge variant="outline" className="shadow-none">{label}</Badge>;
         }
-    };
-
-    // LOGIKA PAGINATION IDENTIK DENGAN PEGAWAI
-    const getRelativeUrl = (absoluteUrl: string | null) => {
-        if (!absoluteUrl) return null;
-        try {
-            const url = new URL(absoluteUrl);
-            return url.pathname + url.search;
-        } catch {
-            return absoluteUrl;
-        }
-    };
-
-    const parsePaginationLabel = (label: string) => {
-        const lowerLabel = label.toLowerCase();
-        if (lowerLabel.includes('prev')) return '‹ Sebelumnya';
-        if (lowerLabel.includes('next')) return 'Selanjutnya ›';
-        return label;
     };
 
     return (
@@ -103,26 +87,25 @@ export function ServiceTable({ serviceOrders, onProcessClick, onChatClick, onDel
                                         <div className="font-mono text-xs text-muted-foreground">{item.customer_phone}</div>
                                     </TableCell>
                                     <TableCell className="max-w-[280px]">
-    <div className="flex items-center gap-2">
-        <div className="text-sm font-semibold">{item.device_name}</div>
-        {item.complaint.includes('[KLAIM GARANSI') && (
-            <Badge className="bg-blue-100 text-blue-700 border-blue-300 shadow-none px-1.5 py-0 text-[9px] hover:bg-blue-100">
-                KLAIM GARANSI
-            </Badge>
-        )}
-    </div>
-    
-    <Tooltip>
-        <TooltipTrigger asChild>
-            <div className={`mt-0.5 max-w-full truncate text-xs ${item.complaint.includes('[KLAIM GARANSI') ? 'text-blue-600 font-medium' : 'text-muted-foreground'}`}>
-                {item.complaint}
-            </div>
-        </TooltipTrigger>
-        <TooltipContent side="bottom" className="max-w-sm p-3 text-xs shadow-md">
-            <p className="leading-relaxed font-medium whitespace-pre-wrap">{item.complaint}</p>
-        </TooltipContent>
-    </Tooltip>
-</TableCell>
+                                        <div className="flex items-center gap-2">
+                                            <div className="text-sm font-semibold">{item.device_name}</div>
+                                            {item.complaint.includes('[KLAIM GARANSI') && (
+                                                <Badge className="bg-blue-100 text-blue-700 border-blue-300 shadow-none px-1.5 py-0 text-[9px]">
+                                                    KLAIM GARANSI
+                                                </Badge>
+                                            )}
+                                        </div>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <div className={`mt-0.5 max-w-full truncate text-xs cursor-help ${item.complaint.includes('[KLAIM GARANSI') ? 'text-blue-600 font-medium' : 'text-muted-foreground'}`}>
+                                                    {item.complaint}
+                                                </div>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="bottom" className="max-w-sm p-3 text-xs shadow-md">
+                                                <p className="leading-relaxed font-medium whitespace-pre-wrap">{item.complaint}</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TableCell>
                                     <TableCell className="text-sm font-medium whitespace-nowrap">{formatCurrency(item.estimated_cost)}</TableCell>
                                     <TableCell className="text-center">{renderStatusBadge(item.status, item.status_label)}</TableCell>
                                     <TableCell className="py-3 pr-4 text-right">
@@ -158,8 +141,10 @@ export function ServiceTable({ serviceOrders, onProcessClick, onChatClick, onDel
                                             {(isAdmin || isPegawai) && (
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-700" onClick={() => router.get(`/services/${item.id}`)}>
-                                                            <FolderPen className="h-4 w-4" />
+                                                        <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-slate-700">
+                                                            <Link href={`/services/${item.id}`}>
+                                                                <FolderPen className="h-4 w-4" />
+                                                            </Link>
                                                         </Button>
                                                     </TooltipTrigger>
                                                     <TooltipContent className="text-xs">Lihat & Edit Lengkap</TooltipContent>
@@ -185,6 +170,7 @@ export function ServiceTable({ serviceOrders, onProcessClick, onChatClick, onDel
                                                     <TooltipContent className="text-xs">Buang ke Sampah</TooltipContent>
                                                 </Tooltip>
                                             )}
+
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -194,33 +180,13 @@ export function ServiceTable({ serviceOrders, onProcessClick, onChatClick, onDel
                 </TableBody>
             </Table>
 
-            {/* PAGINATION PERSIS PEGAWAI TABLE */}
-            {serviceOrders.data.length > 0 && (
-                <div className="flex flex-col items-center justify-between gap-4 border-t px-4 py-3 text-sm text-muted-foreground sm:flex-row">
-                    <div>
-                        Menampilkan {serviceOrders.from || 0} - {serviceOrders.to || 0} dari {serviceOrders.total} data servisan
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                        {serviceOrders.links.map((link, idx) => {
-                            const relativeUrl = getRelativeUrl(link.url);
-                            const labelHtml = parsePaginationLabel(link.label);
-
-                            return (
-                                <Button
-                                    key={idx}
-                                    variant={link.active ? 'default' : 'outline'}
-                                    size="sm"
-                                    disabled={!relativeUrl}
-                                    onClick={() => relativeUrl && router.get(relativeUrl, {}, { preserveState: true, preserveScroll: true })}
-                                    className={`h-8 px-3 ${link.active ? 'pointer-events-none' : ''}`}
-                                >
-                                    <span dangerouslySetInnerHTML={{ __html: labelHtml }} />
-                                </Button>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
+            {/* MEMANGGIL PAGINATION GLOBAL */}
+            <Pagination 
+                links={serviceOrders.links} 
+                from={serviceOrders.from} 
+                to={serviceOrders.to} 
+                total={serviceOrders.total} 
+            />
         </TooltipProvider>
     );
 }

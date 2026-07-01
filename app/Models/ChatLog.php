@@ -18,6 +18,9 @@ class ChatLog extends Model
 {
     use HasFactory;
 
+    /**
+     * Konversi tipe data atribut secara otomatis (Type Casting).
+     */
     protected function casts(): array
     {
         return [
@@ -28,24 +31,27 @@ class ChatLog extends Model
         ];
     }
 
+    /**
+     * Relasi ke entitas ServiceOrder.
+     */
     public function serviceOrder()
     {
         return $this->belongsTo(ServiceOrder::class);
     }
 
     /**
-     * OTOMATISASI REAL-TIME (REVERB)
+     * Bootstrap model dan mengatur event listener untuk Real-Time Broadcasting (Laravel Reverb).
      */
-    protected static function booted()
+    protected static function booted(): void
     {
-        // 1. Setiap ada chat baru (Dari Pelanggan / AI / Kasir) -> Otomatis muncul di layar Live Chat!
+        // 1. Broadcast event ketika ada pesan baru (dari Pelanggan, AI, atau Agen) untuk pembaruan UI secara real-time.
         static::created(function ($chatLog) {
             if ($chatLog->service_order_id) {
                 broadcast(new NewChatMessage($chatLog));
             }
         });
 
-        // 2. Setiap kali AI nyerah (Job ngubah resolved_by jadi 'human') -> Otomatis bunyi Ting! di Kasir
+        // 2. Broadcast event eskalasi ketika AI mengalihkan percakapan ke Agen Manusia (Customer Service).
         static::updated(function ($chatLog) {
             if ($chatLog->isDirty('resolved_by') && $chatLog->resolved_by === 'human') {
                 broadcast(new ChatRequiresHuman($chatLog));

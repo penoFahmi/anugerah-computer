@@ -1,4 +1,3 @@
-import { router } from '@inertiajs/react';
 import {
     Pencil,
     Trash2,
@@ -7,6 +6,7 @@ import {
     KeyRound,
 } from 'lucide-react';
 import { useState } from 'react';
+import Pagination from '@/components/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,7 +23,11 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import type { PaginatedPegawai, Pegawai } from '@/types/pegawai';
 import { PegawaiAlert } from './pegawai-alert';
 import { PegawaiForm } from './pegawai-form';
@@ -34,46 +38,10 @@ export function PegawaiTable({ pegawais }: { pegawais: PaginatedPegawai }) {
         open: boolean;
         type: 'delete' | 'toggle_status' | 'reset_password' | null;
         pegawai: Pegawai | null;
-    }>({
-        open: false,
-        type: null,
-        pegawai: null,
-    });
+    }>({ open: false, type: null, pegawai: null });
 
-    const triggerAlert = (
-        type: 'delete' | 'toggle_status' | 'reset_password',
-        pegawai: Pegawai,
-    ) => {
+    const triggerAlert = (type: typeof alertConfig.type, pegawai: Pegawai) => {
         setAlertConfig({ open: true, type, pegawai });
-    };
-
-    const getRelativeUrl = (absoluteUrl: string | null) => {
-        if (!absoluteUrl) {
-return null;
-}
-
-        try {
-            const url = new URL(absoluteUrl);
-
-            return url.pathname + url.search;
-        } catch {
-            return absoluteUrl;
-        }
-    };
-
-    // Fungsi Parser Label Pagination agar Bersih dari tag aneh Laravel
-    const parsePaginationLabel = (label: string) => {
-        const lowerLabel = label.toLowerCase();
-
-        if (lowerLabel.includes('prev')) {
-return '‹ Sebelumnya';
-}
-
-        if (lowerLabel.includes('next')) {
-return 'Selanjutnya ›';
-}
-
-        return label;
     };
 
     return (
@@ -81,7 +49,9 @@ return 'Selanjutnya ›';
             <Table>
                 <TableHeader>
                     <TableRow className="bg-muted/50">
-                        <TableHead className="text-center">No</TableHead>
+                        <TableHead className="w-[60px] text-center">
+                            No
+                        </TableHead>
                         <TableHead>Nama</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>No. Telepon</TableHead>
@@ -94,17 +64,20 @@ return 'Selanjutnya ›';
                     {pegawais.data.length === 0 ? (
                         <TableRow>
                             <TableCell
-                                colSpan={6}
+                                colSpan={7}
                                 className="py-8 text-center text-muted-foreground"
                             >
                                 Tidak ada data pegawai yang ditemukan.
                             </TableCell>
                         </TableRow>
                     ) : (
-                        pegawais.data.map((p) => (
+                        pegawais.data.map((p, index) => (
                             <TableRow key={p.id}>
                                 <TableCell className="text-center">
-                                    {(pegawais.current_page - 1) * pegawais.per_page + pegawais.data.indexOf(p) + 1}
+                                    {(pegawais.current_page - 1) *
+                                        pegawais.per_page +
+                                        index +
+                                        1}
                                 </TableCell>
                                 <TableCell className="font-medium">
                                     {p.name}
@@ -141,60 +114,70 @@ return 'Selanjutnya ›';
                                     <div className="flex justify-end gap-1">
                                         <Tooltip>
                                             <TooltipTrigger asChild>
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            className="h-8 w-8 text-slate-500"
-                                            onClick={() =>
-                                                triggerAlert(
-                                                    'reset_password',
-                                                    p,
-                                                )
-                                            }
-                                        >
-                                            <KeyRound className="h-4 w-4" />
-                                        </Button>
-                                        </TooltipTrigger>
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    className="h-8 w-8 text-slate-500"
+                                                    onClick={() =>
+                                                        triggerAlert(
+                                                            'reset_password',
+                                                            p,
+                                                        )
+                                                    }
+                                                >
+                                                    <KeyRound className="h-4 w-4" />
+                                                </Button>
+                                            </TooltipTrigger>
                                             <TooltipContent className="text-xs">
-                                                Reset Password Pegawai
+                                                Reset Password
                                             </TooltipContent>
                                         </Tooltip>
+
                                         <Tooltip>
                                             <TooltipTrigger asChild>
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            className="h-8 w-8 text-blue-600"
-                                            onClick={() => setEditPegawai(p)}
-                                        >
-                                            <Pencil className="h-4 w-4" />
-                                        </Button>
-                                        </TooltipTrigger>
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    className="h-8 w-8 text-blue-600"
+                                                    onClick={() =>
+                                                        setEditPegawai(p)
+                                                    }
+                                                >
+                                                    <Pencil className="h-4 w-4" />
+                                                </Button>
+                                            </TooltipTrigger>
                                             <TooltipContent className="text-xs">
-                                                Edit Data Pegawai
+                                                Edit Data
                                             </TooltipContent>
                                         </Tooltip>
+
                                         <Tooltip>
                                             <TooltipTrigger asChild>
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            className={`h-8 w-8 ${p.is_active ? 'text-amber-600' : 'text-emerald-600'}`}
-                                            onClick={() =>
-                                                triggerAlert('toggle_status', p)
-                                            }
-                                        >
-                                            {p.is_active ? (
-                                                <ShieldAlert className="h-4 w-4" />
-                                            ) : (
-                                                <ShieldCheck className="h-4 w-4" />
-                                            )}
-                                        </Button>
-                                        </TooltipTrigger>
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    className={`h-8 w-8 ${p.is_active ? 'text-amber-600' : 'text-emerald-600'}`}
+                                                    onClick={() =>
+                                                        triggerAlert(
+                                                            'toggle_status',
+                                                            p,
+                                                        )
+                                                    }
+                                                >
+                                                    {p.is_active ? (
+                                                        <ShieldAlert className="h-4 w-4" />
+                                                    ) : (
+                                                        <ShieldCheck className="h-4 w-4" />
+                                                    )}
+                                                </Button>
+                                            </TooltipTrigger>
                                             <TooltipContent className="text-xs">
-                                                {p.is_active ? 'Nonaktifkan Akun' : 'Aktifkan Akun'}
+                                                {p.is_active
+                                                    ? 'Nonaktifkan Akun'
+                                                    : 'Aktifkan Akun'}
                                             </TooltipContent>
                                         </Tooltip>
+
                                         <Tooltip>
                                             <TooltipTrigger asChild>
                                                 <Button
@@ -205,7 +188,7 @@ return 'Selanjutnya ›';
                                                         triggerAlert(
                                                             'delete',
                                                             p,
-                                                        )   
+                                                        )
                                                     }
                                                 >
                                                     <Trash2 className="h-4 w-4" />
@@ -223,45 +206,12 @@ return 'Selanjutnya ›';
                 </TableBody>
             </Table>
 
-            <div className="flex flex-col items-center justify-between gap-4 border-t px-4 py-3 text-sm text-muted-foreground sm:flex-row">
-                <div>
-                    Menampilkan {pegawais.from || 0} - {pegawais.to || 0} dari{' '}
-                    {pegawais.total} pegawai
-                </div>
-                <div className="flex flex-wrap gap-1">
-                    {pegawais.links.map((link, idx) => {
-                        const relativeUrl = getRelativeUrl(link.url);
-                        const labelHtml = parsePaginationLabel(link.label);
-
-                        return (
-                            <Button
-                                key={idx}
-                                variant={link.active ? 'default' : 'outline'}
-                                size="sm"
-                                disabled={!relativeUrl}
-                                onClick={() =>
-                                    relativeUrl &&
-                                    router.get(
-                                        relativeUrl,
-                                        {},
-                                        {
-                                            preserveState: true,
-                                            preserveScroll: true,
-                                        },
-                                    )
-                                }
-                                className={`h-8 px-3 ${link.active ? 'pointer-events-none' : ''}`}
-                            >
-                                <span
-                                    dangerouslySetInnerHTML={{
-                                        __html: labelHtml,
-                                    }}
-                                />
-                            </Button>
-                        );
-                    })}
-                </div>
-            </div>
+            <Pagination 
+                links={pegawais.links} 
+                from={pegawais.from} 
+                to={pegawais.to} 
+                total={pegawais.total} 
+            />
 
             <Dialog
                 open={!!editPegawai}
@@ -271,11 +221,14 @@ return 'Selanjutnya ›';
                     <DialogHeader>
                         <DialogTitle>Edit Registrasi Pegawai</DialogTitle>
                     </DialogHeader>
-                    <PegawaiForm
-                        key={editPegawai?.id}
-                        pegawai={editPegawai}
-                        onSuccess={() => setEditPegawai(null)}
-                    />
+                    {editPegawai && (
+                        <PegawaiForm
+                            pegawai={editPegawai}
+                            onSuccess={() => setEditPegawai(null)}
+                            // Anda dapat meneruskan prop 'roles' di sini jika tersedia,
+                            // jika tidak, ambil lewat usePage() seperti di form
+                        />
+                    )}
                 </DialogContent>
             </Dialog>
 

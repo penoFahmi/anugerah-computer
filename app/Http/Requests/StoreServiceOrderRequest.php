@@ -8,7 +8,6 @@ class StoreServiceOrderRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // Pastikan hanya user yang login yang bisa menambah servisan
         return auth()->check();
     }
 

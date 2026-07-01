@@ -8,6 +8,7 @@ use App\Models\ChatLog;
 use App\Jobs\ProcessInboundWaMessage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class WhatsappWebhookController extends Controller
 {

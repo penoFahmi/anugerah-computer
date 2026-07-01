@@ -1,5 +1,6 @@
 import { Draggable } from '@hello-pangea/dnd';
 import { MoreHorizontal } from 'lucide-react';
+
 import { Badge } from '@/components/ui/badge';
 import type { ServiceListItem } from '@/types/service';
 
@@ -10,12 +11,14 @@ interface KanbanCardProps {
 }
 
 export function KanbanCard({ service, index, onClick }: KanbanCardProps) {
-    const formatRupiah = (angka: string | number | null | undefined) => {
+    // Fungsi formatting currency yang lebih aman (Safe Parsing)
+    const formatRupiah = (angka: string | number | null | undefined): string | null => {
         if (!angka || Number(angka) === 0) return null;
         return new Intl.NumberFormat('id-ID').format(Number(angka));
     };
 
     const cost = formatRupiah(service.estimated_cost);
+    const isWarrantyClaim = service.complaint.includes('[KLAIM GARANSI');
 
     return (
         <Draggable draggableId={service.id.toString()} index={index}>
@@ -39,17 +42,20 @@ export function KanbanCard({ service, index, onClick }: KanbanCardProps) {
                     <h4 className="font-bold text-sm text-slate-800 leading-tight mb-1">
                         {service.device_name}
                     </h4>
+                    
                     <p className="text-xs font-medium text-slate-600 mb-3">
                         A.n: {service.customer_name}
                     </p>
 
-                    {service.complaint.includes('[KLAIM GARANSI') && (
+                    {/* Indikator Khusus Klaim Garansi */}
+                    {isWarrantyClaim && (
                         <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-300 shadow-none px-1.5 py-0 text-[9px] mb-2 w-full justify-center">
                             KLAIM GARANSI
                         </Badge>
                     )}
 
                     <div className="bg-slate-50 p-2 rounded text-[11px] text-slate-500 line-clamp-2 leading-snug border border-slate-100">
+                        {/* Menghilangkan tag [KLAIM GARANSI] dari tampilan deskripsi agar lebih bersih */}
                         {service.complaint.replace(/\[KLAIM GARANSI.*?\]/g, '').trim()}
                     </div>
 

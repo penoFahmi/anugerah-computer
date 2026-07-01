@@ -3,34 +3,23 @@ import { Plus, Search, FilterX } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useDebouncedCallback } from 'use-debounce';
-import Heading from '@/components/heading';
-import { PegawaiForm } from '@/components/pegawai/pegawai-form';
-import { PegawaiTable } from '@/components/pegawai/pegawai-table';
-import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+
 import AppLayout from '@/layouts/app-layout';
-import { index } from '@/routes/pegawai';
+import Heading from '@/components/heading';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+import { PegawaiTable } from '@/components/pegawai/pegawai-table';
+import { PegawaiForm } from '@/components/pegawai/pegawai-form';
 import type { PegawaiPageProps } from '@/types/pegawai';
 
-export default function PegawaiList({ pegawais, roles, filters }: any) {
+export default function PegawaiList({ pegawais, roles, filters }: PegawaiPageProps) {
     const [open, setOpen] = useState(false);
     const { flash } = usePage<PegawaiPageProps>().props;
 
-    // State Filter Kolektif ditambahkan per_page
+    // Inisialisasi Filter State berdasarkan URL saat ini
     const [filterState, setFilterState] = useState({
         search: filters.search ?? '',
         status: filters.status ?? 'all',
@@ -38,67 +27,44 @@ export default function PegawaiList({ pegawais, roles, filters }: any) {
         per_page: filters.per_page ?? '5',
     });
 
+    // Menangani Flash Message secara global
     useEffect(() => {
         if (flash?.toast) {
-            if (flash.toast.type === 'success') {
-toast.success(flash.toast.message);
-}
-
-            if (flash.toast.type === 'error') {
-toast.error(flash.toast.message);
-}
-
-            if (flash.toast.type === 'warning') {
-toast.warning(flash.toast.message);
-}
+            toast[flash.toast.type](flash.toast.message);
         }
     }, [flash]);
+
+    // Eksekusi pembaruan URL ke Inertia
+    const applyFilters = (newFilters: typeof filterState) => {
+        const query: Record<string, string> = {};
+        
+        // Hanya kirim parameter yang aktif (bukan default) agar URL tetap bersih
+        if (newFilters.search) query.search = newFilters.search;
+        if (newFilters.status !== 'all') query.status = newFilters.status;
+        if (newFilters.role !== 'all') query.role = newFilters.role;
+        if (newFilters.per_page !== '5') query.per_page = newFilters.per_page;
+
+        // Asumsi rute bernama 'pegawai.index', sesuaikan dengan routing helper kamu (misal ziggy)
+        router.get('/pegawai', query, { preserveState: true, replace: true });
+    };
 
     const handleSearchDebounce = useDebouncedCallback((value: string) => {
         applyFilters({ ...filterState, search: value });
     }, 400);
 
-    const applyFilters = (newFilters: typeof filterState) => {
-        const query: Record<string, string> = {};
-
-        if (newFilters.search) {
-query.search = newFilters.search;
-}
-
-        if (newFilters.status !== 'all') {
-query.status = newFilters.status;
-}
-
-        if (newFilters.role !== 'all') {
-query.role = newFilters.role;
-}
-
-        if (newFilters.per_page !== '5') {
-query.per_page = newFilters.per_page;
-}
-
-        router.get(index.url(), query, { preserveState: true, replace: true });
-    };
-
-    const handleFilterChange = (
-        key: keyof typeof filterState,
-        value: string,
-    ) => {
+    const handleFilterChange = (key: keyof typeof filterState, value: string) => {
         const newFilters = { ...filterState, [key]: value };
         setFilterState(newFilters);
         applyFilters(newFilters);
     };
 
     const resetFilters = () => {
-        const defaultFilters = {
-            search: '',
-            status: 'all',
-            role: 'all',
-            per_page: '5',
-        };
+        const defaultFilters = { search: '', status: 'all', role: 'all', per_page: '5' };
         setFilterState(defaultFilters);
-        router.get(index.url(), {}, { preserveState: true, replace: true });
+        applyFilters(defaultFilters);
     };
+
+    const isFiltered = filterState.search || filterState.status !== 'all' || filterState.role !== 'all' || filterState.per_page !== '5';
 
     return (
         <>
@@ -118,14 +84,9 @@ query.per_page = newFilters.per_page;
                         </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
-                                <DialogTitle>
-                                    Registrasi Pegawai Baru
-                                </DialogTitle>
+                                <DialogTitle>Registrasi Pegawai Baru</DialogTitle>
                             </DialogHeader>
-                            <PegawaiForm
-                                key={String(open)}
-                                onSuccess={() => setOpen(false)}
-                            />
+                            <PegawaiForm onSuccess={() => setOpen(false)} roles={roles} />
                         </DialogContent>
                     </Dialog>
                 </div>
@@ -138,20 +99,13 @@ query.per_page = newFilters.per_page;
                             className="pl-8"
                             value={filterState.search}
                             onChange={(e) => {
-                                setFilterState((prev) => ({
-                                    ...prev,
-                                    search: e.target.value,
-                                }));
+                                setFilterState((prev) => ({ ...prev, search: e.target.value }));
                                 handleSearchDebounce(e.target.value);
                             }}
                         />
                     </div>
-                    <Select
-                        value={filterState.per_page}
-                        onValueChange={(val) =>
-                            handleFilterChange('per_page', val)
-                        }
-                    >
+                    
+                    <Select value={filterState.per_page} onValueChange={(val) => handleFilterChange('per_page', val)}>
                         <SelectTrigger className="w-full sm:w-[120px]">
                             <SelectValue placeholder="Baris" />
                         </SelectTrigger>
@@ -162,12 +116,8 @@ query.per_page = newFilters.per_page;
                             <SelectItem value="all">Semua</SelectItem>
                         </SelectContent>
                     </Select>
-                    <Select
-                        value={filterState.status}
-                        onValueChange={(val) =>
-                            handleFilterChange('status', val)
-                        }
-                    >
+
+                    <Select value={filterState.status} onValueChange={(val) => handleFilterChange('status', val)}>
                         <SelectTrigger className="w-full sm:w-[140px]">
                             <SelectValue placeholder="Status" />
                         </SelectTrigger>
@@ -177,36 +127,23 @@ query.per_page = newFilters.per_page;
                             <SelectItem value="inactive">Nonaktif</SelectItem>
                         </SelectContent>
                     </Select>
-                    <Select
-                        value={filterState.role}
-                        onValueChange={(val) => handleFilterChange('role', val)}
-                    >
+
+                    <Select value={filterState.role} onValueChange={(val) => handleFilterChange('role', val)}>
                         <SelectTrigger className="w-full sm:w-[150px]">
                             <SelectValue placeholder="Role" />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">Semua Role</SelectItem>
-                            {roles.map((r: any) => (
-                                <SelectItem
-                                    key={r.id}
-                                    value={r.name}
-                                    className="capitalize"
-                                >
+                            {roles.map((r) => (
+                                <SelectItem key={r.id} value={r.name} className="capitalize">
                                     {r.name}
                                 </SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
-                    {(filterState.search ||
-                        filterState.status !== 'all' ||
-                        filterState.role !== 'all' ||
-                        filterState.per_page !== '5') && (
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={resetFilters}
-                            title="Reset Filter"
-                        >
+
+                    {isFiltered && (
+                        <Button variant="ghost" size="icon" onClick={resetFilters} title="Reset Filter">
                             <FilterX className="h-4 w-4 text-muted-foreground" />
                         </Button>
                     )}
@@ -221,7 +158,7 @@ query.per_page = newFilters.per_page;
 }
 
 PegawaiList.layout = (page: React.ReactNode) => (
-    <AppLayout breadcrumbs={[{ title: 'Pegawai', href: index.url() }]}>
+    <AppLayout breadcrumbs={[{ title: 'Pegawai', href: '/pegawai' }]}>
         {page}
     </AppLayout>
 );

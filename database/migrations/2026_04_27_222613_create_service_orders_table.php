@@ -15,24 +15,33 @@ return new class extends Migration
             $table->id();
             $table->string('order_number')->unique();
 
+            // Relasi ke entitas utama. restrictOnDelete digunakan agar data riwayat
+            // perbaikan tidak rusak jika ada percobaan penghapusan data master.
             $table->foreignId('customer_id')->constrained()->restrictOnDelete();
             $table->foreignId('device_id')->constrained()->restrictOnDelete();
 
             $table->text('complaint');
-            $table->json('equipments')->nullable();
+            // JSON sangat cocok untuk menyimpan kelengkapan bawaan (misal: ["charger", "tas"])
+            $table->json('equipments')->nullable(); 
 
+            // Index pada status akan sangat mempercepat query di halaman Dashboard/Kanban board
             $table->string('status', 30)->default('waiting_checking')->index();
-
             $table->boolean('is_technician_on_site')->default(false);
 
-            // Biaya
+            // BIAYA
+            // Note: Jika menggunakan mata uang Rupiah (IDR), biasanya tidak butuh angka desimal.
+            // Tapi menggunakan decimal(12, 2) tetap aman sebagai standar akuntansi.
             $table->decimal('estimated_cost', 12, 2)->nullable();
             $table->decimal('down_payment', 12, 2)->nullable();
             $table->decimal('final_cost', 12, 2)->nullable();
 
             $table->text('technician_notes')->nullable();
 
+            // Tracker Karyawan yang bertanggung jawab
             $table->foreignId('created_by')->constrained('users')->restrictOnDelete();
+            
+            // nullOnDelete: Jika akun teknisi dihapus/resign, history order tetap ada 
+            // tapi field ini menjadi null agar tidak error.
             $table->foreignId('technician_id')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('handed_over_by')->nullable()->constrained('users')->nullOnDelete();
 

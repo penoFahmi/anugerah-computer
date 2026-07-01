@@ -9,6 +9,7 @@ import { ServiceProcessModal } from '@/components/services/service-process-modal
 import { KanbanCard } from '@/components/services/kanban-card';
 import type { ServiceListItem } from '@/types/service';
 
+// Definisi Kolom Statis (Disesuaikan dengan Enum ServiceStatus)
 const COLUMNS = [
     { id: 'waiting_checking', title: 'Antrean Baru', icon: AlertCircle, color: 'border-pink-300 bg-pink-50', headerBg: 'bg-pink-100 text-pink-800' },
     { id: 'waiting_approval', title: 'Menunggu Konfirmasi', icon: Clock, color: 'border-orange-300 bg-orange-50', headerBg: 'bg-orange-100 text-orange-800' },
@@ -22,9 +23,11 @@ interface KanbanBoardProps {
 }
 
 export function KanbanBoard({ services }: KanbanBoardProps) {
+    // State lokal untuk memfasilitasi "Optimistic UI Update"
     const [boardData, setBoardData] = useState<ServiceListItem[]>(services);
     const [selectedService, setSelectedService] = useState<ServiceListItem | null>(null);
 
+    // Sinkronisasi data dari backend saat props services berubah
     useEffect(() => {
         setBoardData(services);
     }, [services]);
@@ -32,6 +35,7 @@ export function KanbanBoard({ services }: KanbanBoardProps) {
     const onDragEnd = (result: DropResult) => {
         const { destination, source, draggableId } = result;
 
+        // 1. Batalkan jika di-drop di luar zona atau tidak ada perpindahan posisi
         if (!destination || (destination.droppableId === source.droppableId && destination.index === source.index)) {
             return;
         }
@@ -41,26 +45,29 @@ export function KanbanBoard({ services }: KanbanBoardProps) {
 
         if (!draggedService) return;
 
-        // Pembaruan UI sementara untuk pengalaman responsif
-        const updatedBoard = boardData.map(s => s.id === draggedService.id ? { ...s, status: newStatus } : s);
+        // 2. OPTIMISTIC UI UPDATE: Perbarui UI secara instan agar terasa sangat cepat
+        const updatedBoard = boardData.map(s => 
+            s.id === draggedService.id ? { ...s, status: newStatus } : s
+        );
         setBoardData(updatedBoard);
 
-        // Eksekusi pembaruan ke backend
+        // 3. Sinkronisasi perubahan ke Backend (Database)
         router.put(`/services/${draggedService.id}`, { 
             status: newStatus,
             is_full_update: false,
         }, {
             preserveScroll: true,
             onError: () => {
-                toast.error('Gagal memindah status. Silakan isi data secara manual.');
-                setBoardData(services);
-                setSelectedService(draggedService);
+                // ROLLBACK: Jika server gagal menyimpan, kembalikan posisi kartu ke awal
+                toast.error('Gagal memindah status secara otomatis. Silakan isi form operasional secara manual.');
+                setBoardData(services); 
+                setSelectedService(draggedService); // Buka modal agar teknisi bisa input alasan/catatan
             }
         });
     };
 
     return (
-        <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4">
+        <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4 custom-scrollbar">
             <DragDropContext onDragEnd={onDragEnd}>
                 <div className="flex h-full gap-4 items-start w-max min-w-full">
                     {COLUMNS.map(column => {
@@ -85,7 +92,9 @@ export function KanbanBoard({ services }: KanbanBoardProps) {
                                         <div 
                                             ref={provided.innerRef} 
                                             {...provided.droppableProps}
-                                            className={`flex-1 overflow-y-auto p-3 space-y-3 transition-colors ${snapshot.isDraggingOver ? 'bg-black/5' : ''}`}
+                                            className={`flex-1 overflow-y-auto p-3 space-y-3 transition-colors ${
+                                                snapshot.isDraggingOver ? 'bg-black/5' : ''
+                                            }`}
                                         >
                                             {columnServices.map((service, index) => (
                                                 <KanbanCard
@@ -106,6 +115,7 @@ export function KanbanBoard({ services }: KanbanBoardProps) {
                 </div>
             </DragDropContext>
 
+            {/* Modal Form Operasional untuk mengedit biaya/catatan */}
             <ServiceProcessModal 
                 isOpen={!!selectedService} 
                 onClose={() => setSelectedService(null)} 

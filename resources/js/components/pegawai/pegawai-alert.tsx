@@ -24,7 +24,6 @@ export function PegawaiAlert({ open, onOpenChange, type, pegawai }: Props) {
 return null;
 }
 
-    // Confirm password reset
     const handleConfirm = () => {
         if (type === 'delete') {
             router.delete(destroy.url(pegawai.id), {
@@ -37,7 +36,6 @@ return null;
                 { onSuccess: () => onOpenChange(false) },
             );
         } else if (type === 'reset_password') {
-            // Asumsi rutenya bernama 'pegawai.reset-password'
             router.patch(
                 `/pegawai/${pegawai.id}/reset-password`,
                 {},
@@ -59,7 +57,7 @@ return null;
                     </AlertDialogTitle>
                     <AlertDialogDescription>
                         {type === 'delete'
-                            ? `Apakah Anda yakin ingin menghapus "${pegawai.name}" secara permanen?`
+                            ? `Apakah Anda yakin ingin menghapus "${pegawai.name}", akunnya. dapat dipulihkan di sampah?`
                             : type === 'reset_password'
                               ? `Apakah Anda yakin ingin mereset password "${pegawai.name}"?`
                               : `Apakah Anda yakin ingin mengubah status akun "${pegawai.name}"?`}

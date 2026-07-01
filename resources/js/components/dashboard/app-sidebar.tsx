@@ -40,9 +40,9 @@ const mainNavItems: NavItem[] = [
         icon: Wrench,
         roles: ['administrator', 'teknisi', 'pegawai'],
         items: [
-            { title: 'Servis & cek ', href: '/services' },
+            { title: 'Pusat Servis ', href: '/services' },
             { title: 'Papan Teknisi', href: '/kanban' },
-            { title: 'Klaim & Garansi Servis', href: '/garansi' },
+            { title: 'Garansi', href: '/garansi' },
         ],
     },
     {

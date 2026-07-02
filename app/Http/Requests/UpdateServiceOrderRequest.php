@@ -17,12 +17,13 @@ class UpdateServiceOrderRequest extends FormRequest
     {
         // Validasi dasar untuk operasional teknisi (selalu wajib)
         $rules = [
+            'is_full_update' => ['nullable', 'boolean'],
             'status' => ['required', Rule::enum(ServiceStatus::class)],
             'estimated_cost' => ['nullable', 'numeric', 'min:0'],
             'final_cost' => ['nullable', 'numeric', 'min:0'],
+            'down_payment' => ['nullable', 'numeric', 'min:0'],
             'technician_notes' => ['nullable', 'string', 'max:2000'],
             'warranty_days' => ['nullable', 'integer', 'min:0', 'max:365'],
-            'is_full_update' => ['nullable', 'boolean'],
         ];
 
         // Validasi tambahan JIKA ini adalah form Edit Lengkap dari Front Office/Admin

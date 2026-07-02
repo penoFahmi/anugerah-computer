@@ -29,8 +29,6 @@ return new class extends Migration
             $table->boolean('is_technician_on_site')->default(false);
 
             // BIAYA
-            // Note: Jika menggunakan mata uang Rupiah (IDR), biasanya tidak butuh angka desimal.
-            // Tapi menggunakan decimal(12, 2) tetap aman sebagai standar akuntansi.
             $table->decimal('estimated_cost', 12, 2)->nullable();
             $table->decimal('down_payment', 12, 2)->nullable();
             $table->decimal('final_cost', 12, 2)->nullable();

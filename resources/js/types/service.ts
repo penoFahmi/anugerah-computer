@@ -27,6 +27,12 @@ export interface ServiceListItem {
     estimated_cost: string | number | null;
     final_cost?: string | number | null;
     down_payment?: string | number | null;
+    financials: {
+        estimated: string | number | null;
+        final: string | number | null;
+        dp: string | number | null;
+        remaining: number;
+    };
     technician_notes?: string | null;
     created_at: string;
     device_type?: string;

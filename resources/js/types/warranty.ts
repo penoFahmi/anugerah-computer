@@ -1,3 +1,5 @@
+import type { PaginatedData, GlobalPageProps } from './global';
+
 export interface WarrantyListItem {
     id: number;
     warranty_code: string;
@@ -12,23 +14,13 @@ export interface WarrantyListItem {
     notes: string | null;
 }
 
-export interface PaginatedWarranties {
-    current_page: number;
-    data: WarrantyListItem[];
-    first_page_url: string;
-    from: number | null;
-    last_page: number;
-    links: { url: string | null; label: string; active: boolean }[];
-    per_page: number;
-    to: number | null;
-    total: number;
-}
-
-export interface WarrantyIndexProps {
-    warranties: PaginatedWarranties;
+export interface WarrantyIndexProps extends GlobalPageProps {
+    warranties: PaginatedData<WarrantyListItem>;
     filters: {
         search: string;
         status: string;
         per_page: string | number;
+        date?: string;
+        type?: string;
     };
 }

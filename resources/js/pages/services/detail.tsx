@@ -1,18 +1,27 @@
-import { Head, Link, usePage } from '@inertiajs/react';
-import { ArrowLeft, FileText, Settings, MessageSquare } from 'lucide-react';
+import { Head, usePage } from '@inertiajs/react';
+import { FileText, Settings, MessageSquare } from 'lucide-react';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 
-import AppLayout from '@/layouts/app-layout';
 import Heading from '@/components/heading';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { ServiceDetailForm } from '@/components/services/service-detail-form';
 import { ServiceDetailChat } from '@/components/services/service-detail-chat';
+import { ServiceDetailForm } from '@/components/services/service-detail-form';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import AppLayout from '@/layouts/app-layout';
 
-export default function ServicesDetail({ serviceOrder }: { serviceOrder: any }) {
-    const { flash } = usePage().props as any;
+import type { GlobalPageProps } from '@/types/global';
+import type { ServiceListItem } from '@/types/service';
+
+interface ServiceDetailProps extends GlobalPageProps {
+    serviceOrder: ServiceListItem & {
+        customer: any;
+        device: any;
+    };
+}
+
+export default function ServicesDetail({ serviceOrder }: ServiceDetailProps) {
+    const { flash } = usePage<ServiceDetailProps>().props;
 
     useEffect(() => {
         if (flash?.toast) {
@@ -25,58 +34,86 @@ export default function ServicesDetail({ serviceOrder }: { serviceOrder: any }) 
     return (
         <>
             <Head title={`Detail ${serviceOrder.order_number}`} />
-
-            {/* Container */}
-            <div className="flex flex-col gap-4 p-4 h-[calc(100vh-4rem)] overflow-hidden">
-                
-                {/* HEADER */}
-                <div className="flex items-center gap-4 shrink-0">
-                    <Button variant="outline" size="icon" asChild>
-                        <Link href="/services"><ArrowLeft className="h-4 w-4" /></Link>
-                    </Button>
-                    <div>
-                        <div className="flex items-center gap-3">
-                            <Heading title={`Nota: ${serviceOrder.order_number}`} description="Pusat Kendali Data Servisan" />
-                            <Badge variant="outline" className="ml-2 uppercase tracking-wider bg-background">{serviceOrder.status}</Badge>
-                        </div>
+            <div className="flex h-[calc(100vh-4rem)] flex-col gap-4 overflow-hidden p-4">
+                {/* HEADER (Terkunci di atas) */}
+                <div className="flex shrink-0 items-center gap-4">
+                    <div className="flex items-center gap-3">
+                        <Heading
+                            title={`Nota: ${serviceOrder.order_number}`}
+                            description="Pusat Kendali Data Servisan"
+                        />
+                        <Badge
+                            variant="outline"
+                            className="ml-2 bg-background tracking-wider text-foreground uppercase shadow-sm"
+                        >
+                            {serviceOrder.status_label || serviceOrder.status}
+                        </Badge>
                     </div>
                 </div>
 
-                {/* 2-COLUMN LAYOUT (Lebih luas dan lega) */}
-                <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 overflow-hidden mt-2">
-                    
-                    {/* KOLOM KIRI (65%): FORM EDIT LENGKAP */}
-                    <div className="lg:col-span-2 flex flex-col bg-card border border-border rounded-xl shadow-sm overflow-hidden h-full">
-                        <div className="flex items-center gap-2 border-b p-4 shrink-0 bg-muted/20">
-                            <Settings className="h-5 w-5 text-primary" />
+                <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 xl:grid-cols-3">
+                    <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm xl:col-span-2">
+                        {/* Header Kolom Form */}
+                        <div className="flex shrink-0 items-center gap-3 border-b border-border bg-muted/20 p-4">
+                            <div className="rounded-lg bg-primary/10 p-2">
+                                <Settings className="h-5 w-5 text-primary" />
+                            </div>
                             <div>
-                                <h2 className="font-bold text-sm">Edit Data Keseluruhan</h2>
-                                <p className="text-[10px] text-muted-foreground">Koreksi identitas pelanggan dan operasional.</p>
+                                <h2 className="text-sm font-bold text-foreground">
+                                    Edit Data Keseluruhan
+                                </h2>
+                                <p className="text-[11px] text-muted-foreground">
+                                    Koreksi identitas pelanggan dan detail
+                                    operasional teknisi.
+                                </p>
                             </div>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-5">
+
+                        {/* Area Komponen Form: Memenuhi seluruh sisa ruang */}
+                        <div className="min-h-0 flex-1 overflow-hidden">
                             <ServiceDetailForm service={serviceOrder} />
                         </div>
                     </div>
 
-                    {/* KOLOM KANAN (35%): CHAT & PDF */}
-                    <div className="lg:col-span-1 flex flex-col h-full">
-                        <Tabs defaultValue="chat" className="w-full flex flex-col h-full">
-                            <TabsList className="grid w-full grid-cols-2 mb-3 shrink-0 h-10">
-                                <TabsTrigger value="chat" className="gap-2 text-xs"><MessageSquare className="h-3.5 w-3.5" /> Live Chat WA</TabsTrigger>
-                                <TabsTrigger value="pdf" className="gap-2 text-xs"><FileText className="h-3.5 w-3.5" /> Nota PDF</TabsTrigger>
+                    {/* KOLOM KANAN (TABS CHAT & PDF) */}
+                    <div className="flex h-full flex-col overflow-hidden xl:col-span-1">
+                        <Tabs
+                            defaultValue="chat"
+                            className="flex h-full w-full flex-col overflow-hidden"
+                        >
+                            <TabsList className="mb-3 grid h-10 w-full shrink-0 grid-cols-2 bg-muted">
+                                <TabsTrigger
+                                    value="chat"
+                                    className="gap-2 text-xs font-semibold"
+                                >
+                                    <MessageSquare className="h-3.5 w-3.5" />{' '}
+                                    Live Chat
+                                </TabsTrigger>
+                                <TabsTrigger
+                                    value="pdf"
+                                    className="gap-2 text-xs font-semibold"
+                                >
+                                    <FileText className="h-3.5 w-3.5" /> Nota
+                                    PDF
+                                </TabsTrigger>
                             </TabsList>
-                            
-                            <TabsContent value="chat" className="mt-0 flex-1 overflow-hidden">
+
+                            <TabsContent
+                                value="chat"
+                                className="m-0 min-h-0 flex-1 flex-col overflow-hidden data-[state=active]:flex"
+                            >
                                 <ServiceDetailChat service={serviceOrder} />
                             </TabsContent>
 
-                            <TabsContent value="pdf" className="mt-0 flex-1 overflow-hidden">
-                                <div className="border border-border rounded-xl overflow-hidden shadow-sm h-full bg-muted">
-                                    <iframe 
-                                        src={pdfUrl} 
-                                        width="100%" 
-                                        height="100%" 
+                            <TabsContent
+                                value="pdf"
+                                className="m-0 min-h-0 flex-1 flex-col overflow-hidden data-[state=active]:flex"
+                            >
+                                <div className="h-full overflow-hidden rounded-xl border border-border bg-muted/50 shadow-sm">
+                                    <iframe
+                                        src={pdfUrl}
+                                        width="100%"
+                                        height="100%"
                                         title="PDF Nota"
                                         className="border-none"
                                     />
@@ -84,7 +121,6 @@ export default function ServicesDetail({ serviceOrder }: { serviceOrder: any }) 
                             </TabsContent>
                         </Tabs>
                     </div>
-
                 </div>
             </div>
         </>
@@ -92,7 +128,12 @@ export default function ServicesDetail({ serviceOrder }: { serviceOrder: any }) 
 }
 
 ServicesDetail.layout = (page: React.ReactNode) => (
-    <AppLayout breadcrumbs={[{ title: 'Servis', href: '/services' }, { title: 'Detail', href: '#' }]}>
+    <AppLayout
+        breadcrumbs={[
+            { title: 'Servis', href: '/services' },
+            { title: 'Detail', href: '#' },
+        ]}
+    >
         {page}
     </AppLayout>
 );

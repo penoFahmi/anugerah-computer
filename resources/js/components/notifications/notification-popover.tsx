@@ -1,9 +1,9 @@
 import { usePage, router } from '@inertiajs/react';
-import { Bell, CheckCheck, Trash2, Wifi, WifiOff } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
+import { Bell, CheckCheck, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import 'dayjs/locale/id';
 
 import { Button } from '@/components/ui/button';
@@ -12,18 +12,55 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 dayjs.extend(relativeTime);
 dayjs.locale('id');
 
+interface NotificationData {
+    message: string;
+    action_url?: string;
+    type?: string;
+}
+
+interface DatabaseNotification {
+    id: string;
+    data: NotificationData;
+    created_at: string;
+    read_at: string | null;
+}
+
+interface SharedProps {
+    auth: {
+        user: {
+            id: number;
+            name: string;
+            unread_notifications_count: number;
+            notifications: DatabaseNotification[];
+        };
+    };
+}
+
 export function NotificationPopover() {
-    const { auth } = usePage().props as any;
+    const { auth } = usePage<SharedProps>().props;
 
     const initialUnreadCount = auth?.user?.unread_notifications_count || 0;
     const initialNotifications = auth?.user?.notifications || [];
 
-    const [hasUnread, setHasUnread] = useState(initialUnreadCount > 0);
-    const [notifications, setNotifications] = useState<any[]>(initialNotifications);
-    
-    // Status koneksi Reverb manual
-    const [wsStatus, setWsStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
+    const [hasUnread, setHasUnread] = useState<boolean>(initialUnreadCount > 0);
+    const [notifications, setNotifications] = useState<DatabaseNotification[]>(initialNotifications);
 
+    // 1. Aksi: Klik Notifikasi -> Tandai Dibaca & Redirect Otomatis ke Sumber Data
+    const handleNotificationClick = (n: DatabaseNotification) => {
+        router.post(`/notifications/${n.id}/read`, {}, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setNotifications(prev =>
+                    prev.map(item => item.id === n.id ? { ...item, read_at: new Date().toISOString() } : item)
+                );
+                // Hitung ulang apakah masih ada yang belum dibaca di state lokal
+                const stillHasUnread = notifications.some(item => item.id !== n.id && !item.read_at);
+                setHasUnread(stillHasUnread);
+            }
+        });
+    };
+
+    // 2. Aksi: Tandai Semua Telah Dibaca
     const markAllAsRead = () => {
         router.post('/notifications/read-all', {}, {
             preserveScroll: true,
@@ -34,129 +71,138 @@ export function NotificationPopover() {
         });
     };
 
+    // 3. Aksi: Hapus Notifikasi Tertentu dari Daftar
     const deleteNotification = (id: string) => {
         router.delete(`/notifications/${id}`, {
             preserveScroll: true,
-            onSuccess: () => setNotifications(prev => prev.filter(n => n.id !== id))
+            onSuccess: () => {
+                setNotifications(prev => prev.filter(n => n.id !== id));
+                const stillHasUnread = notifications.filter(n => n.id !== id).some(n => !n.read_at);
+                setHasUnread(stillHasUnread);
+            }
         });
     };
 
     useEffect(() => {
-        // Jika window.Echo belum siap, tunggu sebentar (handling SSR Vite)
-        if (typeof window === 'undefined' || !window.Echo) {
-            setWsStatus('disconnected');
+        if (typeof window === 'undefined' || !window.Echo || !auth?.user) {
             return;
         }
 
-        // 1. PANTAU KONEKSI REVERB SECARA NATIVE
-        if (window.Echo.connector.pusher) {
-            window.Echo.connector.pusher.connection.bind('connected', () => setWsStatus('connected'));
-            window.Echo.connector.pusher.connection.bind('disconnected', () => setWsStatus('disconnected'));
-            window.Echo.connector.pusher.connection.bind('error', () => setWsStatus('disconnected'));
-        }
+        // A. DENGARKAN NOTIFIKASI MANUAL CS / WHATSAPP (GLOBAL CHANNEL)
+        window.Echo.private('admin.notifications')
+            .listen('ChatRequiresHuman', (e: { chatLog?: { service_order_id?: string; message?: string } }) => {
+                const msg = e.chatLog?.message || `Pelanggan butuh penanganan manual! (Nota ID: ${e.chatLog?.service_order_id || 'N/A'})`;
+                toast.warning(msg, { duration: 8000 });
+                
+                const tempNotif: DatabaseNotification = {
+                    id: Math.random().toString(),
+                    data: { 
+                        type: 'chat', 
+                        message: msg,
+                        action_url: e.chatLog?.service_order_id ? `/services?search=${e.chatLog.service_order_id}` : undefined
+                    },
+                    created_at: new Date().toISOString(),
+                    read_at: null,
+                };
+                setHasUnread(true);
+                setNotifications(prev => [tempNotif, ...prev]);
+            });
 
-        if (auth?.user) {
-            // 2. DENGARKAN NOTIF CS (GLOBAL)
-            window.Echo.private('admin.notifications')
-                .listen('ChatRequiresHuman', (e: any) => {
-                    const msg = `Pelanggan butuh bantuan manual! (Nota: ${e.chatLog?.service_order_id || 'Unknown'})`;
-                    toast.warning(msg, { duration: 8000 });
-                    
-                    const tempNotif = {
-                        id: Math.random().toString(),
-                        data: { type: 'chat', message: msg },
-                        created_at: new Date().toISOString(),
-                        read_at: null,
-                    };
-                    setHasUnread(true);
-                    setNotifications(prev => [tempNotif, ...prev]);
-                });
+        // B. DENGARKAN BROADCAST NOTIFIKASI BAWAAN LARAVEL (PRIVATE CHANNEL USER)
+        window.Echo.private(`App.Models.User.${auth.user.id}`)
+            .notification((notification: any) => {
+                const pesan = notification.message || notification.data?.message || "Ada pemberitahuan sistem baru!";
+                toast.success(pesan);
+                
+                const formattedNotif: DatabaseNotification = {
+                    id: notification.id || Math.random().toString(),
+                    data: {
+                        type: notification.data?.type || 'system',
+                        message: pesan,
+                        action_url: notification.data?.action_url || undefined
+                    },
+                    created_at: notification.created_at || new Date().toISOString(),
+                    read_at: null,
+                };
 
-            // 3. DENGARKAN NOTIF SERVISAN BARU (PRIVATE)
-            window.Echo.private(`App.Models.User.${auth.user.id}`)
-                .notification((notification: any) => {
-                    const pesan = notification.message || notification.data?.message || "Ada pemberitahuan baru!";
-                    toast.success(pesan);
-                    
-                    const formattedNotif = {
-                        id: notification.id || Math.random().toString(),
-                        data: notification.data || notification,
-                        created_at: notification.created_at || new Date().toISOString(),
-                        read_at: null,
-                    };
+                setHasUnread(true);
+                setNotifications(prev => [formattedNotif, ...prev]);
+            });
 
-                    setHasUnread(true);
-                    setNotifications(prev => [formattedNotif, ...prev]);
-                });
-        }
-
-        // CLEANUP SAAT KOMPONEN DITUTUP
+        // CLEANUP: Putuskan listen saat ganti halaman / logout
         return () => {
-            if (typeof window !== 'undefined' && window.Echo) {
+            if (window.Echo) {
                 window.Echo.leave('admin.notifications');
-                if (auth?.user) window.Echo.leave(`App.Models.User.${auth.user.id}`);
+                window.Echo.leave(`App.Models.User.${auth.user.id}`);
             }
         };
-    }, [auth?.user]);
+    }, [auth?.user?.id]);
 
     return (
-        <div className="flex items-center gap-1">
-            {/* INDIKATOR RADAR REVERB */}
-            <div title={`Status Websocket: ${wsStatus}`} className="mr-1">
-                {wsStatus === 'connected' ? (
-                    <Wifi className="h-4 w-4 text-emerald-500" />
-                ) : wsStatus === 'connecting' ? (
-                    <Wifi className="h-4 w-4 text-yellow-500 animate-pulse" />
-                ) : (
-                    <WifiOff className="h-4 w-4 text-red-500" />
-                )}
-            </div>
-
+        <div className="flex items-center">
             <Popover>
                 <PopoverTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative h-9 w-9" onClick={() => setHasUnread(false)}>
+                    <Button variant="ghost" size="icon" className="relative h-9 w-9">
                         <Bell className="h-5 w-5 text-slate-700 dark:text-slate-300" />
                         {hasUnread && (
-                            <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5 animate-pulse rounded-full border-2 border-background bg-red-500" />
+                            <span className="absolute top-1.5 right-1.5 flex h-2 w-2 animate-pulse rounded-full border border-background bg-red-500" />
                         )}
                     </Button>
                 </PopoverTrigger>
                 
-                <PopoverContent className="w-96 p-0" align="end">
+                <PopoverContent className="w-96 p-0 border-border bg-card" align="end">
                     <div className="flex flex-col">
-                        <div className="flex items-center justify-between border-b px-4 py-3 bg-muted/30">
+                        <div className="flex items-center justify-between border-b border-border px-4 py-2.5 bg-muted/30">
                             <div>
-                                <h4 className="font-bold text-sm">Notifikasi</h4>
-                                <p className="text-[11px] text-muted-foreground mt-0.5">Pembaruan sistem & servis terbaru.</p>
+                                <h4 className="font-bold text-xs uppercase tracking-wide">Pusat Notifikasi</h4>
+                                <p className="text-[10px] text-muted-foreground mt-0.5">Pembaruan sistem & operasional terpadu.</p>
                             </div>
                             {hasUnread && (
-                                <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-8 px-2 text-xs text-blue-600 hover:text-blue-700">
-                                    <CheckCheck className="mr-1 h-3.5 w-3.5" /> Tandai Dibaca
+                                <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-7 px-2 text-[11px] text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                                    <CheckCheck className="mr-1 h-3.5 w-3.5" /> Bersihkan Lonceng
                                 </Button>
                             )}
                         </div>
 
-                        <div className="max-h-[350px] overflow-y-auto p-2">
+                        <div className="max-h-[320px] overflow-y-auto p-1.5 custom-scrollbar">
                             {notifications.length === 0 ? (
-                                <div className="py-8 text-center flex flex-col items-center justify-center opacity-50">
-                                    <Bell className="h-8 w-8 mb-2" />
-                                    <p className="text-sm font-medium">Belum ada notifikasi.</p>
+                                <div className="py-12 text-center flex flex-col items-center justify-center opacity-40">
+                                    <Bell className="h-6 w-6 mb-2 text-muted-foreground" />
+                                    <p className="text-xs font-semibold">Kotak masuk bersih.</p>
                                 </div>
                             ) : (
                                 <div className="space-y-1">
                                     {notifications.map((n) => {
                                         const isUnread = !n.read_at;
                                         return (
-                                            <div key={n.id} className={`group relative flex flex-col gap-1 rounded-lg p-3 text-sm transition-colors ${isUnread ? 'bg-blue-50/50 dark:bg-blue-950/20' : 'hover:bg-muted/50'}`}>
-                                                {isUnread && <div className="absolute left-1.5 top-4 h-1.5 w-1.5 rounded-full bg-blue-600" />}
-                                                <div className={`pl-3 ${isUnread ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
+                                            <div 
+                                                key={n.id} 
+                                                onClick={() => handleNotificationClick(n)}
+                                                className={`group relative flex flex-col gap-1 rounded-md p-2.5 text-xs transition-colors cursor-pointer ${
+                                                    isUnread 
+                                                        ? 'bg-blue-50/60 dark:bg-blue-950/20 hover:bg-blue-100/40 dark:hover:bg-blue-950/40' 
+                                                        : 'hover:bg-muted/60'
+                                                }`}
+                                            >
+                                                {isUnread && <div className="absolute left-1.5 top-3.5 h-1.5 w-1.5 rounded-full bg-blue-600 dark:bg-blue-500" />}
+                                                
+                                                <div className={`pl-2.5 pr-6 leading-relaxed ${isUnread ? 'font-bold text-foreground' : 'text-muted-foreground font-medium'}`}>
                                                     {n.data?.message}
                                                 </div>
-                                                <div className="pl-3 flex items-center justify-between mt-1">
-                                                    <span className="text-[10px] text-slate-400 font-medium">
+                                                
+                                                <div className="pl-2.5 flex items-center justify-between mt-1">
+                                                    <span className="text-[9px] font-semibold text-slate-400 font-mono">
                                                         {dayjs(n.created_at).fromNow()}
                                                     </span>
-                                                    <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:bg-red-100" onClick={(e) => { e.stopPropagation(); deleteNotification(n.id); }}>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:bg-destructive/10" 
+                                                        onClick={(e) => { 
+                                                            e.stopPropagation(); // Mencegah terpicunya aksi click dibaca
+                                                            deleteNotification(n.id); 
+                                                        }}
+                                                    >
                                                         <Trash2 className="h-3 w-3" />
                                                     </Button>
                                                 </div>

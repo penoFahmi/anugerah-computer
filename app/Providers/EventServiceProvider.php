@@ -2,8 +2,6 @@
 
 namespace App\Providers;
 
-use App\Events\ServiceOrderCreated;
-use App\Listeners\GenerateReceiptPdf;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;

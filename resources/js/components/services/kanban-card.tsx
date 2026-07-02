@@ -28,43 +28,48 @@ export function KanbanCard({ service, index, onClick }: KanbanCardProps) {
                     {...provided.draggableProps}
                     {...provided.dragHandleProps}
                     onClick={onClick}
-                    className={`group bg-white p-3.5 rounded-lg border border-slate-200 shadow-sm hover:border-blue-400 hover:shadow-md cursor-pointer transition-all ${
+                    /* PERBAIKAN: Menggunakan bg-card, border-border, dan text-card-foreground */
+                    className={`group bg-card text-card-foreground p-3.5 rounded-lg border border-border shadow-sm hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-md cursor-pointer transition-all ${
                         snapshot.isDragging ? 'rotate-2 scale-105 shadow-xl ring-2 ring-blue-500' : ''
                     }`}
                 >
                     <div className="flex justify-between items-start mb-2">
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono text-slate-500 border-slate-300">
+                        {/* PERBAIKAN: Menggunakan text-muted-foreground untuk teks sekunder */}
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono text-muted-foreground border-border bg-background">
                             {service.order_number}
                         </Badge>
-                        <MoreHorizontal className="h-4 w-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
+                        <MoreHorizontal className="h-4 w-4 text-muted-foreground group-hover:text-blue-500 transition-colors" />
                     </div>
                     
-                    <h4 className="font-bold text-sm text-slate-800 leading-tight mb-1">
+                    {/* PERBAIKAN: Menggunakan text-foreground agar warna judul dinamis */}
+                    <h4 className="font-bold text-sm text-foreground leading-tight mb-1">
                         {service.device_name}
                     </h4>
                     
-                    <p className="text-xs font-medium text-slate-600 mb-3">
+                    {/* PERBAIKAN: Menggunakan text-muted-foreground */}
+                    <p className="text-xs font-medium text-muted-foreground mb-3">
                         A.n: {service.customer_name}
                     </p>
 
                     {/* Indikator Khusus Klaim Garansi */}
                     {isWarrantyClaim && (
-                        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-300 shadow-none px-1.5 py-0 text-[9px] mb-2 w-full justify-center">
+                        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-300 shadow-none px-1.5 py-0 text-[9px] mb-2 w-full justify-center dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
                             KLAIM GARANSI
                         </Badge>
                     )}
 
-                    <div className="bg-slate-50 p-2 rounded text-[11px] text-slate-500 line-clamp-2 leading-snug border border-slate-100">
+                    {/* PERBAIKAN: Menggunakan bg-muted/50 agar menyesuaikan tema terang/gelap dengan lembut */}
+                    <div className="bg-muted/50 p-2 rounded text-[11px] text-muted-foreground line-clamp-2 leading-snug border border-border">
                         {/* Menghilangkan tag [KLAIM GARANSI] dari tampilan deskripsi agar lebih bersih */}
                         {service.complaint.replace(/\[KLAIM GARANSI.*?\]/g, '').trim()}
                     </div>
 
-                    <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-100">
-                        <span className="text-[10px] font-medium text-slate-400">
+                    <div className="flex justify-between items-center mt-3 pt-3 border-t border-border">
+                        <span className="text-[10px] font-medium text-muted-foreground">
                             {service.created_at}
                         </span>
                         {cost && (
-                            <span className="text-[11px] font-bold text-emerald-600">
+                            <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-500">
                                 Rp {cost}
                             </span>
                         )}

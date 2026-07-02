@@ -13,6 +13,7 @@ use App\Models\ServiceOrder;
 use App\Models\Warranty;
 use App\Services\WaGateway;
 use App\Notifications\NewServiceOrderNotification;
+use App\Notifications\ServiceOrderNotification;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -63,20 +64,34 @@ class ServiceOrderController extends Controller
 
         $services = $query->latest('id')->paginate($limit)->withQueryString();
 
-        $services->through(fn ($service) => [
-            'id' => $service->id,
-            'order_number' => $service->order_number,
-            'customer_name' => $service->customer->name,
-            'customer_phone' => $service->customer->phone,
-            'device_name' => $service->device->brand . ' ' . $service->device->model,
-            'complaint' => $service->complaint,
-            'status' => $service->status->value,
-            'status_label' => $service->status->label(),
-            'estimated_cost' => $service->estimated_cost,
-            'final_cost' => $service->final_cost,
-            'technician_notes' => $service->technician_notes,
-            'created_at' => $service->created_at->format('d M Y, H:i'),
-        ]);
+        $services->through(function ($service) {
+
+            $baseCost = $service->final_cost ?? $service->estimated_cost ?? 0;
+            $downPayment = $service->down_payment ?? 0;
+            $remaining = max(0, $baseCost - $downPayment);
+
+            return [
+                'id' => $service->id,
+                'order_number' => $service->order_number,
+                'customer_name' => $service->customer->name,
+                'customer_phone' => $service->customer->phone,
+                'device_name' => $service->device->brand . ' ' . $service->device->model,
+                'complaint' => $service->complaint,
+                'status' => $service->status->value,
+                'status_label' => $service->status->label(),
+                'estimated_cost' => $service->estimated_cost,
+                'final_cost' => $service->final_cost,
+                'down_payment' => $service->down_payment,
+                'technician_notes' => $service->technician_notes,
+                'created_at' => $service->created_at->format('d M Y, H:i'),
+                'financials' => [
+                    'estimated' => $service->estimated_cost,
+                    'final' => $service->final_cost,
+                    'dp' => $service->down_payment,
+                    'remaining' => $remaining,
+                ],
+            ];
+        });
 
         return Inertia::render('services/list', [
             'serviceOrders' => $services,
@@ -162,10 +177,9 @@ class ServiceOrderController extends Controller
             ]);
 
             return redirect()->route('services.index');
-
         } catch (\Exception $e) {
             Log::error('ServiceOrder Store Error: ' . $e->getMessage());
-            
+
             Inertia::flash('toast', [
                 'type' => 'error',
                 'message' => 'Gagal mendaftarkan servis. Silakan coba lagi.'
@@ -194,7 +208,7 @@ class ServiceOrderController extends Controller
             ->orderBy('updated_at', 'desc')
             ->limit(15)
             ->get()
-            ->map(fn ($item) => [
+            ->map(fn($item) => [
                 'id' => $item->id,
                 'order_number' => $item->order_number,
                 'customer_name' => $item->customer->name,
@@ -262,7 +276,7 @@ class ServiceOrderController extends Controller
 
             // C. OTOMATISASI GARANSI (Hanya Dibuat Saat Unit Diambil Pertama Kali)
             if ($oldStatus !== ServiceStatus::TAKEN->value && $newStatus === ServiceStatus::TAKEN->value) {
-                
+
                 $warrantyDays = (int) $request->input('warranty_days', 0);
 
                 if ($warrantyDays > 0) {
@@ -271,7 +285,7 @@ class ServiceOrderController extends Controller
                         ->orderBy('warranty_code', 'desc')
                         ->lockForUpdate()
                         ->first();
-                        
+
                     $nextSeq = $lastWarranty ? (int) substr($lastWarranty->warranty_code, -3) + 1 : 1;
                     $warrantyCode = $prefix . str_pad((string)$nextSeq, 3, '0', STR_PAD_LEFT);
 
@@ -283,14 +297,14 @@ class ServiceOrderController extends Controller
                     ]);
 
                     $waMessage = "Terima kasih Kak *{$serviceOrder->customer->name}* telah mempercayakan perbaikan unit *{$serviceOrder->device->brand}* di Anugerah Computer.\n\n"
-                               . "Unit Anda telah diserahkan dan masa garansi perbaikan aktif selama {$warrantyDays} hari hingga *" . now()->addDays($warrantyDays)->format('d M Y') . "*.\n"
-                               . "Kode Garansi: *{$warrantyCode}*\n\n"
-                               . "Harap simpan pesan ini sebagai bukti garansi. Semoga unitnya awet selalu! 🙏";
+                        . "Unit Anda telah diserahkan dan masa garansi perbaikan aktif selama {$warrantyDays} hari hingga *" . now()->addDays($warrantyDays)->format('d M Y') . "*.\n"
+                        . "Kode Garansi: *{$warrantyCode}*\n\n"
+                        . "Harap simpan pesan ini sebagai bukti garansi. Semoga unitnya awet selalu! 🙏";
                 } else {
                     $waMessage = "Terima kasih Kak *{$serviceOrder->customer->name}* telah mempercayakan perbaikan unit *{$serviceOrder->device->brand}* di Anugerah Computer.\n\n"
-                               . "Unit Anda telah diserahkan. Semoga unitnya awet dan dapat digunakan dengan lancar kembali! Jika ada keluhan lain, jangan ragu untuk menghubungi kami. 🙏";
+                        . "Unit Anda telah diserahkan. Semoga unitnya awet dan dapat digunakan dengan lancar kembali! Jika ada keluhan lain, jangan ragu untuk menghubungi kami. 🙏";
                 }
-                
+
                 // Panggil WhatsApp API Gateway
                 WaGateway::sendMessage($serviceOrder->customer->phone, $waMessage, $serviceOrder->id, 'send_warranty');
             }
@@ -382,8 +396,8 @@ class ServiceOrderController extends Controller
         ]);
 
         $pdf = Pdf::loadView('pdf.service_receipt', ['order' => $serviceOrder])
-                  ->setPaper([0, 0, 226.77, 600], 'portrait');
-                  
+            ->setPaper([0, 0, 226.77, 600], 'portrait');
+
         return $pdf->stream("nota-{$serviceOrder->order_number}.pdf");
     }
 
@@ -396,7 +410,7 @@ class ServiceOrderController extends Controller
             ->whereNotIn('status', [ServiceStatus::TAKEN->value, ServiceStatus::CANCELLED->value])
             ->orderBy('updated_at', 'desc')
             ->get()
-            ->map(fn ($service) => [
+            ->map(fn($service) => [
                 'id' => $service->id,
                 'order_number' => $service->order_number,
                 'customer_name' => $service->customer->name,
@@ -409,7 +423,7 @@ class ServiceOrderController extends Controller
                 'final_cost' => $service->final_cost,
                 'down_payment' => $service->down_payment,
                 'technician_notes' => $service->technician_notes,
-                'created_at' => $service->created_at->diffForHumans(), 
+                'created_at' => $service->created_at->diffForHumans(),
             ]);
 
         return Inertia::render('services/kanban', [

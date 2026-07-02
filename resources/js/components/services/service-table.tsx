@@ -1,11 +1,30 @@
 import { router, usePage, Link } from '@inertiajs/react';
-import { Printer, Pencil, Send, Trash2, MessageSquare, FolderPen } from 'lucide-react';
+import {
+    Printer,
+    Pencil,
+    Send,
+    Trash2,
+    MessageSquare,
+    FolderPen,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import Pagination from '@/components/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import type { PaginatedData } from '@/types/global';
 import type { ServiceListItem } from '@/types/service';
 
@@ -16,38 +35,87 @@ interface ServiceTableProps {
     onDeleteClick: (service: ServiceListItem) => void;
 }
 
-export function ServiceTable({ serviceOrders, onProcessClick, onChatClick, onDeleteClick }: ServiceTableProps) {
+export function ServiceTable({
+    serviceOrders,
+    onProcessClick,
+    onChatClick,
+    onDeleteClick,
+}: ServiceTableProps) {
     const { auth } = usePage().props as any;
-    const isAdmin = auth.user?.roles?.includes('administrator') || auth.user?.role === 'administrator';
+    const isAdmin =
+        auth.user?.roles?.includes('administrator') ||
+        auth.user?.role === 'administrator';
     const isPegawai = auth.user?.roles?.includes('pegawai');
 
     const handlePrint = (item: ServiceListItem) => {
         const isFinished = ['completed', 'taken'].includes(item.status);
-        window.open(`/services/${item.id}/${isFinished ? 'print-receipt' : 'print-ticket'}`, '_blank');
+        window.open(
+            `/services/${item.id}/${isFinished ? 'print-receipt' : 'print-ticket'}`,
+            '_blank',
+        );
     };
 
     const handlePrintWaManual = (item: ServiceListItem) => {
         toast.loading('Memicu sistem WA...');
-        router.post(`/services/${item.id}/trigger-wa`, {}, { 
-            preserveScroll: true,
-            onSuccess: () => { toast.dismiss(); toast.success('Pemberitahuan berhasil dipicu ke WhatsApp.'); },
-            onError: () => { toast.dismiss(); toast.error('Gagal memicu WA.'); }
-        });
+        router.post(
+            `/services/${item.id}/trigger-wa`,
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.dismiss();
+                    toast.success('Pemberitahuan berhasil dipicu ke WhatsApp.');
+                },
+                onError: () => {
+                    toast.dismiss();
+                    toast.error('Gagal memicu WA.');
+                },
+            },
+        );
     };
 
     const formatCurrency = (value: string | number | null) => {
         if (!value || Number(value) === 0) return '-';
-        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(value));
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            maximumFractionDigits: 0,
+        }).format(Number(value));
     };
 
     const renderStatusBadge = (status: string, label: string) => {
         switch (status) {
-            case 'waiting_checking': return <Badge className="bg-pink-100 text-pink-700 border-pink-300 shadow-none">{label}</Badge>;
-            case 'waiting_approval': return <Badge className="bg-orange-100 text-orange-700 border-orange-300 shadow-none">{label}</Badge>;
-            case 'in_progress': return <Badge className="bg-blue-100 text-blue-700 border-blue-300 shadow-none">{label}</Badge>;
+            case 'waiting_checking':
+                return (
+                    <Badge className="border-pink-300 bg-pink-100 text-pink-700 shadow-none">
+                        {label}
+                    </Badge>
+                );
+            case 'waiting_approval':
+                return (
+                    <Badge className="border-orange-300 bg-orange-100 text-orange-700 shadow-none">
+                        {label}
+                    </Badge>
+                );
+            case 'in_progress':
+                return (
+                    <Badge className="border-blue-300 bg-blue-100 text-blue-700 shadow-none">
+                        {label}
+                    </Badge>
+                );
             case 'completed':
-            case 'taken': return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-300 shadow-none">{label}</Badge>;
-            default: return <Badge variant="outline" className="shadow-none">{label}</Badge>;
+            case 'taken':
+                return (
+                    <Badge className="border-emerald-300 bg-emerald-100 text-emerald-700 shadow-none">
+                        {label}
+                    </Badge>
+                );
+            default:
+                return (
+                    <Badge variant="outline" className="shadow-none">
+                        {label}
+                    </Badge>
+                );
         }
     };
 
@@ -56,121 +124,285 @@ export function ServiceTable({ serviceOrders, onProcessClick, onChatClick, onDel
             <Table>
                 <TableHeader>
                     <TableRow className="bg-muted/50">
-                        <TableHead className="w-[60px] text-center font-bold">No</TableHead>
-                        <TableHead className="font-bold whitespace-nowrap">Nota & Waktu</TableHead>
-                        <TableHead className="font-bold whitespace-nowrap">Pelanggan</TableHead>
-                        <TableHead className="min-w-[200px] font-bold">Perangkat & Keluhan</TableHead>
-                        <TableHead className="font-bold whitespace-nowrap">Estimasi Biaya</TableHead>
-                        <TableHead className="text-center font-bold whitespace-nowrap">Status</TableHead>
-                        <TableHead className="pr-4 text-right font-bold whitespace-nowrap">Aksi</TableHead>
+                        <TableHead className="w-[60px] text-center font-bold">
+                            No
+                        </TableHead>
+                        <TableHead className="font-bold whitespace-nowrap">
+                            Nota & Waktu
+                        </TableHead>
+                        <TableHead className="font-bold whitespace-nowrap">
+                            Pelanggan
+                        </TableHead>
+                        <TableHead className="min-w-[200px] font-bold">
+                            Perangkat & Keluhan
+                        </TableHead>
+                        <TableHead className="font-bold whitespace-nowrap">
+                            Biaya
+                        </TableHead>
+                        <TableHead className="text-center font-bold whitespace-nowrap">
+                            Status
+                        </TableHead>
+                        <TableHead className="pr-4 text-right font-bold whitespace-nowrap">
+                            Aksi
+                        </TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {serviceOrders.data.length === 0 ? (
                         <TableRow>
-                            <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+                            <TableCell
+                                colSpan={7}
+                                className="py-8 text-center text-muted-foreground"
+                            >
                                 Tidak ada data servisan yang ditemukan.
                             </TableCell>
                         </TableRow>
                     ) : (
                         serviceOrders.data.map((item, index) => {
-                            const rowNumber = (serviceOrders.current_page - 1) * serviceOrders.per_page + index + 1;
+                            const rowNumber =
+                                (serviceOrders.current_page - 1) *
+                                    serviceOrders.per_page +
+                                index +
+                                1;
                             return (
-                                <TableRow key={item.id} className="transition-colors hover:bg-muted/30">
-                                    <TableCell className="text-center font-medium text-muted-foreground">{rowNumber}</TableCell>
+                                <TableRow
+                                    key={item.id}
+                                    className="transition-colors hover:bg-muted/30"
+                                >
+                                    <TableCell className="text-center font-medium text-muted-foreground">
+                                        {rowNumber}
+                                    </TableCell>
                                     <TableCell className="py-3">
-                                        <div className="text-sm font-bold text-primary">{item.order_number}</div>
-                                        <div className="mt-0.5 text-xs text-muted-foreground">{item.created_at}</div>
+                                        <div className="text-sm font-bold text-primary">
+                                            {item.order_number}
+                                        </div>
+                                        <div className="mt-0.5 text-xs text-muted-foreground">
+                                            {item.created_at}
+                                        </div>
                                     </TableCell>
                                     <TableCell>
-                                        <div className="text-sm font-bold">{item.customer_name}</div>
-                                        <div className="font-mono text-xs text-muted-foreground">{item.customer_phone}</div>
+                                        <div className="text-sm font-bold">
+                                            {item.customer_name}
+                                        </div>
+                                        <div className="font-mono text-xs text-muted-foreground">
+                                            {item.customer_phone}
+                                        </div>
                                     </TableCell>
                                     <TableCell className="max-w-[280px]">
                                         <div className="flex items-center gap-2">
-                                            <div className="text-sm font-semibold">{item.device_name}</div>
-                                            {item.complaint.includes('[KLAIM GARANSI') && (
-                                                <Badge className="bg-blue-100 text-blue-700 border-blue-300 shadow-none px-1.5 py-0 text-[9px]">
+                                            <div className="text-sm font-semibold">
+                                                {item.device_name}
+                                            </div>
+                                            {item.complaint.includes(
+                                                '[KLAIM GARANSI',
+                                            ) && (
+                                                <Badge className="border-blue-300 bg-blue-100 px-1.5 py-0 text-[9px] text-blue-700 shadow-none">
                                                     KLAIM GARANSI
                                                 </Badge>
                                             )}
                                         </div>
                                         <Tooltip>
                                             <TooltipTrigger asChild>
-                                                <div className={`mt-0.5 max-w-full truncate text-xs cursor-help ${item.complaint.includes('[KLAIM GARANSI') ? 'text-blue-600 font-medium' : 'text-muted-foreground'}`}>
+                                                <div
+                                                    className={`mt-0.5 max-w-full cursor-help truncate text-xs ${item.complaint.includes('[KLAIM GARANSI') ? 'font-medium text-blue-600' : 'text-muted-foreground'}`}
+                                                >
                                                     {item.complaint}
                                                 </div>
                                             </TooltipTrigger>
-                                            <TooltipContent side="bottom" className="max-w-sm p-3 text-xs shadow-md">
-                                                <p className="leading-relaxed font-medium whitespace-pre-wrap">{item.complaint}</p>
+                                            <TooltipContent
+                                                side="bottom"
+                                                className="max-w-sm p-3 text-xs shadow-md"
+                                            >
+                                                <p className="leading-relaxed font-medium whitespace-pre-wrap">
+                                                    {item.complaint}
+                                                </p>
                                             </TooltipContent>
                                         </Tooltip>
                                     </TableCell>
-                                    <TableCell className="text-sm font-medium whitespace-nowrap">{formatCurrency(item.estimated_cost)}</TableCell>
-                                    <TableCell className="text-center">{renderStatusBadge(item.status, item.status_label)}</TableCell>
+                                    {/* <TableCell className="text-sm font-medium whitespace-nowrap">{formatCurrency(item.estimated_cost)}</TableCell> */}
+                                    <TableCell className="py-3 align-top">
+                                        <div className="flex w-full flex-col gap-1 rounded-md border border-border/50 bg-muted/20 p-2 text-[11px]">
+                                            <div className="flex items-center justify-between gap-4">
+                                                <span className="text-muted-foreground">
+                                                    Estimasi:
+                                                </span>
+                                                <span className="font-mono text-foreground">
+                                                    {formatCurrency(
+                                                        item.financials
+                                                            .estimated,
+                                                    )}
+                                                </span>
+                                            </div>
+
+                                            {Number(item.financials.final) >
+                                                0 && (
+                                                <div className="flex items-center justify-between gap-4">
+                                                    <span className="text-muted-foreground">
+                                                        Final Cost:
+                                                    </span>
+                                                    <span className="font-mono font-semibold text-blue-600 dark:text-blue-400">
+                                                        {formatCurrency(
+                                                            item.financials
+                                                                .final,
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            {Number(item.financials.dp) > 0 && (
+                                                <div className="flex items-center justify-between gap-4">
+                                                    <span className="text-muted-foreground">
+                                                        Uang Muka:
+                                                    </span>
+                                                    <span className="font-mono text-emerald-600 dark:text-emerald-500">
+                                                        -{' '}
+                                                        {formatCurrency(
+                                                            item.financials.dp,
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            <div className="mt-1 flex items-center justify-between gap-4 border-t border-border pt-1">
+                                                <span className="font-semibold text-foreground">
+                                                    Sisa:
+                                                </span>
+                                                <span
+                                                    className={`font-mono font-bold ${item.financials.remaining > 0 ? 'text-orange-600 dark:text-orange-500' : 'text-emerald-600 dark:text-emerald-500'}`}
+                                                >
+                                                    {formatCurrency(
+                                                        item.financials
+                                                            .remaining,
+                                                    )}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                        {renderStatusBadge(
+                                            item.status,
+                                            item.status_label,
+                                        )}
+                                    </TableCell>
                                     <TableCell className="py-3 pr-4 text-right">
                                         <div className="flex items-center justify-end gap-1">
-                                            
                                             <Tooltip>
                                                 <TooltipTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-600" onClick={() => onChatClick(item)}>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-emerald-600"
+                                                        onClick={() =>
+                                                            onChatClick(item)
+                                                        }
+                                                    >
                                                         <MessageSquare className="h-4 w-4" />
                                                     </Button>
                                                 </TooltipTrigger>
-                                                <TooltipContent className="text-xs">Live Chat WA</TooltipContent>
+                                                <TooltipContent className="text-xs">
+                                                    Live Chat WA
+                                                </TooltipContent>
                                             </Tooltip>
 
                                             <Tooltip>
                                                 <TooltipTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500" onClick={() => handlePrint(item)}>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-slate-500"
+                                                        onClick={() =>
+                                                            handlePrint(item)
+                                                        }
+                                                    >
                                                         <Printer className="h-4 w-4" />
                                                     </Button>
                                                 </TooltipTrigger>
-                                                <TooltipContent className="text-xs">Cetak Dokumen</TooltipContent>
+                                                <TooltipContent className="text-xs">
+                                                    Cetak Dokumen
+                                                </TooltipContent>
                                             </Tooltip>
 
                                             <Tooltip>
                                                 <TooltipTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => onProcessClick(item)}>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-blue-600"
+                                                        onClick={() =>
+                                                            onProcessClick(item)
+                                                        }
+                                                    >
                                                         <Pencil className="h-4 w-4" />
                                                     </Button>
                                                 </TooltipTrigger>
-                                                <TooltipContent className="text-xs">Proses Operasional</TooltipContent>
+                                                <TooltipContent className="text-xs">
+                                                    Proses Operasional
+                                                </TooltipContent>
                                             </Tooltip>
 
                                             {(isAdmin || isPegawai) && (
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
-                                                        <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-slate-700">
-                                                            <Link href={`/services/${item.id}`}>
+                                                        <Button
+                                                            asChild
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-slate-700"
+                                                        >
+                                                            <Link
+                                                                href={`/services/${item.id}`}
+                                                            >
                                                                 <FolderPen className="h-4 w-4" />
                                                             </Link>
                                                         </Button>
                                                     </TooltipTrigger>
-                                                    <TooltipContent className="text-xs">Lihat & Edit Lengkap</TooltipContent>
+                                                    <TooltipContent className="text-xs">
+                                                        Lihat & Edit Lengkap
+                                                    </TooltipContent>
                                                 </Tooltip>
                                             )}
 
                                             <Tooltip>
                                                 <TooltipTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-600" onClick={() => handlePrintWaManual(item)}>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-emerald-600"
+                                                        onClick={() =>
+                                                            handlePrintWaManual(
+                                                                item,
+                                                            )
+                                                        }
+                                                    >
                                                         <Send className="h-4 w-4" />
                                                     </Button>
                                                 </TooltipTrigger>
-                                                <TooltipContent className="text-xs">Kirim Update WhatsApp</TooltipContent>
+                                                <TooltipContent className="text-xs">
+                                                    Kirim Update WhatsApp
+                                                </TooltipContent>
                                             </Tooltip>
 
                                             {isAdmin && (
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => onDeleteClick(item)}>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-destructive"
+                                                            onClick={() =>
+                                                                onDeleteClick(
+                                                                    item,
+                                                                )
+                                                            }
+                                                        >
                                                             <Trash2 className="h-4 w-4" />
                                                         </Button>
                                                     </TooltipTrigger>
-                                                    <TooltipContent className="text-xs">Buang ke Sampah</TooltipContent>
+                                                    <TooltipContent className="text-xs">
+                                                        Buang ke Sampah
+                                                    </TooltipContent>
                                                 </Tooltip>
                                             )}
-
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -181,11 +413,11 @@ export function ServiceTable({ serviceOrders, onProcessClick, onChatClick, onDel
             </Table>
 
             {/* MEMANGGIL PAGINATION GLOBAL */}
-            <Pagination 
-                links={serviceOrders.links} 
-                from={serviceOrders.from} 
-                to={serviceOrders.to} 
-                total={serviceOrders.total} 
+            <Pagination
+                links={serviceOrders.links}
+                from={serviceOrders.from}
+                to={serviceOrders.to}
+                total={serviceOrders.total}
             />
         </TooltipProvider>
     );

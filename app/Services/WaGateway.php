@@ -125,4 +125,41 @@ class WaGateway
             return false;
         }
     }
+
+    /**
+     * Mengirim pesan update sesuai dengan status servisan saat ini.
+     */
+    public static function sendStatusUpdate(ServiceOrder $order): bool
+    {
+        $customerName = $order->customer->name;
+        $deviceName = $order->device->brand . ' ' . $order->device->model;
+        $orderNumber = $order->order_number;
+
+        $message = "Halo Kak *{$customerName}*,\nBerikut adalah update untuk unit *{$deviceName}* (Nota: {$orderNumber}):\n\n";
+
+        switch ($order->status->value) {
+            case 'approved':
+            case 'in_progress':
+                $message .= "🛠️ Unit Kakak saat ini *sedang dalam proses pengerjaan* oleh teknisi kami. Kami akan mengabari kembali setelah perbaikan selesai.";
+                break;
+            case 'completed':
+                // Ambil harga final jika ada, jika tidak pakai harga estimasi
+                $cost = $order->final_cost > 0 ? $order->final_cost : $order->estimated_cost;
+                $formattedCost = 'Rp ' . number_format((float) $cost, 0, ',', '.');
+                $message .= "✅ Perbaikan unit Kakak *TELAH SELESAI* dan sudah bisa diambil di toko.\n\nTotal Biaya: *{$formattedCost}*.\nMohon bawa nota saat pengambilan. Terima kasih! 🙏";
+                break;
+            case 'cancelled':
+                $message .= "❌ Perbaikan unit Kakak *DIBATALKAN*. Silakan datang ke toko untuk mengambil unit Anda kembali.";
+                break;
+            case 'taken':
+                $message .= "📦 Unit Kakak telah diambil. Terima kasih telah mempercayakan perbaikan di Anugerah Computer!";
+                break;
+            default:
+                $message .= "Status unit Kakak saat ini: *" . $order->status->label() . "*";
+                break;
+        }
+
+        // Panggil fungsi pengirim pesan murni
+        return self::sendMessage($order->customer->phone, $message, $order->id, 'status_update');
+    }
 }

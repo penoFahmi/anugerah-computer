@@ -1,10 +1,13 @@
 import { usePage, router } from '@inertiajs/react';
+import { Bell, CheckCheck, Trash2, Wifi, WifiOff } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { Bell, CheckCheck, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
 import 'dayjs/locale/id';
+
+// MENGGUNAKAN HOOKS RESMI DARI LARAVEL ECHO REACT
+import { useEcho, useConnectionStatus } from '@laravel/echo-react';
 
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -12,55 +15,80 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 dayjs.extend(relativeTime);
 dayjs.locale('id');
 
-interface NotificationData {
-    message: string;
-    action_url?: string;
-    type?: string;
-}
-
 interface DatabaseNotification {
     id: string;
-    data: NotificationData;
+    data: { message: string; action_url?: string; type?: string };
     created_at: string;
     read_at: string | null;
 }
 
-interface SharedProps {
-    auth: {
-        user: {
-            id: number;
-            name: string;
-            unread_notifications_count: number;
-            notifications: DatabaseNotification[];
-        };
-    };
-}
-
 export function NotificationPopover() {
-    const { auth } = usePage<SharedProps>().props;
+    const { auth } = usePage<any>().props;
 
     const initialUnreadCount = auth?.user?.unread_notifications_count || 0;
     const initialNotifications = auth?.user?.notifications || [];
 
-    const [hasUnread, setHasUnread] = useState<boolean>(initialUnreadCount > 0);
+    const [hasUnread, setHasUnread] = useState(initialUnreadCount > 0);
     const [notifications, setNotifications] = useState<DatabaseNotification[]>(initialNotifications);
 
-    // 1. Aksi: Klik Notifikasi -> Tandai Dibaca & Redirect Otomatis ke Sumber Data
+    // 1. PANTAU KONEKSI REVERB MENGGUNAKAN HOOK BAWAAN (Bukan window.Echo)
+    const wsStatus = useConnectionStatus(); 
+
+    // 2. DENGARKAN NOTIFIKASI GLOBAL (Live Chat CS)
+    useEcho('admin.notifications', 'ChatRequiresHuman', (e: any) => {
+        const msg = e.chatLog?.message || `Pelanggan butuh penanganan manual! (Nota: ${e.chatLog?.service_order_id || 'N/A'})`;
+        toast.warning(msg, { duration: 8000 });
+        
+        const tempNotif: DatabaseNotification = {
+            id: Math.random().toString(),
+            data: { type: 'chat', message: msg },
+            created_at: new Date().toISOString(),
+            read_at: null,
+        };
+        setHasUnread(true);
+        setNotifications(prev => [tempNotif, ...prev]);
+    });
+
+    // 3. DENGARKAN NOTIFIKASI DATABASE LARAVEL (Servis Baru/Update)
+    // Hook useEcho memiliki akses ke method khusus .notification() untuk broadcast Laravel
+    const { channel } = useEcho(`App.Models.User.${auth?.user?.id}`);
+    
+    useEffect(() => {
+        if (!channel) return;
+
+        // Mendengarkan broadcast spesifik notifikasi Laravel
+        channel().notification((notification: any) => {
+            const pesan = notification.message || notification.data?.message || "Ada pemberitahuan sistem baru!";
+            toast.success(pesan);
+            
+            const formattedNotif: DatabaseNotification = {
+                id: notification.id || Math.random().toString(),
+                data: {
+                    type: notification.data?.type || 'system',
+                    message: pesan,
+                    action_url: notification.data?.action_url
+                },
+                created_at: notification.created_at || new Date().toISOString(),
+                read_at: null,
+            };
+
+            setHasUnread(true);
+            setNotifications(prev => [formattedNotif, ...prev]);
+        });
+
+    }, [channel]);
+
     const handleNotificationClick = (n: DatabaseNotification) => {
         router.post(`/notifications/${n.id}/read`, {}, {
             preserveScroll: true,
             onSuccess: () => {
-                setNotifications(prev =>
-                    prev.map(item => item.id === n.id ? { ...item, read_at: new Date().toISOString() } : item)
-                );
-                // Hitung ulang apakah masih ada yang belum dibaca di state lokal
+                setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, read_at: new Date().toISOString() } : item));
                 const stillHasUnread = notifications.some(item => item.id !== n.id && !item.read_at);
                 setHasUnread(stillHasUnread);
             }
         });
     };
 
-    // 2. Aksi: Tandai Semua Telah Dibaca
     const markAllAsRead = () => {
         router.post('/notifications/read-all', {}, {
             preserveScroll: true,
@@ -71,7 +99,6 @@ export function NotificationPopover() {
         });
     };
 
-    // 3. Aksi: Hapus Notifikasi Tertentu dari Daftar
     const deleteNotification = (id: string) => {
         router.delete(`/notifications/${id}`, {
             preserveScroll: true,
@@ -83,63 +110,19 @@ export function NotificationPopover() {
         });
     };
 
-    useEffect(() => {
-        if (typeof window === 'undefined' || !window.Echo || !auth?.user) {
-            return;
-        }
-
-        // A. DENGARKAN NOTIFIKASI MANUAL CS / WHATSAPP (GLOBAL CHANNEL)
-        window.Echo.private('admin.notifications')
-            .listen('ChatRequiresHuman', (e: { chatLog?: { service_order_id?: string; message?: string } }) => {
-                const msg = e.chatLog?.message || `Pelanggan butuh penanganan manual! (Nota ID: ${e.chatLog?.service_order_id || 'N/A'})`;
-                toast.warning(msg, { duration: 8000 });
-                
-                const tempNotif: DatabaseNotification = {
-                    id: Math.random().toString(),
-                    data: { 
-                        type: 'chat', 
-                        message: msg,
-                        action_url: e.chatLog?.service_order_id ? `/services?search=${e.chatLog.service_order_id}` : undefined
-                    },
-                    created_at: new Date().toISOString(),
-                    read_at: null,
-                };
-                setHasUnread(true);
-                setNotifications(prev => [tempNotif, ...prev]);
-            });
-
-        // B. DENGARKAN BROADCAST NOTIFIKASI BAWAAN LARAVEL (PRIVATE CHANNEL USER)
-        window.Echo.private(`App.Models.User.${auth.user.id}`)
-            .notification((notification: any) => {
-                const pesan = notification.message || notification.data?.message || "Ada pemberitahuan sistem baru!";
-                toast.success(pesan);
-                
-                const formattedNotif: DatabaseNotification = {
-                    id: notification.id || Math.random().toString(),
-                    data: {
-                        type: notification.data?.type || 'system',
-                        message: pesan,
-                        action_url: notification.data?.action_url || undefined
-                    },
-                    created_at: notification.created_at || new Date().toISOString(),
-                    read_at: null,
-                };
-
-                setHasUnread(true);
-                setNotifications(prev => [formattedNotif, ...prev]);
-            });
-
-        // CLEANUP: Putuskan listen saat ganti halaman / logout
-        return () => {
-            if (window.Echo) {
-                window.Echo.leave('admin.notifications');
-                window.Echo.leave(`App.Models.User.${auth.user.id}`);
-            }
-        };
-    }, [auth?.user?.id]);
-
     return (
-        <div className="flex items-center">
+        <div className="flex items-center gap-1">
+            {/* INDIKATOR RADAR REVERB (Otomatis deteksi dari hook) */}
+            <div title={`Status Websocket: ${wsStatus}`} className="mr-1">
+                {wsStatus === 'connected' ? (
+                    <Wifi className="h-4 w-4 text-emerald-500" />
+                ) : wsStatus === 'connecting' ? (
+                    <Wifi className="h-4 w-4 text-yellow-500 animate-pulse" />
+                ) : (
+                    <WifiOff className="h-4 w-4 text-red-500" />
+                )}
+            </div>
+
             <Popover>
                 <PopoverTrigger asChild>
                     <Button variant="ghost" size="icon" className="relative h-9 w-9">
@@ -151,6 +134,7 @@ export function NotificationPopover() {
                 </PopoverTrigger>
                 
                 <PopoverContent className="w-96 p-0 border-border bg-card" align="end">
+                    {/* ... (Konten notifikasi sama seperti kode sebelumnya, 100% menggunakan styling milikmu) ... */}
                     <div className="flex flex-col">
                         <div className="flex items-center justify-between border-b border-border px-4 py-2.5 bg-muted/30">
                             <div>
@@ -199,7 +183,7 @@ export function NotificationPopover() {
                                                         size="icon" 
                                                         className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:bg-destructive/10" 
                                                         onClick={(e) => { 
-                                                            e.stopPropagation(); // Mencegah terpicunya aksi click dibaca
+                                                            e.stopPropagation(); 
                                                             deleteNotification(n.id); 
                                                         }}
                                                     >

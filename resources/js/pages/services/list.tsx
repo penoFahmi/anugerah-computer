@@ -1,4 +1,4 @@
-import { Head, usePage } from '@inertiajs/react';
+import { router, Head, usePage } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import type { ServiceIndexProps, ServiceListItem } from '@/types/service';
 import { ServiceFilters } from '@/components/services/service-filters';
+import { useEcho } from '@laravel/echo-react';
 
 export default function ServicesIndex({ serviceOrders, filters }: ServiceIndexProps) {
     const { flash } = usePage<ServiceIndexProps>().props;
@@ -21,6 +22,18 @@ export default function ServicesIndex({ serviceOrders, filters }: ServiceIndexPr
     const [selectedServiceToProcess, setSelectedServiceToProcess] = useState<ServiceListItem | null>(null);
     const [selectedServiceToChat, setSelectedServiceToChat] = useState<ServiceListItem | null>(null);
     const [selectedServiceToDelete, setSelectedServiceToDelete] = useState<ServiceListItem | null>(null);
+
+    const { auth } = usePage<any>().props;
+
+    useEcho('admin.notifications', '.service.crud', (e: any) => {
+        
+        console.log(`Ada perubahan data via WebSocket: Aksi ${e.action} pada nota ${e.serviceOrder?.order_number}`);
+    
+        router.reload({ 
+            preserveScroll: true, 
+            preserveState: true 
+        });
+    })
 
     // Sentralisasi Flash Message
     useEffect(() => {

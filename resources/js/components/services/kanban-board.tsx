@@ -10,7 +10,6 @@ import { ServiceProcessModal } from '@/components/services/service-process-modal
 import { Badge } from '@/components/ui/badge';
 import type { ServiceListItem } from '@/types/service';
 
-// PERBAIKAN: Menambahkan class "dark:" pada setiap kolom agar menyesuaikan dengan Dark Mode
 const COLUMNS = [
     { 
         id: 'waiting_checking', 

@@ -1,4 +1,4 @@
-import { Head, usePage } from '@inertiajs/react';
+import { router,Head, usePage } from '@inertiajs/react';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 
@@ -8,6 +8,7 @@ import AppLayout from '@/layouts/app-layout';
 
 import type { GlobalPageProps } from '@/types/global';
 import type { ServiceListItem } from '@/types/service';
+import { useEcho } from '@laravel/echo-react';
 
 // Extend GlobalPageProps agar bisa membaca flash.toast dari server
 interface KanbanPageProps extends GlobalPageProps {
@@ -16,6 +17,20 @@ interface KanbanPageProps extends GlobalPageProps {
 
 export default function KanbanPage({ services }: KanbanPageProps) {
     const { flash } = usePage<KanbanPageProps>().props;
+
+
+    const { auth } = usePage<any>().props;
+
+    useEcho('admin.notifications', '.service.crud', (e: any) => {
+        
+        
+        console.log(`Ada perubahan data via WebSocket: Aksi ${e.action} pada nota ${e.serviceOrder?.order_number}`);
+        
+        router.reload({ 
+            preserveScroll: true, 
+            preserveState: true 
+        });
+    });
 
     // Sentralisasi Flash Message
     useEffect(() => {

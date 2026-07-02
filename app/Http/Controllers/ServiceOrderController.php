@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Events\ServiceOrderCreated;
+use App\Events\ServiceOrderBroadcast;
 use App\Enums\ServiceStatus;
 use App\Http\Requests\StoreServiceOrderRequest;
 use App\Http\Requests\UpdateServiceOrderRequest;
@@ -171,6 +172,8 @@ class ServiceOrderController extends Controller
                 new NewServiceOrderNotification($serviceOrder, auth()->user()->name)
             );
 
+            event(new ServiceOrderBroadcast($serviceOrder, 'created'));
+
             Inertia::flash('toast', [
                 'type' => 'success',
                 'message' => 'Servisan baru berhasil didaftarkan. Nota akan segera dikirim.'
@@ -274,6 +277,8 @@ class ServiceOrderController extends Controller
 
             $serviceOrder->update($updateData);
 
+            event(new ServiceOrderBroadcast($serviceOrder, 'updated'));
+
             // C. OTOMATISASI GARANSI (Hanya Dibuat Saat Unit Diambil Pertama Kali)
             if ($oldStatus !== ServiceStatus::TAKEN->value && $newStatus === ServiceStatus::TAKEN->value) {
 
@@ -341,6 +346,9 @@ class ServiceOrderController extends Controller
         }
 
         $orderNumber = $serviceOrder->order_number;
+
+        event(new ServiceOrderBroadcast($serviceOrder, 'deleted'));
+
         $serviceOrder->delete();
 
         Inertia::flash('toast', ['type' => 'info', 'message' => "Servisan {$orderNumber} telah dihapus."]);
@@ -362,20 +370,66 @@ class ServiceOrderController extends Controller
     /**
      * Memicu pengiriman penawaran harga via WhatsApp ke pelanggan.
      */
+    // public function triggerWhatsappOffer(Request $request, ServiceOrder $serviceOrder): RedirectResponse
+    // {
+    //     if ($serviceOrder->estimated_cost <= 0) {
+    //         Inertia::flash('toast', ['type' => 'error', 'message' => 'Gagal: Estimasi biaya harus diisi terlebih dahulu sebelum mengirim penawaran.']);
+    //         return back();
+    //     }
+
+    //     $isSent = WaGateway::sendOffer($serviceOrder);
+
+    //     if ($isSent) {
+    //         $serviceOrder->update(['status' => ServiceStatus::WAITING_APPROVAL]);
+    //         Inertia::flash('toast', ['type' => 'success', 'message' => 'Penawaran WA terkirim! Sistem AI kini siaga menunggu balasan pelanggan.']);
+    //     } else {
+    //         Inertia::flash('toast', ['type' => 'error', 'message' => 'GAGAL MENGIRIM WA! Pastikan server WhatsApp Anda aktif.']);
+    //     }
+
+    //     return back();
+    // }
+
+    /**
+     * Memicu pengiriman pesan WhatsApp ke pelanggan (Cerdas Sesuai Status).
+     */
     public function triggerWhatsappOffer(Request $request, ServiceOrder $serviceOrder): RedirectResponse
     {
-        if ($serviceOrder->estimated_cost <= 0) {
-            Inertia::flash('toast', ['type' => 'error', 'message' => 'Gagal: Estimasi biaya harus diisi terlebih dahulu sebelum mengirim penawaran.']);
+        $status = $serviceOrder->status->value;
+
+        // ==========================================
+        // KONDISI 1: AWAL SERVIS (KIRIM PENAWARAN HARGA)
+        // ==========================================
+        if (in_array($status, [ServiceStatus::WAITING_CHECKING->value, ServiceStatus::WAITING_APPROVAL->value])) {
+            
+            if ($serviceOrder->estimated_cost <= 0) {
+                Inertia::flash('toast', ['type' => 'error', 'message' => 'Gagal: Estimasi biaya harus diisi terlebih dahulu sebelum mengirim penawaran.']);
+                return back();
+            }
+
+            $isSent = WaGateway::sendOffer($serviceOrder);
+
+            if ($isSent) {
+                // HANYA ubah status jika sebelumnya masih "Menunggu Pengecekan"
+                if ($status === ServiceStatus::WAITING_CHECKING->value) {
+                    $serviceOrder->update(['status' => ServiceStatus::WAITING_APPROVAL->value]);
+                }
+                Inertia::flash('toast', ['type' => 'success', 'message' => 'Penawaran WA terkirim! Sistem AI kini siaga menunggu balasan pelanggan.']);
+            } else {
+                Inertia::flash('toast', ['type' => 'error', 'message' => 'GAGAL MENGIRIM WA! Pastikan server API Baileys Anda menyala.']);
+            }
+            
             return back();
         }
 
-        $isSent = WaGateway::sendOffer($serviceOrder);
+        // ==========================================
+        // KONDISI 2: PROSES / SELESAI / BATAL (KIRIM UPDATE STATUS)
+        // ==========================================
+        $isSent = WaGateway::sendStatusUpdate($serviceOrder);
 
         if ($isSent) {
-            $serviceOrder->update(['status' => ServiceStatus::WAITING_APPROVAL]);
-            Inertia::flash('toast', ['type' => 'success', 'message' => 'Penawaran WA terkirim! Sistem AI kini siaga menunggu balasan pelanggan.']);
+            Inertia::flash('toast', ['type' => 'success', 'message' => 'Pesan update status berhasil dikirim ke WhatsApp pelanggan!']);
         } else {
-            Inertia::flash('toast', ['type' => 'error', 'message' => 'GAGAL MENGIRIM WA! Pastikan server WhatsApp Anda aktif.']);
+            Inertia::flash('toast', ['type' => 'error', 'message' => 'GAGAL MENGIRIM WA! Pastikan server API Baileys Anda menyala.']);
         }
 
         return back();

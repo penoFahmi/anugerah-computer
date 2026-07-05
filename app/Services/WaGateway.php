@@ -14,21 +14,19 @@ class WaGateway
         return 'http://127.0.0.1:3001';
     }
 
-    // Ambil token untuk dikirim ke Node.js
-    private static function getToken(): string 
+    private static function getToken(): string
     {
         return config('services.wa_gateway.token', 'anugerah2026');
     }
 
     public static function sendReceiptWithPdf(ServiceOrder $order, string $pdfUrl): bool
     {
-        $endpoint = self::getBaseUrl() . '/send-document'; 
+        $endpoint = self::getBaseUrl() . '/send-document';
         $message = "Halo Kak *{$order->customer->name}*,\n\nUnit *{$order->device->brand} {$order->device->model}* telah berhasil didaftarkan di toko kami dengan No. Nota: *{$order->order_number}*.\n\nBerikut lampiran tanda terima unit perbaikan dalam format PDF.\n\nTerima kasih banyak atas kepercayaan Anda.";
 
         try {
-            // TAMBAHAN HEADER X-Token
             $response = Http::withHeaders(['X-Token' => self::getToken()])
-                ->timeout(10)
+                ->timeout(15) // Tambah timeout karena bawa file besar
                 ->post($endpoint, [
                     'phone' => $order->customer->phone,
                     'caption' => $message,
@@ -37,9 +35,11 @@ class WaGateway
                 ]);
 
             if ($response->successful()) {
+                $data = $response->json();
                 ChatLog::create([
                     'service_order_id' => $order->id,
                     'phone' => $order->customer->phone,
+                    'wa_message_id' => $data['messageId'] ?? null, // [FIX] Simpan ID
                     'sender_name' => 'System',
                     'message_type' => 'document',
                     'direction' => 'outbound',
@@ -58,43 +58,13 @@ class WaGateway
 
     public static function sendOffer(ServiceOrder $order): bool
     {
-        $endpoint = self::getBaseUrl() . '/send-message';
         $formattedCost = 'Rp ' . number_format($order->estimated_cost, 0, ',', '.');
         $message = "Halo Kak *{$order->customer->name}*,\n\nUntuk perbaikan unit *{$order->device->brand} {$order->device->model}* (Nota: *{$order->order_number}*), estimasi biayanya adalah sekitar *{$formattedCost}*.\n\nApakah Anda setuju untuk melanjutkan perbaikan dengan biaya tersebut?\n\nSilakan balas *SETUJU* atau *TIDAK*.\n\nTerima kasih.";
 
-        try {
-            // TAMBAHAN HEADER X-Token
-            $response = Http::withHeaders(['X-Token' => self::getToken()])
-                ->timeout(10)
-                ->post($endpoint, [
-                    'phone' => $order->customer->phone,
-                    'message' => $message,
-                ]);
-
-            if ($response->successful()) {
-                ChatLog::create([
-                    'service_order_id' => $order->id,
-                    'phone' => $order->customer->phone,
-                    'sender_name' => 'System',
-                    'message_type' => 'text',
-                    'direction' => 'outbound',
-                    'message' => $message,
-                    'resolved_by' => 'system',
-                    'final_intent' => 'send_offer'
-                ]);
-                return true;
-            }
-            return false;
-        } catch (\Exception $e) {
-            Log::error("Baileys API - Gagal Offer: " . $e->getMessage());
-            return false;
-        }
+        return self::sendMessage($order->customer->phone, $message, $order->id, 'send_offer', 'System');
     }
 
-    // =======================================================
-    // INI FUNGSI YANG HILANG DAN BIKIN JOB FAIL! KITA KEMBALIKAN!
-    // =======================================================
-    public static function sendMessage(string $phone, string $message, ?int $serviceOrderId = null, string $intent = 'notification'): bool
+    public static function sendMessage(string $phone, string $message, ?int $serviceOrderId = null, string $intent = 'notification', string $senderName = 'AI Assistant'): bool
     {
         $endpoint = self::getBaseUrl() . '/send-message';
 
@@ -107,10 +77,12 @@ class WaGateway
                 ]);
 
             if ($response->successful()) {
+                $data = $response->json();
                 ChatLog::create([
                     'service_order_id' => $serviceOrderId,
                     'phone' => $phone,
-                    'sender_name' => 'AI Assistant',
+                    'wa_message_id' => $data['messageId'] ?? null, // [FIX] Simpan ID
+                    'sender_name' => $senderName,
                     'message_type' => 'text',
                     'direction' => 'outbound',
                     'message' => $message,
@@ -126,9 +98,6 @@ class WaGateway
         }
     }
 
-    /**
-     * Mengirim pesan update sesuai dengan status servisan saat ini.
-     */
     public static function sendStatusUpdate(ServiceOrder $order): bool
     {
         $customerName = $order->customer->name;
@@ -140,26 +109,21 @@ class WaGateway
         switch ($order->status->value) {
             case 'approved':
             case 'in_progress':
-                $message .= "🛠️ Unit Kakak saat ini *sedang dalam proses pengerjaan* oleh teknisi kami. Kami akan mengabari kembali setelah perbaikan selesai.";
+                $message .= "🛠️ Unit Kakak saat ini *sedang dalam proses pengerjaan* oleh teknisi kami.";
                 break;
             case 'completed':
-                // Ambil harga final jika ada, jika tidak pakai harga estimasi
                 $cost = $order->final_cost > 0 ? $order->final_cost : $order->estimated_cost;
                 $formattedCost = 'Rp ' . number_format((float) $cost, 0, ',', '.');
-                $message .= "✅ Perbaikan unit Kakak *TELAH SELESAI* dan sudah bisa diambil di toko.\n\nTotal Biaya: *{$formattedCost}*.\nMohon bawa nota saat pengambilan. Terima kasih! 🙏";
+                $message .= "✅ Perbaikan unit Kakak *TELAH SELESAI* dan sudah bisa diambil di toko.\nTotal Biaya: *{$formattedCost}*.";
                 break;
             case 'cancelled':
-                $message .= "❌ Perbaikan unit Kakak *DIBATALKAN*. Silakan datang ke toko untuk mengambil unit Anda kembali.";
-                break;
-            case 'taken':
-                $message .= "📦 Unit Kakak telah diambil. Terima kasih telah mempercayakan perbaikan di Anugerah Computer!";
+                $message .= "❌ Perbaikan unit Kakak *DIBATALKAN*. Silakan ambil unit Anda.";
                 break;
             default:
                 $message .= "Status unit Kakak saat ini: *" . $order->status->label() . "*";
                 break;
         }
 
-        // Panggil fungsi pengirim pesan murni
-        return self::sendMessage($order->customer->phone, $message, $order->id, 'status_update');
+        return self::sendMessage($order->customer->phone, $message, $order->id, 'status_update', 'System');
     }
 }

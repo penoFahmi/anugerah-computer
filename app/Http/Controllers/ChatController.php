@@ -28,11 +28,13 @@ class ChatController extends Controller
         $request->validate(['message' => 'required|string|max:2000']);
 
         // 1. Kirim via WA Gateway (Node.js)
+        // [PERBAIKAN]: Tambahkan parameter ke-5 untuk menandai pengirimnya adalah Admin Web
         $isSent = WaGateway::sendMessage(
             $serviceOrder->customer->phone, 
             $request->message, 
             $serviceOrder->id, 
-            'manual_reply'
+            'manual_reply',
+            'Admin (Via Web)' // <-- Ini yang ditambahkan
         );
 
         if ($isSent) {
@@ -45,6 +47,6 @@ class ChatController extends Controller
             return response()->json(['status' => 'success']);
         }
 
-        return response()->json(['error' => 'Gagal mengirim pesan'], 500);
+        return response()->json(['error' => 'Gagal mengirim pesan, pastikan WhatsApp terhubung.'], 500);
     }
 }

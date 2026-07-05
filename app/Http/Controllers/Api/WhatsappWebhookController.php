@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
 
 class WhatsappWebhookController extends Controller
 {
-public function handle(Request $request): JsonResponse 
+    public function handle(Request $request): JsonResponse 
     {
         try {
             $expectedToken = config('services.wa_gateway.token');
@@ -23,30 +23,42 @@ public function handle(Request $request): JsonResponse
             $rawPhone = $request->phone;
             $originalMessage = trim($request->message);
             $isFromMe = $request->boolean('isFromMe');
+            $waMessageId = $request->id; // [FIX] Tangkap ID asli
             
+            // ==========================================
+            // [FIX] PEREDAM EFEK PANTULAN (ECHO LOOP)
+            // ==========================================
+            if ($isFromMe) {
+                $isEcho = ChatLog::where('phone', $rawPhone)
+                    ->where('direction', 'outbound')
+                    ->whereIn('sender_name', ['System', 'AI Assistant'])
+                    ->where('message', $originalMessage)
+                    ->where('created_at', '>=', now()->subSeconds(15))
+                    ->exists();
+
+                if ($isEcho) {
+                    return response()->json(['status' => 'ignored_echo'], 200);
+                }
+            }
+
             $searchPhone = str_starts_with($rawPhone, '62') ? '0' . substr($rawPhone, 2) : $rawPhone;
 
-            // Cari nota
             $serviceOrder = ServiceOrder::whereHas('customer', function ($query) use ($rawPhone, $searchPhone) {
                 $query->where('phone', $rawPhone)->orWhere('phone', $searchPhone);
             })->where('status', 'waiting_approval')->latest()->first();
 
-            // SIMPAN KE DB
             $chatLog = ChatLog::create([
                 'service_order_id' => $serviceOrder?->id, 
                 'phone' => $rawPhone,
-                // Jika dari Admin HP, beri nama "Admin". Jika dari pelanggan, pakai PushName.
+                'wa_message_id' => $waMessageId,
                 'sender_name' => $isFromMe ? 'Admin (Via HP)' : ($request->pushName ?? 'Pelanggan'),
                 'message_type' => $request->type ?? 'text',
-                // Atur arah panah pesannya
                 'direction' => $isFromMe ? 'outbound' : 'inbound',
                 'message' => $originalMessage,
-                // Jika dari Admin, tandai selesai. Jika pelanggan, beri pending untuk AI.
                 'resolved_by' => $isFromMe ? 'human' : 'pending', 
                 'final_intent' => $isFromMe ? 'manual_reply' : 'analyzing',
             ]);
 
-            // HANYA SURUH AI MIKIR JIKA INI PESAN DARI PELANGGAN!
             if (!$isFromMe) {
                 ProcessInboundWaMessage::dispatch($chatLog, $serviceOrder, $rawPhone);
             }
@@ -55,7 +67,6 @@ public function handle(Request $request): JsonResponse
 
         } catch (\Exception $e) {
             Log::error('Webhook Error: ' . $e->getMessage());
-            // Tetap jawab Sukses agar Baileys tidak mengira gagal
             return response()->json(['status' => 'error_recorded'], 200);
         }
     }

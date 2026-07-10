@@ -34,19 +34,37 @@ export function NotificationPopover() {
     // 1. PANTAU KONEKSI REVERB MENGGUNAKAN HOOK BAWAAN (Bukan window.Echo)
     const wsStatus = useConnectionStatus(); 
 
-    // 2. DENGARKAN NOTIFIKASI GLOBAL (Live Chat CS)
-    useEcho('admin.notifications', 'ChatRequiresHuman', (e: any) => {
-        const msg = e.chatLog?.message || `Pelanggan butuh penanganan manual! (Nota: ${e.chatLog?.service_order_id || 'N/A'})`;
-        toast.warning(msg, { duration: 8000 });
+    // 2. DENGARKAN NOTIFIKASI GLOBAL (Panggilan Bantuan Manual CS)
+    useEcho('admin.notifications', '.chat.requires_human', (e: any) => {
+        const msg = `⚠️ Pelanggan butuh admin manual! (Nota: ${e.chatLog?.service_order_id || 'N/A'})`;
+        toast.error(msg, { duration: 8000 }); // Gunakan error agar lebih mencolok
         
         const tempNotif: DatabaseNotification = {
             id: Math.random().toString(),
-            data: { type: 'chat', message: msg },
+            data: { type: 'chat_alert', message: msg },
             created_at: new Date().toISOString(),
             read_at: null,
         };
         setHasUnread(true);
         setNotifications(prev => [tempNotif, ...prev]);
+    });
+
+    // [TAMBAHAN BARU]: DENGARKAN PESAN MASUK BIASA
+    useEcho('admin.notifications', '.chat.new_message', (e: any) => {
+        // FILTER: Hanya bunyikan bel jika pesannya dari Pelanggan (inbound)
+        if (e.chatLog && e.chatLog.direction === 'inbound') {
+            const msg = `Pesan baru dari ${e.chatLog.sender_name}: "${e.chatLog.message.substring(0, 25)}..."`;
+            toast.info(msg);
+            
+            const tempNotif: DatabaseNotification = {
+                id: Math.random().toString(),
+                data: { type: 'chat_message', message: msg },
+                created_at: new Date().toISOString(),
+                read_at: null,
+            };
+            setHasUnread(true);
+            setNotifications(prev => [tempNotif, ...prev]);
+        }
     });
 
     // 3. DENGARKAN NOTIFIKASI DATABASE LARAVEL (Servis Baru/Update)

@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import type { ServiceListItem } from '@/types/service';
+import { useEcho } from '@laravel/echo-react';
 
 interface ChatMessage {
     id: number;
@@ -37,33 +38,30 @@ export function ServiceChatModal({ isOpen, onClose, service }: Props) {
     useEffect(() => {
         if (!isOpen || !service) return;
 
-        setLoading(true);
-        fetch(`/services/${service.id}/chat`)
-            .then((res) => res.json())
-            .then((data) => {
-                setMessages(data);
-                setLoading(false);
-                setTimeout(scrollToBottom, 100);
-            });
-
-        // MENGGUNAKAN CARA STANDAR (DIJAMIN TIDAK ERROR)
-        if (window.Echo) {
-            const channelName = `chat.service.${service.id}`;
-            window.Echo.private(channelName).listen(
-                'NewChatMessage',
-                (e: any) => {
-                    setMessages((prev) => [...prev, e.chat]);
-                    setTimeout(scrollToBottom, 100);
-                },
-            );
-        }
-
-        return () => {
-            if (window.Echo && service) {
-                window.Echo.leave(`chat.service.${service.id}`);
-            }
+        const fetchMessages = async () => {
+            setLoading(true);
+            const res = await fetch(`/services/${service.id}/chat`);
+            const data = await res.json();
+            setMessages(data);
+            setLoading(false);
+            setTimeout(scrollToBottom, 100);
         };
+
+        fetchMessages();
     }, [isOpen, service]);
+    // 2. [PERBAIKAN]: Dengarkan pesan baru dengan useEcho
+    useEcho('admin.notifications', '.chat.new_message', (e: any) => {
+        // FILTER: Pastikan pesan yang masuk benar-benar milik nota yang sedang dibuka ini
+        if (
+            isOpen &&
+            service &&
+            e.chatLog &&
+            e.chatLog.service_order_id === service.id
+        ) {
+            setMessages((prev) => [...prev, e.chatLog]);
+            setTimeout(scrollToBottom, 100);
+        }
+    });
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();

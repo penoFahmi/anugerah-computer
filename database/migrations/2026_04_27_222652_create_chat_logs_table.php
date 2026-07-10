@@ -13,17 +13,16 @@ return new class extends Migration
     {
         Schema::create('chat_logs', function (Blueprint $table) {
             $table->id();
-            
+            $table->foreignId('customer_id')->nullable()->constrained('customers')->nullOnDelete();
             // cascadeOnDelete: Jika order dihapus (force delete), log chat terkait order ini ikut terhapus
             $table->foreignId('service_order_id')->nullable()->constrained()->cascadeOnDelete();
             
-            // ID unik dari API WhatsApp (contoh: wamid.HBgL...)
             $table->string('wa_message_id')->unique()->nullable(); 
             
             // --- KEBUTUHAN NLP & CS ---
             $table->string('phone', 25)->nullable()->index();
             $table->string('sender_name', 100)->nullable();
-            $table->string('message_type', 30)->default('text'); // text, image, document, dll.
+            $table->string('message_type', 30)->default('text'); 
             
             // Arah pesan: 'inbound' (dari user) atau 'outbound' (dari bot/admin)
             $table->string('direction', 20)->index(); 

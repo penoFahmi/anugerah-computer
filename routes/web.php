@@ -9,6 +9,7 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\WarrantyController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\SparePartController;
 
 /*
 |--------------------------------------------------------------------------
@@ -35,6 +36,8 @@ Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
     
     // API & Resource Service Orders
     Route::get('/api/search-customer', [ServiceOrderController::class, 'searchCustomer'])->name('api.search-customer');
+    Route::post('/services/{serviceOrder}/spareparts', [ServiceOrderController::class, 'attachSparepart'])
+    ->name('services.spareparts.attach');
     Route::resource('services', ServiceOrderController::class)
         ->parameters(['services' => 'serviceOrder'])
         ->only(['index', 'store', 'show', 'update', 'destroy']);
@@ -50,6 +53,10 @@ Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
 
     // Modul Pelanggan
     Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
+
+    // Modul Sparepart / Inventory
+    Route::resource('inventory/spareparts', SparePartController::class)->except(['create', 'edit', 'show']);
+    Route::get('/api/spareparts/search', [SparePartController::class, 'searchApi'])->name('api.spareparts.search');
 
     // Modul Notifikasi
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');

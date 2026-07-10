@@ -54,4 +54,13 @@ class Customer extends Model
     {
         return $this->hasMany(ServiceOrder::class);
     }
+    public function chatLogs()
+    {
+        return $this->hasMany(ChatLog::class);
+    }
+
+    public function posTransactions()
+    {
+        return $this->hasMany(PosTransaction::class);
+    }
 }

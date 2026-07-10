@@ -13,13 +13,25 @@ class ChatRequiresHuman implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public function __construct(public ChatLog $chatLog) {}
+    public function __construct(
+        public ChatLog $chatLog
+    ) {}
 
-    // Event ini akan didengarkan secara global oleh Admin di Dashboard
+    /**
+     * Kirimkan ke channel admin
+     */
     public function broadcastOn(): array
     {
         return [
             new PrivateChannel('admin.notifications'),
         ];
+    }
+
+    /**
+     * Alias event khusus untuk intervensi manusia
+     */
+    public function broadcastAs(): string
+    {
+        return 'chat.requires_human';
     }
 }

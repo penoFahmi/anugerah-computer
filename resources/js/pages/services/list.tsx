@@ -1,18 +1,18 @@
 import { router, Head, usePage } from '@inertiajs/react';
+import { useEcho } from '@laravel/echo-react';
 import { Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import Heading from '@/components/heading';
 import { ServiceAlert } from '@/components/services/service-alert';
 import { ServiceChatModal } from '@/components/services/service-chat-modal';
+import { ServiceFilters } from '@/components/services/service-filters';
 import { ServiceFormModal } from '@/components/services/service-form-modal';
 import { ServiceProcessModal } from '@/components/services/service-process-modal';
 import { ServiceTable } from '@/components/services/service-table';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import type { ServiceIndexProps, ServiceListItem } from '@/types/service';
-import { ServiceFilters } from '@/components/services/service-filters';
-import { useEcho } from '@laravel/echo-react';
 
 export default function ServicesIndex({ serviceOrders, filters }: ServiceIndexProps) {
     const { flash } = usePage<ServiceIndexProps>().props;
@@ -22,12 +22,24 @@ export default function ServicesIndex({ serviceOrders, filters }: ServiceIndexPr
     const [selectedServiceToProcess, setSelectedServiceToProcess] = useState<ServiceListItem | null>(null);
     const [selectedServiceToChat, setSelectedServiceToChat] = useState<ServiceListItem | null>(null);
     const [selectedServiceToDelete, setSelectedServiceToDelete] = useState<ServiceListItem | null>(null);
+    const [unreadChatIds, setUnreadChatIds] = useState<number[]>([]);
 
     const { auth } = usePage<any>().props;
 
     useEcho('admin.notifications', '.service.crud', (e: any) => {
         
         console.log(`Ada perubahan data via WebSocket: Aksi ${e.action} pada nota ${e.serviceOrder?.order_number}`);
+
+        if (e.action === 'updated' && e.serviceOrder) {
+            const status = e.serviceOrder.status;
+            const nota = e.serviceOrder.order_number;
+            
+            if (status === 'approved') {
+                toast.success(`🎉 HORE! Pelanggan (Nota: ${nota}) baru saja MENYETUJUI biaya servis!`, { duration: 6000 });
+            } else if (status === 'cancelled') {
+                toast.error(`❌ Pelanggan (Nota: ${nota}) MEMBATALKAN servis.`, { duration: 6000 });
+            }
+        }
     
         router.reload({ 
             preserveScroll: true, 
@@ -35,12 +47,30 @@ export default function ServicesIndex({ serviceOrders, filters }: ServiceIndexPr
         });
     })
 
+    useEcho('admin.notifications', '.chat.new_message', (e: any) => {
+        if (e.chatLog && e.chatLog.direction === 'inbound') {
+            const serviceId = e.chatLog.service_order_id;
+            if (serviceId) {
+                // Tambahkan ID ke daftar unread jika belum ada
+                setUnreadChatIds(prev => 
+                    prev.includes(serviceId) ? prev : [...prev, serviceId]
+                );
+            }
+        }
+    });
+
     // Sentralisasi Flash Message
     useEffect(() => {
         if (flash?.toast) {
             toast[flash.toast.type](flash.toast.message);
         }
     }, [flash]);
+
+    const handleOpenChat = (service: ServiceListItem) => {
+        setSelectedServiceToChat(service);
+        // Hapus ID dari daftar titik merah karena sudah dibaca
+        setUnreadChatIds(prev => prev.filter(id => id !== service.id));
+    };
 
     return (
         <>
@@ -63,10 +93,12 @@ export default function ServicesIndex({ serviceOrders, filters }: ServiceIndexPr
                 {/* Tabel */}
                 <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
                     <ServiceTable
+                    unreadChatIds={unreadChatIds}
                         serviceOrders={serviceOrders}
                         onProcessClick={setSelectedServiceToProcess}
-                        onChatClick={setSelectedServiceToChat}
+                        // onChatClick={setSelectedServiceToChat}
                         onDeleteClick={setSelectedServiceToDelete}
+                        onChatClick={handleOpenChat}
                     />
                 </div>
             </div>
@@ -81,11 +113,13 @@ export default function ServicesIndex({ serviceOrders, filters }: ServiceIndexPr
                 onClose={() => setSelectedServiceToProcess(null)}
                 service={selectedServiceToProcess}
             />
-            <ServiceChatModal
-                isOpen={!!selectedServiceToChat}
-                onClose={() => setSelectedServiceToChat(null)}
-                service={selectedServiceToChat}
-            />
+            {selectedServiceToChat && (
+                <ServiceChatModal
+                    isOpen={!!selectedServiceToChat}
+                    onClose={() => setSelectedServiceToChat(null)}
+                    service={selectedServiceToChat}
+                />
+            )}
             <ServiceAlert
                 open={!!selectedServiceToDelete}
                 onOpenChange={(val) => !val && setSelectedServiceToDelete(null)}

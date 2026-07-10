@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ServiceStatus;
+use App\Enums\SparepartStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,6 +17,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'equipments',
     'status',
     'is_technician_on_site',
+    'is_unit_left_at_store',
     'estimated_cost',
     'down_payment',
     'final_cost',
@@ -37,6 +39,7 @@ class ServiceOrder extends Model
             'status' => ServiceStatus::class,
             'equipments' => 'array',
             'is_technician_on_site' => 'boolean',
+            'is_unit_left_at_store' => 'boolean',
             'estimated_cost' => 'decimal:2',
             'down_payment' => 'decimal:2',
             'final_cost' => 'decimal:2',
@@ -117,5 +120,16 @@ class ServiceOrder extends Model
     public function handedOverBy()
     {
         return $this->belongsTo(User::class, 'handed_over_by');
+    }
+    public function spareParts()
+    {
+        return $this->belongsToMany(SparePart::class, 'service_order_sparepart')
+                    ->withPivot(['quantity', 'price', 'status'])
+                    ->withCasts(['status' => SparepartStatus::class])
+                    ->withTimestamps();
+    }
+    public function transactions()
+    {
+        return $this->hasMany(Transaction::class);
     }
 }

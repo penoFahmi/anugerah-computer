@@ -33,6 +33,7 @@ interface ServiceTableProps {
     onProcessClick: (service: ServiceListItem) => void;
     onChatClick: (service: ServiceListItem) => void;
     onDeleteClick: (service: ServiceListItem) => void;
+    unreadChatIds: number[];
 }
 
 export function ServiceTable({
@@ -40,6 +41,7 @@ export function ServiceTable({
     onProcessClick,
     onChatClick,
     onDeleteClick,
+    unreadChatIds,
 }: ServiceTableProps) {
     const { auth } = usePage().props as any;
     const isAdmin =
@@ -291,12 +293,19 @@ export function ServiceTable({
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        className="h-8 w-8 text-emerald-600"
+                                                        // Gunakan 'relative' agar titik merah menempel
+                                                        className="relative h-8 w-8 text-emerald-600"
                                                         onClick={() =>
                                                             onChatClick(item)
                                                         }
                                                     >
                                                         <MessageSquare className="h-4 w-4" />
+
+                                                        {unreadChatIds.includes(
+                                                            item.id,
+                                                        ) && (
+                                                            <span className="absolute top-1 right-1 h-2 w-2 animate-pulse rounded-full border border-background bg-red-500" />
+                                                        )}
                                                     </Button>
                                                 </TooltipTrigger>
                                                 <TooltipContent className="text-xs">

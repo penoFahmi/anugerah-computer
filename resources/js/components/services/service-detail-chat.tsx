@@ -1,3 +1,4 @@
+import { useEcho } from '@laravel/echo-react';
 import { Loader2, Send } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 
@@ -43,21 +44,16 @@ export function ServiceDetailChat({ service }: ServiceDetailChatProps) {
                 setLoading(false); 
                 setTimeout(scrollToBottom, 100); 
             });
-
-        if (typeof window !== 'undefined' && window.Echo) {
-            window.Echo.private(`chat.service.${service.id}`)
-                .listen('NewChatMessage', (e: { chat: ChatMessage }) => {
-                    setMessages(prev => [...prev, e.chat]);
-                    setTimeout(scrollToBottom, 100);
-                });
-        }
-
-        return () => {
-            if (typeof window !== 'undefined' && window.Echo && service) {
-                window.Echo.leave(`chat.service.${service.id}`);
-            }
-        };
     }, [service]);
+
+    // 2. [PERBAIKAN]: Tangkap siaran pesan baru menggunakan useEcho
+    useEcho('admin.notifications', '.chat.new_message', (e: any) => {
+        // FILTER: Cocokkan ID nota agar chat tidak bocor/nyasar ke halaman detail nota lain
+        if (service && e.chatLog && e.chatLog.service_order_id === service.id) {
+            setMessages(prev => [...prev, e.chatLog]);
+            setTimeout(scrollToBottom, 100);
+        }
+    });
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();

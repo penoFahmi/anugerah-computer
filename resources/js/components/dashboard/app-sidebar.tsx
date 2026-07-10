@@ -79,8 +79,8 @@ const mainNavItems: NavItem[] = [
         icon: CircleDollarSign,
         roles: ['administrator', 'teknisi', 'pegawai'],
         items: [
-            { title: 'Arus Kas Harian', href: '/finance/cashflow' },
-            { title: 'Laporan Laba Rugi', href: '/finance/income-statement' },
+            { title: 'Arus Kas Harian', href: '#' },
+            { title: 'Laporan Laba Rugi', href: '#' },
         ],
     },
 ];

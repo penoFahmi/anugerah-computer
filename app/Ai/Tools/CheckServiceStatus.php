@@ -6,70 +6,72 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
 use App\Models\ServiceOrder;
+use Carbon\Carbon;
 use Stringable;
 
 class CheckServiceStatus implements Tool
 {
     /**
-     * Get the description of the tool's purpose.
+     * Deskripsi yang akan dibaca oleh AI untuk menentukan kapan alat ini boleh dipakai.
      */
     public function description(): Stringable|string
     {
-        return 'Gunakan alat ini untuk mengecek status, estimasi biaya, dan detail servis laptop ' .
-               'JIKA DAN HANYA JIKA pelanggan memberikan Nomor Nota (contoh: SRV-20260624-001).';
+        return 'Gunakan alat ini HANYA JIKA pelanggan secara eksplisit menyebutkan/mengetik Nomor Nota (contoh: SRV-20260624-001) di dalam pesan mereka untuk mencari tahu status servis.';
     }
 
     /**
-     * Execute the tool.
+     * Eksekusi alat untuk mengambil data dari MySQL.
      */
     public function handle(Request $request): Stringable|string
     {
-        // Parameterized query otomatis oleh Eloquent (Aman dari SQL Injection)
         $orderNumber = $request['order_number'] ?? '';
         
-        $order = ServiceOrder::where('order_number', $orderNumber)->first();
+        // Eager loading relasi 'warranty' agar tidak terjadi N+1 Query Problem
+        $order = ServiceOrder::with('warranty')->where('order_number', $orderNumber)->first();
 
+        // Jika nota tidak ada di database
         if (!$order) {
-            return "SISTEM: Nota dengan nomor '{$orderNumber}' tidak ditemukan di sistem. Minta pelanggan memeriksa kembali.";
+            return "DATA SISTEM: Nota '{$orderNumber}' tidak ditemukan di database. Beritahu pelanggan dengan sopan agar mengecek kembali ketikan nomor notanya.";
         }
 
         // ==========================================
-        // BUSINESS LOGIC: Perhitungan Garansi (Hardcoded Backend)
+        // BACA DATA GARANSI DARI TABEL 'warranties'
         // ==========================================
-        $warrantyStatus = 'Belum Berlaku (Servis belum berstatus Selesai)';
+        $warrantyStatus = 'Tidak Ada Garansi / Belum Diterbitkan';
         
-        if ($order->status->value === 'completed') {
-            // Asumsi: Garansi 30 hari terhitung sejak status berubah menjadi 'completed' (diambil dari updated_at)
-            $daysPassed = $order->updated_at->diffInDays(now());
+        if ($order->warranty) {
+            // Ubah status bahasa Inggris ke bahasa Indonesia yang ramah pelanggan
+            $statusLabel = match ($order->warranty->status) {
+                'active' => 'AKTIF',
+                'expired' => 'HABIS/KEDALUWARSA',
+                'void' => 'DIBATALKAN (Void)',
+                default => strtoupper($order->warranty->status),
+            };
             
-            if ($daysPassed <= 30) {
-                $daysRemaining = 30 - $daysPassed;
-                $warrantyStatus = "AKTIF (Sisa {$daysRemaining} Hari)";
-            } else {
-                $warrantyStatus = "HANGUS/HABIS (Sudah lewat 30 hari dari tanggal selesai)";
-            }
-        } elseif ($order->status->value === 'cancelled') {
-            $warrantyStatus = 'Tidak Ada Garansi (Servis Dibatalkan)';
+            // Format tanggal menggunakan Carbon (Contoh: 15 Aug 2026)
+            $endDate = Carbon::parse($order->warranty->end_date)->format('d M Y');
+            $claimCount = $order->warranty->claim_count;
+            
+            $warrantyStatus = "{$statusLabel} (Berlaku s/d: {$endDate}). Telah diklaim: {$claimCount} kali.";
         }
 
-        // Kembalikan data baku dengan instruksi ketat agar AI tidak halusinasi
-        return "DATA SISTEM (Bacakan persis seperti ini, jangan mengarang):" .
+        // Kembalikan data mentah ke AI (AI akan merangkainya menjadi kalimat ramah)
+        return "DATA SISTEM (Gunakan info ini untuk menjawab pertanyaan pelanggan):" .
                "\nStatus Servis: " . $order->status->label() . 
-               "\nEstimasi Biaya: Rp " . number_format((float) $order->estimated_cost, 0, ',', '.') .
+               "\nBiaya: Rp " . number_format((float) $order->estimated_cost, 0, ',', '.') .
                "\nKeluhan Awal: " . $order->complaint .
-               "\nStatus Garansi: " . $warrantyStatus;
+               "\nGaransi: " . $warrantyStatus;
     }
 
     /**
-     * Get the tool's schema definition.
+     * Skema parameter yang harus dikirim oleh AI ke alat ini.
      */
     public function schema(JsonSchema $schema): array
     {
-        // Penulisan schema baru yang elegan (Fluent API)
         return [
             'order_number' => $schema->string()
-                                     ->description('Nomor nota servis dari pelanggan.')
-                                     ->required(),
+                ->description('Nomor nota servis yang diberikan pelanggan (format: SRV-XXX-XXX). Harus persis sesuai yang diketik.')
+                ->required(),
         ];
     }
 }

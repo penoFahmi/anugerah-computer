@@ -11,6 +11,7 @@ use App\Models\Customer;
 use App\Models\Device;
 use App\Models\User;
 use App\Models\ServiceOrder;
+use App\Models\SparePart;
 use App\Models\Warranty;
 use App\Services\WaGateway;
 use App\Notifications\NewServiceOrderNotification;
@@ -483,5 +484,56 @@ class ServiceOrderController extends Controller
         return Inertia::render('services/kanban', [
             'services' => $services
         ]);
+    }
+
+    /**
+     * Memasukkan sparepart dari katalog ke dalam nota servis (Pivot).
+     */
+    public function attachSparepart(Request $request, ServiceOrder $serviceOrder): \Illuminate\Http\RedirectResponse
+    {
+        // 1. Validasi data yang dikirim dari form teknisi
+        $request->validate([
+            'spare_part_id' => 'required|exists:spare_parts,id',
+            'quantity' => 'required|integer|min:1',
+        ]);
+
+        // 2. Ambil data barang dari database
+        $sparePart = SparePart::findOrFail($request->spare_part_id);
+        $quantity = $request->quantity;
+
+        // 3. Cek apakah stok cukup (jika bukan barang inden)
+        if (!$sparePart->is_always_indent && $sparePart->stock < $quantity) {
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => "Gagal: Stok {$sparePart->name} tidak mencukupi. Sisa stok: {$sparePart->stock}"
+            ]);
+            return back();
+        }
+
+        // 4. Proses penyimpanan menggunakan Database Transaction agar aman
+        DB::transaction(function () use ($serviceOrder, $sparePart, $quantity) {
+            
+            // Tentukan status barang (apakah harus inden atau langsung dipasang)
+            $status = $sparePart->is_always_indent ? 'indenting' : 'installed';
+
+            // Masukkan barang ke nota servis (menyimpan Harga Jual saat ini)
+            $serviceOrder->spareParts()->attach($sparePart->id, [
+                'quantity' => $quantity,
+                'price' => $sparePart->selling_price,
+                'status' => $status,
+            ]);
+
+            // Kurangi fisik stok di katalog (jika bukan barang inden)
+            if (!$sparePart->is_always_indent) {
+                $sparePart->decrement('stock', $quantity);
+            }
+        });
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => "Berhasil menambahkan {$sparePart->name} ke dalam nota servis."
+        ]);
+
+        return back();
     }
 }

@@ -13,18 +13,25 @@ class NewChatMessage implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public function __construct(public ChatLog $chatLog) {}
+    public function __construct(
+        public ChatLog $chatLog
+    ) {}
 
-    // Event ini akan didengarkan di ruang chat per-nota
+    /**
+     * Kirimkan ke channel admin yang sama dengan ServiceOrder
+     */
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('chat.service.' . $this->chatLog->service_order_id),
+            new PrivateChannel('admin.notifications'),
         ];
     }
 
-    public function broadcastWith(): array
+    /**
+     * Alias event untuk ditangkap di React Echo
+     */
+    public function broadcastAs(): string
     {
-        return ['chat' => $this->chatLog->toArray()];
+        return 'chat.new_message';
     }
 }

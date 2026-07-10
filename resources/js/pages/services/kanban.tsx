@@ -25,6 +25,17 @@ export default function KanbanPage({ services }: KanbanPageProps) {
         
         
         console.log(`Ada perubahan data via WebSocket: Aksi ${e.action} pada nota ${e.serviceOrder?.order_number}`);
+
+        if (e.action === 'updated' && e.serviceOrder) {
+            const status = e.serviceOrder.status;
+            const nota = e.serviceOrder.order_number;
+            
+            if (status === 'approved') {
+                toast.success(`🎉 HORE! Pelanggan (Nota: ${nota}) baru saja MENYETUJUI biaya servis!`, { duration: 6000 });
+            } else if (status === 'cancelled') {
+                toast.error(`❌ Pelanggan (Nota: ${nota}) MEMBATALKAN servis.`, { duration: 6000 });
+            }
+        }
         
         router.reload({ 
             preserveScroll: true, 

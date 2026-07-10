@@ -27,6 +27,9 @@ return new class extends Migration
             // Index pada status akan sangat mempercepat query di halaman Dashboard/Kanban board
             $table->string('status', 30)->default('waiting_checking')->index();
             $table->boolean('is_technician_on_site')->default(false);
+            
+            // Menyimpan informasi apakah unit ditinggalkan di toko atau dibawa pulang oleh pelanggan
+            $table->boolean('is_unit_left_at_store')->default(true);
 
             // BIAYA
             $table->decimal('estimated_cost', 12, 2)->nullable();

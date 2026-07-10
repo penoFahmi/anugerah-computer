@@ -115,7 +115,7 @@ export function ServiceProcessModal({ isOpen, onClose, service }: ServiceProcess
                 <div className="flex flex-col h-full space-y-4">
                     <UIAlert className="bg-muted/50 border-border py-2.5">
                         <AlertDescription className="text-muted-foreground text-xs leading-relaxed font-medium">
-                            Lakukan pengecekan awal pada perangkat. Masukkan estimasi biaya di bawah, lalu klik "Kirim Penawaran WA" untuk meminta persetujuan pelanggan.
+                            Lakukan pengecekan awal pada perangkat. Masukkan estimasi biaya di bawah, lalu klik "Kirim Penawaran WA". Jika unit tidak dapat diperbaiki, Anda bisa membatalkannya.
                         </AlertDescription>
                     </UIAlert>
                     
@@ -131,16 +131,36 @@ export function ServiceProcessModal({ isOpen, onClose, service }: ServiceProcess
                         <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                             <FileText className="h-3.5 w-3.5 text-muted-foreground" /> Catatan Pengecekan
                         </Label>
-                        <Textarea className="flex-1 text-sm resize-none bg-background p-3 custom-scrollbar min-h-[80px]" placeholder="Misal: Keyboard error pada tombol spasi..." value={data.technician_notes} onChange={(e) => setData('technician_notes', e.target.value)} />
+                        <Textarea className="flex-1 text-sm resize-none bg-background p-3 custom-scrollbar min-h-[80px]" placeholder="Misal: Sparepart kosong, IC Power mati..." value={data.technician_notes} onChange={(e) => setData('technician_notes', e.target.value)} />
                     </div>
                     
-                    <div className="flex justify-end gap-3 pt-4 border-t border-border shrink-0">
-                        <Button type="button" size="sm" variant="outline" onClick={() => processAction('waiting_checking')} disabled={processing}>
-                            {processing ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Check className="h-4 w-4 mr-1.5" />} Simpan Draf
+                    {/* [PERBAIKAN]: Area Tombol dengan penambahan Tombol Batal di sebelah kiri */}
+                    <div className="flex justify-between items-center pt-4 border-t border-border shrink-0">
+                        
+                        <Button 
+                            type="button" 
+                            size="sm" 
+                            variant="destructive" 
+                            onClick={() => setAlertConfig({ 
+                                open: true, 
+                                action: 'cancelled', 
+                                title: 'Batalkan Servis', 
+                                desc: 'Yakin membatalkan servis ini? (Pilih ini jika unit tidak bisa diperbaiki atau sparepart kosong).' 
+                            })} 
+                            disabled={processing}
+                        >
+                            <XCircle className="h-4 w-4 mr-1.5" /> Batal
                         </Button>
-                        <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm" onClick={() => processAction('waiting_approval', true)} disabled={processing}>
-                            <Send className="h-4 w-4 mr-2" /> Kirim Penawaran WA
-                        </Button>
+
+                        <div className="flex gap-2">
+                            <Button type="button" size="sm" variant="outline" onClick={() => processAction('waiting_checking')} disabled={processing}>
+                                {processing ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Check className="h-4 w-4 mr-1.5" />} Simpan Draf
+                            </Button>
+                            <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm" onClick={() => processAction('waiting_approval', true)} disabled={processing}>
+                                <Send className="h-4 w-4 mr-2" /> Kirim Penawaran WA
+                            </Button>
+                        </div>
+
                     </div>
                 </div>
             );
@@ -223,7 +243,6 @@ export function ServiceProcessModal({ isOpen, onClose, service }: ServiceProcess
 
             return (
                 <div className="flex flex-col h-full space-y-4">
-                    {/* Kalkulator Terpadu */}
                     <div className="bg-slate-900 rounded-xl p-4 text-slate-100 shadow-inner">
                         <div className="flex justify-between items-center mb-3 border-b border-slate-700/80 pb-3">
                             <span className="text-xs text-slate-400 font-medium tracking-wide uppercase">Biaya Akhir (Final)</span>

@@ -7,7 +7,7 @@ use App\Models\ServiceOrder;
 use App\Enums\ServiceStatus;
 use App\Services\WaGateway;
 use App\Ai\Agents\CustomerService;
-use App\Ai\Agents\IntentAnalyzer; // Aktifkan kembali Intent Analyzer LLM
+use App\Ai\Agents\IntentAnalyzer;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -15,6 +15,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use App\Events\ServiceOrderBroadcast;
 
 class ProcessInboundWaMessage implements ShouldQueue
 {
@@ -45,6 +46,14 @@ class ProcessInboundWaMessage implements ShouldQueue
         return $history;
     }
 
+    /**
+     * Algoritma Estimasi Token untuk Skripsi (1 Kata = 1.5 Token)
+     */
+    private function estimateTokens(string $text): int
+    {
+        return (int) ceil(str_word_count($text) * 1.5);
+    }
+
     public function handle(): void
     {
         $originalMessage = $this->chatLog->message;
@@ -71,11 +80,13 @@ class ProcessInboundWaMessage implements ShouldQueue
             Log::error("Koneksi ke NLP Python gagal: " . $e->getMessage());
         }
 
-        // SIMPAN HASIL RAW NLP KE DATABASE (Agar kolom tidak NULL lagi)
+        // Simpan Hasil NLP Lapis Pertama (Token LLM Masih 0 karena belum pakai AI Groq)
         $this->chatLog->update([
             'svm_predicted_intent' => $nlpIntent,
             'svm_confidence_score' => $nlpConfidence,
             'is_svm_successful' => $isSvmSuccessful,
+            'llm_prompt_tokens' => 0, 
+            'llm_completion_tokens' => 0,
         ]);
 
         // ==========================================
@@ -90,15 +101,21 @@ class ProcessInboundWaMessage implements ShouldQueue
 
             if ($nlpIntent === 'setuju') {
                 $this->serviceOrder->update(['status' => ServiceStatus::APPROVED]);
-                $balasan = "Baik Kak, konfirmasi *SETUJU* diterima melalui NLP Lokal. Unit *{$this->serviceOrder->device->brand}* segera diproses. 🛠️";
-            } else {
+                event(new ServiceOrderBroadcast($this->serviceOrder, 'updated'));
+                $balasan = "Baik Kak, konfirmasi *SETUJU* diterima. Unit *{$this->serviceOrder->device->brand}* segera diproses teknisi. 🛠️";
+        
+                } else {
                 $this->serviceOrder->update(['status' => ServiceStatus::CANCELLED]);
-                $balasan = "Baik Kak, konfirmasi *BATAL* diterima melalui NLP Lokal. Unit *{$this->serviceOrder->device->brand}* kami batalkan. 🙏";
-            }
+                event(new ServiceOrderBroadcast($this->serviceOrder, 'updated'));
+                $balasan = "Baik Kak, konfirmasi *BATAL* diterima. Layanan unit *{$this->serviceOrder->device->brand}* kami batalkan. 🙏";
+            
+                
+
+                }
 
             $this->chatLog->update([
                 'resolved_by' => 'agent_nlp_fasttext',
-                'final_intent' => $nlpIntent
+                'final_intent' => $nlpIntent,
             ]);
 
             WaGateway::sendMessage($this->rawPhone, $balasan, $this->serviceOrder->id, 'nlp_direct_reply');
@@ -108,7 +125,6 @@ class ProcessInboundWaMessage implements ShouldQueue
         // ==========================================
         // TAHAP 3: MEKANISME FALLBACK KE LLM INTENT ANALYZER
         // ==========================================
-        // Jika NLP ragu-ragu (seperti nilai 0.26 tadi), LLM akan menganalisis niatnya secara mendalam
         $this->chatLog->update(['is_llm_triggered' => 1]);
 
         try {
@@ -117,30 +133,39 @@ class ProcessInboundWaMessage implements ShouldQueue
             $analysisData = is_array($analysis) ? $analysis : (array) $analysis;
 
             $llmIntent = $analysisData['intent'] ?? 'unclear';
-            $reasoning = $analysisData['reasoning'] ?? 'Sebab dianalisis LLM Fallback';
+            $reasoning = $analysisData['reasoning'] ?? 'Dianalisis oleh Fallback LLM';
 
-            // Jika LLM Fallback berhasil mendeteksi persetujuan/pembatalan
+            // Hitung Token untuk Intent Analyzer
+            $promptTokens = $this->estimateTokens((string)$intentAgent->instructions() . " " . $originalMessage);
+            $completionTokens = $this->estimateTokens(json_encode($analysisData));
+
             if ($this->serviceOrder && ($llmIntent === 'approve' || $llmIntent === 'cancel')) {
                 
                 if ($this->serviceOrder->status->value !== ServiceStatus::WAITING_APPROVAL->value) {
-                    $this->triggerHumanHandoff("Unit sudah diproses lanjutan (LLM Guardrail).");
+                    $this->triggerHumanHandoff("Sistem Guardrail Mencegah AI.");
                     return;
                 }
 
                 if ($llmIntent === 'approve') {
                     $this->serviceOrder->update(['status' => ServiceStatus::APPROVED]);
-                    $balasan = "Terima kasih atas konfirmasinya. Perbaikan unit *{$this->serviceOrder->device->brand}* segera kami proses oleh teknisi. 🛠️";
+                    event(new ServiceOrderBroadcast($this->serviceOrder, 'updated'));
+                    $balasan = "Terima kasih atas konfirmasinya. Perbaikan unit *{$this->serviceOrder->device->brand}* segera kami proses. 🛠️";
+                    
                     $finalIntentName = 'setuju';
                 } else {
                     $this->serviceOrder->update(['status' => ServiceStatus::CANCELLED]);
+                    event(new ServiceOrderBroadcast($this->serviceOrder, 'updated'));
                     $balasan = "Baik Kak, permintaan pembatalan kami terima. Perbaikan unit *{$this->serviceOrder->device->brand}* telah dibatalkan. 🙏";
+                    
                     $finalIntentName = 'batal';
                 }
 
                 $this->chatLog->update([
                     'resolved_by' => 'agent_intent_analyzer_fallback',
                     'final_intent' => $finalIntentName,
-                    'llm_raw_response' => ['reasoning' => $reasoning]
+                    'llm_raw_response' => ['reasoning' => $reasoning],
+                    'llm_prompt_tokens' => $promptTokens,
+                    'llm_completion_tokens' => $completionTokens,
                 ]);
 
                 WaGateway::sendMessage($this->rawPhone, $balasan, $this->serviceOrder->id, 'llm_intent_fallback_reply');
@@ -148,37 +173,64 @@ class ProcessInboundWaMessage implements ShouldQueue
             }
 
             // ==========================================
-            // TAHAP 4: CHAT GENERATIF (JIKA BUKAN BERISI NIAT SETUJU/BATAL)
+            // TAHAP 4: CHAT GENERATIF (JIKA BUKAN NIAT SETUJU/BATAL)
             // ==========================================
             $history = $this->getChatHistory();
             $csAgent = new CustomerService($history);
             
             if ($this->serviceOrder) {
-                $contextPrompt = "Info Sistem: Pelanggan tanya tentang nota " . $this->serviceOrder->order_number . " (Unit: " . $this->serviceOrder->device->brand . "). Status: " . $this->serviceOrder->status->value . ". Biaya: " . $this->serviceOrder->estimated_cost . ". Balas ramah pesan ini: '{$originalMessage}'";
+                // Eager Load data garansi agar tidak error
+                $this->serviceOrder->load('warranty');
+                
+                // Siapkan teks garansi untuk disuapkan ke AI
+                $warrantyStatus = 'Tidak Ada Garansi';
+                if ($this->serviceOrder->warranty) {
+                    $wStatus = strtoupper($this->serviceOrder->warranty->status);
+                    $wEndDate = \Carbon\Carbon::parse($this->serviceOrder->warranty->end_date)->format('d M Y');
+                    $warrantyStatus = "{$wStatus} (Berlaku s/d: {$wEndDate})";
+                }
+
+                // INJEKSI DATA PENUH: Beri tahu AI bahwa data sudah lengkap, JANGAN PAKAI ALAT.
+                $contextPrompt = "[DATA SISTEM TERDETEKSI]\n" .
+                    "Pelanggan ini menggunakan nomor HP yang terdaftar pada sistem kami.\n" .
+                    "- Nota: {$this->serviceOrder->order_number}\n" .
+                    "- Unit: {$this->serviceOrder->device->brand} {$this->serviceOrder->device->model}\n" .
+                    "- Status: {$this->serviceOrder->status->label()}\n" .
+                    "- Biaya: Rp " . number_format((float) $this->serviceOrder->estimated_cost, 0, ',', '.') . "\n" .
+                    "- Garansi: {$warrantyStatus}\n\n" .
+                    "INSTRUKSI KHUSUS UNTUK ANDA: Gunakan data di atas untuk menjawab. ANDA DILARANG KERAS menanyakan nomor nota atau memanggil Tool CheckServiceStatus karena semua data sudah saya sediakan di sini!\n\n" .
+                    "Pesan Pelanggan: '{$originalMessage}'";
+                
                 $this->serviceOrder->update(['last_customer_message' => $originalMessage]);
             } else {
-                $contextPrompt = "Balas pertanyaan umum pelanggan dengan ramah: '{$originalMessage}'";
+                // JIKA NOMOR BARU / TIDAK ADA SERVIS AKTIF
+                $contextPrompt = "[TIDAK ADA DATA SISTEM]\n" .
+                    "Ini adalah pelanggan baru atau tidak ada servis aktif. Jawab dengan ramah. Jika dia bertanya tentang servisannya, barulah minta nomor notanya.\n\n" .
+                    "Pesan Pelanggan: '{$originalMessage}'";
             }
 
             $aiResponse = (string) $csAgent->prompt($contextPrompt);
             
+            // Hitung Token untuk Customer Service Generatif
+            $csPromptTokens = $this->estimateTokens((string)$csAgent->instructions() . " " . $contextPrompt . " " . json_encode($history));
+            $csCompletionTokens = $this->estimateTokens($aiResponse);
+
             $this->chatLog->update([
                 'resolved_by' => 'agent_llm_customer_service',
                 'final_intent' => 'umum_teknis',
-                'llm_raw_response' => ['text' => $aiResponse, 'reasoning' => $reasoning] 
+                'llm_raw_response' => ['text' => $aiResponse, 'reasoning' => $reasoning],
+                'llm_prompt_tokens' => $promptTokens + $csPromptTokens, 
+                'llm_completion_tokens' => $completionTokens + $csCompletionTokens,
             ]);
 
             WaGateway::sendMessage($this->rawPhone, $aiResponse, $this->serviceOrder?->id, 'llm_cs_reply');
 
         } catch (\Throwable $e) {
-            Log::error('Mekanisme Fallback LLM Mengalami Kegagalan: ' . $e->getMessage());
-            $this->triggerHumanHandoff("Sistem Mengalami Kegagalan.");
+            Log::error('Fallback LLM Error: ' . $e->getMessage());
+            $this->triggerHumanHandoff("Sistem AI Mengalami Kegagalan.");
         }
     }
 
-    /**
-     * Fungsi pembantu untuk mengaktifkan Intervensi Manual (Human Handoff)
-     */
     private function triggerHumanHandoff(string $alasan): void
     {
         $balasan = "Maaf Kak, pesan Anda akan segera ditangani langsung oleh Admin toko kami. Mohon tunggu sebentar ya. 🙏";

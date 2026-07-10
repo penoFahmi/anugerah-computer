@@ -39,7 +39,7 @@ class WaGateway
                 ChatLog::create([
                     'service_order_id' => $order->id,
                     'phone' => $order->customer->phone,
-                    'wa_message_id' => $data['messageId'] ?? null, // [FIX] Simpan ID
+                    'wa_message_id' => $data['messageId'] ?? null,
                     'sender_name' => 'System',
                     'message_type' => 'document',
                     'direction' => 'outbound',
@@ -59,7 +59,7 @@ class WaGateway
     public static function sendOffer(ServiceOrder $order): bool
     {
         $formattedCost = 'Rp ' . number_format($order->estimated_cost, 0, ',', '.');
-        $message = "Halo Kak *{$order->customer->name}*,\n\nUntuk perbaikan unit *{$order->device->brand} {$order->device->model}* (Nota: *{$order->order_number}*), estimasi biayanya adalah sekitar *{$formattedCost}*.\n\nApakah Anda setuju untuk melanjutkan perbaikan dengan biaya tersebut?\n\nSilakan balas *SETUJU* atau *TIDAK*.\n\nTerima kasih.";
+        $message = "Halo Kak *{$order->customer->name}*,\n\nUntuk perbaikan unit *{$order->device->brand} {$order->device->model}* (Nota: *{$order->order_number}*), estimasi biayanya adalah sekitar *{$formattedCost}*. *{$order->technician_notes}*.\n\nApakah Anda setuju untuk melanjutkan perbaikan dengan biaya tersebut?\n\nSilakan balas *SETUJU* atau *TIDAK*.\n\nTerima kasih.";
 
         return self::sendMessage($order->customer->phone, $message, $order->id, 'send_offer', 'System');
     }
@@ -81,7 +81,7 @@ class WaGateway
                 ChatLog::create([
                     'service_order_id' => $serviceOrderId,
                     'phone' => $phone,
-                    'wa_message_id' => $data['messageId'] ?? null, // [FIX] Simpan ID
+                    'wa_message_id' => $data['messageId'] ?? null,
                     'sender_name' => $senderName,
                     'message_type' => 'text',
                     'direction' => 'outbound',
@@ -103,21 +103,26 @@ class WaGateway
         $customerName = $order->customer->name;
         $deviceName = $order->device->brand . ' ' . $order->device->model;
         $orderNumber = $order->order_number;
+        $note = $order->technician_notes;
 
         $message = "Halo Kak *{$customerName}*,\nBerikut adalah update untuk unit *{$deviceName}* (Nota: {$orderNumber}):\n\n";
+
+        if ($note) {
+            $message .= "Catatan teknisi: *{$note}*\n\n";
+        }
 
         switch ($order->status->value) {
             case 'approved':
             case 'in_progress':
-                $message .= "🛠️ Unit Kakak saat ini *sedang dalam proses pengerjaan* oleh teknisi kami.";
+                $message .= "Unit Kakak saat ini *sedang dalam proses pengerjaan* oleh teknisi kami.";
                 break;
             case 'completed':
                 $cost = $order->final_cost > 0 ? $order->final_cost : $order->estimated_cost;
                 $formattedCost = 'Rp ' . number_format((float) $cost, 0, ',', '.');
-                $message .= "✅ Perbaikan unit Kakak *TELAH SELESAI* dan sudah bisa diambil di toko.\nTotal Biaya: *{$formattedCost}*.";
+                $message .= "Perbaikan unit Kakak *TELAH SELESAI* dan sudah bisa diambil di toko.\nTotal Biaya: *{$formattedCost}*.";
                 break;
             case 'cancelled':
-                $message .= "❌ Perbaikan unit Kakak *DIBATALKAN*. Silakan ambil unit Anda.";
+                $message .= "Perbaikan unit Kakak *DIBATALKAN*. Silakan ambil unit Anda.";
                 break;
             default:
                 $message .= "Status unit Kakak saat ini: *" . $order->status->label() . "*";

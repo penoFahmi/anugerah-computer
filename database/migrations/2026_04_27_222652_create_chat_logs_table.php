@@ -14,7 +14,6 @@ return new class extends Migration
         Schema::create('chat_logs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('customer_id')->nullable()->constrained('customers')->nullOnDelete();
-            // cascadeOnDelete: Jika order dihapus (force delete), log chat terkait order ini ikut terhapus
             $table->foreignId('service_order_id')->nullable()->constrained()->cascadeOnDelete();
             
             $table->string('wa_message_id')->unique()->nullable(); 

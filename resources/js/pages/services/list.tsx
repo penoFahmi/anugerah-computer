@@ -68,7 +68,6 @@ export default function ServicesIndex({ serviceOrders, filters }: ServiceIndexPr
 
     const handleOpenChat = (service: ServiceListItem) => {
         setSelectedServiceToChat(service);
-        // Hapus ID dari daftar titik merah karena sudah dibaca
         setUnreadChatIds(prev => prev.filter(id => id !== service.id));
     };
 

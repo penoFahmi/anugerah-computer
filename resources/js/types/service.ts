@@ -34,6 +34,8 @@ export interface ServiceListItem {
         remaining: number;
     };
     technician_notes?: string | null;
+    is_unit_left_at_store: boolean;
+    spare_parts?: any[];
     created_at: string;
     device_type?: string;
     brand?: string;

@@ -6,6 +6,8 @@ import {
     Trash2,
     MessageSquare,
     FolderPen,
+    MapPin,
+    Home,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Pagination from '@/components/pagination';
@@ -99,6 +101,12 @@ export function ServiceTable({
                         {label}
                     </Badge>
                 );
+            case 'approved':
+                return (
+                    <Badge className="border-indigo-300 bg-indigo-100 text-indigo-700 shadow-none">
+                        {label}
+                    </Badge>
+                );
             case 'in_progress':
                 return (
                     <Badge className="border-blue-300 bg-blue-100 text-blue-700 shadow-none">
@@ -121,6 +129,41 @@ export function ServiceTable({
         }
     };
 
+    // Fungsi pembantu untuk memunculkan badge lokasi barang HANYA di saat krusial
+    const renderLocationBadge = (item: ServiceListItem) => {
+        // Pastikan nilai undefined dianggap true (Di Toko) untuk mencegah data lama error
+        const isAtStore = item.is_unit_left_at_store !== false; 
+
+        // 1. KASUS BATAL: Sangat penting tahu apakah barang masih numpuk di toko atau sudah diambil
+        if (item.status === 'cancelled') {
+            if (isAtStore) {
+                return (
+                    <div className="flex items-center justify-center gap-1 mt-1.5 text-[10px] font-bold text-red-600 bg-red-50 dark:bg-red-950/30 px-1.5 py-0.5 rounded border border-red-200 dark:border-red-800">
+                        <MapPin className="h-3 w-3" /> Masih di Rak Toko
+                    </div>
+                );
+            } else {
+                return (
+                    <div className="flex items-center justify-center gap-1 mt-1.5 text-[10px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-800/50 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                        <Home className="h-3 w-3" /> Sudah Dikembalikan
+                    </div>
+                );
+            }
+        }
+
+        // 2. KASUS INDEN / PENDING: Jika laptop dibawa pulang sementara oleh pelanggan
+        if (!['completed', 'taken', 'cancelled'].includes(item.status) && !isAtStore) {
+            return (
+                <div className="flex items-center justify-center gap-1 mt-1.5 text-[10px] font-bold text-orange-600 bg-orange-50 dark:bg-orange-950/30 px-1.5 py-0.5 rounded border border-orange-200 dark:border-orange-800">
+                    <Home className="h-3 w-3" /> Dibawa Pulang Sementara
+                </div>
+            );
+        }
+
+        // Untuk status standar (Pasti di toko) atau Taken (Pasti sudah diambil), sembunyikan badge!
+        return null;
+    };
+
     return (
         <TooltipProvider>
             <Table>
@@ -139,10 +182,10 @@ export function ServiceTable({
                             Perangkat & Keluhan
                         </TableHead>
                         <TableHead className="font-bold whitespace-nowrap">
-                            Biaya
+                            Biaya & Tagihan
                         </TableHead>
                         <TableHead className="text-center font-bold whitespace-nowrap">
-                            Status
+                            Status & Lokasi
                         </TableHead>
                         <TableHead className="pr-4 text-right font-bold whitespace-nowrap">
                             Aksi
@@ -221,9 +264,8 @@ export function ServiceTable({
                                             </TooltipContent>
                                         </Tooltip>
                                     </TableCell>
-                                    {/* <TableCell className="text-sm font-medium whitespace-nowrap">{formatCurrency(item.estimated_cost)}</TableCell> */}
-                                    <TableCell className="py-3 align-top">
-                                        <div className="flex w-full flex-col gap-1 rounded-md border border-border/50 bg-muted/20 p-2 text-[11px]">
+                                    <TableCell className="py-3 align-top min-w-[200px]">
+                                        <div className={`flex w-full flex-col gap-1 rounded-md border p-2 text-[11px] ${item.financials?.is_paid ? 'border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20' : 'border-border/50 bg-muted/20'}`}>
                                             <div className="flex items-center justify-between gap-4">
                                                 <span className="text-muted-foreground">
                                                     Estimasi:
@@ -231,12 +273,12 @@ export function ServiceTable({
                                                 <span className="font-mono text-foreground">
                                                     {formatCurrency(
                                                         item.financials
-                                                            .estimated,
+                                                            ?.estimated,
                                                     )}
                                                 </span>
                                             </div>
 
-                                            {Number(item.financials.final) >
+                                            {Number(item.financials?.final) >
                                                 0 && (
                                                 <div className="flex items-center justify-between gap-4">
                                                     <span className="text-muted-foreground">
@@ -245,13 +287,13 @@ export function ServiceTable({
                                                     <span className="font-mono font-semibold text-blue-600 dark:text-blue-400">
                                                         {formatCurrency(
                                                             item.financials
-                                                                .final,
+                                                                ?.final,
                                                         )}
                                                     </span>
                                                 </div>
                                             )}
 
-                                            {Number(item.financials.dp) > 0 && (
+                                            {Number(item.financials?.dp) > 0 && (
                                                 <div className="flex items-center justify-between gap-4">
                                                     <span className="text-muted-foreground">
                                                         Uang Muka:
@@ -259,32 +301,42 @@ export function ServiceTable({
                                                     <span className="font-mono text-emerald-600 dark:text-emerald-500">
                                                         -{' '}
                                                         {formatCurrency(
-                                                            item.financials.dp,
+                                                            item.financials?.dp,
                                                         )}
                                                     </span>
                                                 </div>
                                             )}
 
-                                            <div className="mt-1 flex items-center justify-between gap-4 border-t border-border pt-1">
-                                                <span className="font-semibold text-foreground">
+                                            <div className="mt-1 flex items-center justify-between gap-4 border-t border-border/50 pt-1.5">
+                                                <span className="font-bold text-foreground">
                                                     Sisa:
                                                 </span>
-                                                <span
-                                                    className={`font-mono font-bold ${item.financials.remaining > 0 ? 'text-orange-600 dark:text-orange-500' : 'text-emerald-600 dark:text-emerald-500'}`}
-                                                >
-                                                    {formatCurrency(
-                                                        item.financials
-                                                            .remaining,
+                                                <div className="flex items-center gap-1.5">
+                                                    {item.financials?.is_paid && (
+                                                        <span className="px-1.5 rounded-sm bg-emerald-500 text-white text-[9px] font-black tracking-wider">
+                                                            LUNAS
+                                                        </span>
                                                     )}
-                                                </span>
+                                                    <span
+                                                        className={`font-mono font-bold ${item.financials?.remaining > 0 ? 'text-orange-600 dark:text-orange-500' : 'text-emerald-600 dark:text-emerald-500'}`}
+                                                    >
+                                                        {formatCurrency(
+                                                            item.financials
+                                                                ?.remaining,
+                                                        )}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                     </TableCell>
-                                    <TableCell className="text-center">
-                                        {renderStatusBadge(
-                                            item.status,
-                                            item.status_label,
-                                        )}
+                                    <TableCell className="text-center align-middle">
+                                        <div className="flex flex-col items-center justify-center">
+                                            {renderStatusBadge(
+                                                item.status,
+                                                item.status_label,
+                                            )}
+                                            {renderLocationBadge(item)}
+                                        </div>
                                     </TableCell>
                                     <TableCell className="py-3 pr-4 text-right">
                                         <div className="flex items-center justify-end gap-1">
@@ -293,14 +345,12 @@ export function ServiceTable({
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        // Gunakan 'relative' agar titik merah menempel
                                                         className="relative h-8 w-8 text-emerald-600"
                                                         onClick={() =>
                                                             onChatClick(item)
                                                         }
                                                     >
                                                         <MessageSquare className="h-4 w-4" />
-
                                                         {unreadChatIds.includes(
                                                             item.id,
                                                         ) && (

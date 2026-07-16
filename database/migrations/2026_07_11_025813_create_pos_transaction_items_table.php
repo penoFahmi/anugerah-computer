@@ -14,12 +14,13 @@ return new class extends Migration
         Schema::create('pos_transaction_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('pos_transaction_id')->constrained('pos_transactions')->cascadeOnDelete();
-            $table->foreignId('spare_part_id')->constrained('spare_parts')->restrictOnDelete();
-            
+            $table->foreignId('spare_part_id')->nullable()->constrained('spare_parts')->restrictOnDelete();
+            $table->foreignId('product_id')->nullable()->constrained('products')->restrictOnDelete();
+
             $table->integer('quantity');
-            $table->decimal('price', 12, 2); 
-            $table->decimal('subtotal', 12, 2); 
-            
+            $table->decimal('price', 12, 2);
+            $table->decimal('subtotal', 12, 2);
+
             $table->timestamps();
         });
     }

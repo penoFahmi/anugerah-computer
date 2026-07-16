@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-#[Fillable(['service_order_id', 'warranty_code', 'start_date', 'end_date', 'status', 'claim_count', 'notes'])]
+#[Fillable(['service_order_id', 'pos_transaction_id', 'warranty_code', 'start_date', 'end_date', 'status', 'claim_count', 'notes'])]
 class Warranty extends Model
 {
     use HasFactory;
@@ -29,5 +29,11 @@ class Warranty extends Model
     public function serviceOrder()
     {
         return $this->belongsTo(ServiceOrder::class);
+    }
+
+    // Relasi ke entitas PosTransaction (Transaksi POS yang terkait dengan garansi ini, jika ada)
+    public function posTransaction()
+    {
+        return $this->belongsTo(PosTransaction::class);
     }
 }

@@ -31,6 +31,7 @@ class StoreServiceOrderRequest extends FormRequest
             
             // Pengondisian Teknisi & Biaya
             'is_technician_on_site' => ['boolean'],
+            'is_unit_left_at_store' => ['nullable', 'boolean'],
             'estimated_cost' => ['nullable', 'numeric', 'min:0'],
             'down_payment' => ['nullable', 'numeric', 'min:0'],
         ];

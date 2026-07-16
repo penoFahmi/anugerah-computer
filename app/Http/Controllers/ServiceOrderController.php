@@ -40,6 +40,7 @@ class ServiceOrderController extends Controller
         $query = ServiceOrder::query()->with([
             'customer' => fn($q) => $q->withTrashed(),
             'device' => fn($q) => $q->withTrashed(),
+            'spareParts',
         ]);
 
         // OPTIMASI: Menggunakan Local Scope `scopeSearch` dari Model ServiceOrder!
@@ -86,6 +87,13 @@ class ServiceOrderController extends Controller
                 'down_payment' => $service->down_payment,
                 'technician_notes' => $service->technician_notes,
                 'created_at' => $service->created_at->format('d M Y, H:i'),
+                'spare_parts' => $service->spareParts->map(fn($sp) => [
+                    'id' => $sp->id,
+                    'name' => $sp->name,
+                    'price' => $sp->pivot->price,
+                    'quantity' => $sp->pivot->quantity,
+                    'subtotal' => $sp->pivot->price * $sp->pivot->quantity,
+                ]),
                 'financials' => [
                     'estimated' => $service->estimated_cost,
                     'final' => $service->final_cost,
@@ -131,19 +139,24 @@ class ServiceOrderController extends Controller
                     ]);
                 }
 
-                // Generate Nomor Order (Contoh: SRV-20231024-001)
+                // GENERATE NOMOR ORDER
                 $datePrefix = 'SRV-' . now()->format('Ymd') . '-';
                 $lastOrder = ServiceOrder::where('order_number', 'like', $datePrefix . '%')
                     ->orderBy('order_number', 'desc')
-                    ->lockForUpdate() // Mencegah bentrok (Race Condition)
+                    ->lockForUpdate()
                     ->first();
 
                 $nextSequence = $lastOrder ? (int) substr($lastOrder->order_number, -3) + 1 : 1;
                 $orderNumber = $datePrefix . str_pad((string)$nextSequence, 3, '0', STR_PAD_LEFT);
 
-                $status = $request->is_technician_on_site
-                    ? ServiceStatus::APPROVED
-                    : ServiceStatus::WAITING_CHECKING;
+                // LOGIKA FRONTDESK YANG SUPER SIMPEL & BEBAS PUSING
+                $isTechnicianOnSite = $request->boolean('is_technician_on_site');
+                $status = $isTechnicianOnSite ? ServiceStatus::APPROVED : ServiceStatus::WAITING_CHECKING;
+                
+                // Jika teknisi gada, pasti 0 dan unit ditinggal. Jika teknisi ada, ambil dari form.
+                $estimatedCost = $isTechnicianOnSite ? ($request->estimated_cost ?? 0) : 0;
+                $downPayment = $isTechnicianOnSite ? ($request->down_payment ?? 0) : 0;
+                $isUnitLeftAtStore = $request->has('is_unit_left_at_store') ? $request->boolean('is_unit_left_at_store') : true;
 
                 // Simpan Service Order
                 return ServiceOrder::create([
@@ -153,9 +166,10 @@ class ServiceOrderController extends Controller
                     'complaint' => $request->complaint,
                     'equipments' => $request->equipments,
                     'status' => $status,
-                    'is_technician_on_site' => $request->is_technician_on_site ?? false,
-                    'estimated_cost' => $request->estimated_cost ?? 0,
-                    'down_payment' => $request->down_payment ?? 0,
+                    'is_technician_on_site' => $isTechnicianOnSite,
+                    'is_unit_left_at_store' => $isUnitLeftAtStore,
+                    'estimated_cost' => $estimatedCost,
+                    'down_payment' => $downPayment,
                     'created_by' => auth()->id(),
                 ]);
             });
@@ -369,28 +383,6 @@ class ServiceOrderController extends Controller
     }
 
     /**
-     * Memicu pengiriman penawaran harga via WhatsApp ke pelanggan.
-     */
-    // public function triggerWhatsappOffer(Request $request, ServiceOrder $serviceOrder): RedirectResponse
-    // {
-    //     if ($serviceOrder->estimated_cost <= 0) {
-    //         Inertia::flash('toast', ['type' => 'error', 'message' => 'Gagal: Estimasi biaya harus diisi terlebih dahulu sebelum mengirim penawaran.']);
-    //         return back();
-    //     }
-
-    //     $isSent = WaGateway::sendOffer($serviceOrder);
-
-    //     if ($isSent) {
-    //         $serviceOrder->update(['status' => ServiceStatus::WAITING_APPROVAL]);
-    //         Inertia::flash('toast', ['type' => 'success', 'message' => 'Penawaran WA terkirim! Sistem AI kini siaga menunggu balasan pelanggan.']);
-    //     } else {
-    //         Inertia::flash('toast', ['type' => 'error', 'message' => 'GAGAL MENGIRIM WA! Pastikan server WhatsApp Anda aktif.']);
-    //     }
-
-    //     return back();
-    // }
-
-    /**
      * Memicu pengiriman pesan WhatsApp ke pelanggan (Cerdas Sesuai Status).
      */
     public function triggerWhatsappOffer(Request $request, ServiceOrder $serviceOrder): RedirectResponse
@@ -401,7 +393,7 @@ class ServiceOrderController extends Controller
         // KONDISI 1: AWAL SERVIS (KIRIM PENAWARAN HARGA)
         // ==========================================
         if (in_array($status, [ServiceStatus::WAITING_CHECKING->value, ServiceStatus::WAITING_APPROVAL->value])) {
-            
+
             if ($serviceOrder->estimated_cost <= 0) {
                 Inertia::flash('toast', ['type' => 'error', 'message' => 'Gagal: Estimasi biaya harus diisi terlebih dahulu sebelum mengirim penawaran.']);
                 return back();
@@ -418,7 +410,7 @@ class ServiceOrderController extends Controller
             } else {
                 Inertia::flash('toast', ['type' => 'error', 'message' => 'GAGAL MENGIRIM WA! Pastikan server API Baileys Anda menyala.']);
             }
-            
+
             return back();
         }
 
@@ -461,7 +453,7 @@ class ServiceOrderController extends Controller
      */
     public function kanban(): Response
     {
-        $services = ServiceOrder::with(['customer', 'device'])
+        $services = ServiceOrder::with(['customer', 'device', 'spareParts'])
             ->whereNotIn('status', [ServiceStatus::TAKEN->value, ServiceStatus::CANCELLED->value])
             ->orderBy('updated_at', 'desc')
             ->get()
@@ -477,6 +469,13 @@ class ServiceOrderController extends Controller
                 'estimated_cost' => $service->estimated_cost,
                 'final_cost' => $service->final_cost,
                 'down_payment' => $service->down_payment,
+                'spare_parts' => $service->spareParts->map(fn($sp) => [
+                    'id' => $sp->id,
+                    'name' => $sp->name,
+                    'price' => $sp->pivot->price,
+                    'quantity' => $sp->pivot->quantity,
+                    'subtotal' => $sp->pivot->price * $sp->pivot->quantity,
+                ]),
                 'technician_notes' => $service->technician_notes,
                 'created_at' => $service->created_at->diffForHumans(),
             ]);
@@ -489,50 +488,48 @@ class ServiceOrderController extends Controller
     /**
      * Memasukkan sparepart dari katalog ke dalam nota servis (Pivot).
      */
-    public function attachSparepart(Request $request, ServiceOrder $serviceOrder): \Illuminate\Http\RedirectResponse
+    public function attachSparepart(Request $request, ServiceOrder $serviceOrder): RedirectResponse
     {
-        // 1. Validasi data yang dikirim dari form teknisi
         $request->validate([
             'spare_part_id' => 'required|exists:spare_parts,id',
             'quantity' => 'required|integer|min:1',
         ]);
 
-        // 2. Ambil data barang dari database
         $sparePart = SparePart::findOrFail($request->spare_part_id);
         $quantity = $request->quantity;
 
-        // 3. Cek apakah stok cukup (jika bukan barang inden)
-        if (!$sparePart->is_always_indent && $sparePart->stock < $quantity) {
-            Inertia::flash('toast', [
-                'type' => 'error',
-                'message' => "Gagal: Stok {$sparePart->name} tidak mencukupi. Sisa stok: {$sparePart->stock}"
-            ]);
-            return back();
-        }
-
-        // 4. Proses penyimpanan menggunakan Database Transaction agar aman
         DB::transaction(function () use ($serviceOrder, $sparePart, $quantity) {
-            
-            // Tentukan status barang (apakah harus inden atau langsung dipasang)
+
+            // Status barang (inden luar kota atau langsung pasang)
             $status = $sparePart->is_always_indent ? 'indenting' : 'installed';
 
-            // Masukkan barang ke nota servis (menyimpan Harga Jual saat ini)
+            // Masukkan ke nota servis
             $serviceOrder->spareParts()->attach($sparePart->id, [
                 'quantity' => $quantity,
                 'price' => $sparePart->selling_price,
                 'status' => $status,
             ]);
 
-            // Kurangi fisik stok di katalog (jika bukan barang inden)
+            // Kurangi fisik stok di katalog (Bisa jadi minus jika stok awal 0)
             if (!$sparePart->is_always_indent) {
                 $sparePart->decrement('stock', $quantity);
             }
         });
 
-        Inertia::flash('toast', [
-            'type' => 'success',
-            'message' => "Berhasil menambahkan {$sparePart->name} ke dalam nota servis."
-        ]);
+        // CEK UNTUK NOTIFIKASI FRONTEND
+        if (!$sparePart->is_always_indent && $sparePart->stock < $quantity) {
+            // Beri notifikasi WARNING (Warna Kuning), tapi proses TETAP LANJUT
+            Inertia::flash('toast', [
+                'type' => 'warning',
+                'message' => "Berhasil ditambahkan, TAPI stok {$sparePart->name} sekarang MINUS. Harap lapor Admin untuk merapikan pembukuan."
+            ]);
+        } else {
+            // Beri notifikasi SUCCESS normal
+            Inertia::flash('toast', [
+                'type' => 'success',
+                'message' => "Berhasil menambahkan {$sparePart->name} ke dalam nota servis."
+            ]);
+        }
 
         return back();
     }

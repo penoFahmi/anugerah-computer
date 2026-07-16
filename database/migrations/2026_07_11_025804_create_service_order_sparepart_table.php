@@ -15,9 +15,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('service_order_id')->constrained('service_orders')->cascadeOnDelete();
             $table->foreignId('spare_part_id')->constrained('spare_parts')->cascadeOnDelete();
-            
             $table->integer('quantity')->default(1);
-            $table->decimal('price', 12, 2)->comment('Harga snapshot saat dipesan');
+            $table->decimal('price', 12, 2);
             $table->string('status', 20)->default('ready');
             
             $table->timestamps();

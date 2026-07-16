@@ -14,15 +14,12 @@ return new class extends Migration
         Schema::create('pos_transactions', function (Blueprint $table) {
             $table->id();
             $table->string('invoice_number')->unique(); 
-            
             $table->foreignId('user_id')->constrained('users')->restrictOnDelete();
             $table->foreignId('customer_id')->nullable()->constrained('customers')->nullOnDelete();
-            
             $table->decimal('total_amount', 12, 2);
             $table->decimal('discount', 12, 2)->default(0);
             $table->decimal('final_amount', 12, 2); 
             $table->decimal('paid_amount', 12, 2);
-            
             $table->string('payment_method', 30)->default('cash');
             $table->timestamps();
         });

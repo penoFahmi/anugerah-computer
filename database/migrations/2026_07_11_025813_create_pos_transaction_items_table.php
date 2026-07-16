@@ -16,11 +16,9 @@ return new class extends Migration
             $table->foreignId('pos_transaction_id')->constrained('pos_transactions')->cascadeOnDelete();
             $table->foreignId('spare_part_id')->nullable()->constrained('spare_parts')->restrictOnDelete();
             $table->foreignId('product_id')->nullable()->constrained('products')->restrictOnDelete();
-
             $table->integer('quantity');
             $table->decimal('price', 12, 2);
             $table->decimal('subtotal', 12, 2);
-
             $table->timestamps();
         });
     }

@@ -28,7 +28,6 @@ return new class extends Migration
             $table->text('message'); 
             
             // --- AI & MACHINE LEARNING FIELDS ---
-            // Menyimpan skor keyakinan NLP lokal (contoh: 0.9500)
             $table->decimal('svm_confidence_score', 5, 4)->nullable(); 
             $table->string('svm_predicted_intent')->nullable(); 
             $table->boolean('is_svm_successful')->nullable(); 

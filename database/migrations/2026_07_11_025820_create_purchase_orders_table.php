@@ -13,24 +13,15 @@ return new class extends Migration
     {
         Schema::create('purchase_orders', function (Blueprint $table) {
             $table->id();
-            $table->string('purchase_number')->unique(); // Cth: BUY-20260717-001
-            
-            // Siapa orang yang menjual laptopnya ke toko? (Relasi ke tabel customer tunggal kita)
+            $table->string('purchase_number')->unique();
             $table->foreignId('customer_id')->constrained('customers')->restrictOnDelete();
-            
-            // Spesifikasi laptop yang kita beli dari orang tersebut
-            $table->string('item_name')->comment('Cth: ASUS Vivobook Ultra A412');
+            $table->string('item_name');
             $table->string('serial_number')->nullable();
-            $table->text('specification_summary')->comment('Ringkasan spek: RAM, Proc, dll');
-            $table->text('condition_notes')->comment('Catatan minus atau kelengkapan saat kita beli');
-            
-            // Keuangan & Bukti Hukum
-            $table->decimal('purchase_price', 12, 2)->comment('Uang modal yang dikeluarkan toko untuk membayar orang ini');
-            $table->string('ktp_image_path')->comment('Wajib diisi! Menyimpan path foto KTP penjual untuk keamanan hukum');
-            
-            // Siapa pegawai toko yang melayani transaksi ini?
+            $table->text('specification_summary');
+            $table->text('condition_notes');
+            $table->decimal('purchase_price', 12, 2);
+            $table->string('ktp_image_path')->nullable();
             $table->foreignId('user_id')->constrained('users')->restrictOnDelete();
-            
             $table->timestamps();
             $table->softDeletes();
         });

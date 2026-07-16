@@ -18,8 +18,6 @@ return new class extends Migration
             
             $table->integer('quantity')->default(1);
             $table->decimal('price', 12, 2)->comment('Harga snapshot saat dipesan');
-            
-            // [PERBAIKAN]: Ubah menjadi string, jangan pakai enum database!
             $table->string('status', 20)->default('ready');
             
             $table->timestamps();

@@ -74,10 +74,10 @@ class ServiceOrder extends Model
         // Aplikasikan klausa pencarian dengan relasi bersarang
         return $query->where(function ($q) use ($search, $searchPhone) {
             $q->where('order_number', 'like', "%{$search}%")
-              ->orWhereHas('customer', function ($qCustomer) use ($search, $searchPhone) {
-                  $qCustomer->where('name', 'like', "%{$search}%")
-                            ->orWhere('phone', 'like', "%{$searchPhone}%");
-              });
+                ->orWhereHas('customer', function ($qCustomer) use ($search, $searchPhone) {
+                    $qCustomer->where('name', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$searchPhone}%");
+                });
         });
     }
 
@@ -124,9 +124,9 @@ class ServiceOrder extends Model
     public function spareParts()
     {
         return $this->belongsToMany(SparePart::class, 'service_order_sparepart')
-                    ->withPivot(['quantity', 'price', 'status'])
-                    ->withCasts(['status' => SparepartStatus::class])
-                    ->withTimestamps();
+            ->withPivot(['quantity', 'price', 'status'])
+            ->withCasts(['status' => SparepartStatus::class])
+            ->withTimestamps();
     }
     public function transactions()
     {

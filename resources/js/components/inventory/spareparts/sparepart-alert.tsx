@@ -1,39 +1,41 @@
 import { router } from '@inertiajs/react';
+import { toast } from 'sonner';
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
+    AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import type { SparePart } from '@/types/inventory';
+import type { SparePart } from '@/types/sparepart';
 
 interface Props {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    item: SparePart | null;
+    type: 'delete' | null;
+    part: SparePart | null;
 }
 
-export function SparepartAlert({ open, onOpenChange, item }: Props) {
-    if (!item) return null;
+export function SparepartAlert({ open, onOpenChange, type, part }: Props) {
+    if (!part) return null;
 
     const handleConfirm = () => {
-        router.delete(`/inventory/spareparts/${item.id}`, {
-            onSuccess: () => onOpenChange(false),
-        });
+        if (type === 'delete') {
+            if (part.stock > 0) {
+                toast.error('Gagal: Barang ini masih memiliki stok fisik di gudang. Habiskan stok terlebih dahulu.');
+                onOpenChange(false);
+                return;
+            }
+            router.delete(`/inventory/spareparts/${part.id}`, {
+                onSuccess: () => onOpenChange(false),
+            });
+        }
     };
 
     return (
         <AlertDialog open={open} onOpenChange={onOpenChange}>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Hapus Barang dari Katalog?</AlertDialogTitle>
+                    <AlertDialogTitle>Hapus Sparepart</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Apakah Anda yakin ingin menghapus barang <b>"{item.name}"</b>? 
-                        Data riwayat servis yang menggunakan barang ini tidak akan rusak, tetapi barang ini akan hilang dari pilihan kasir dan teknisi.
+                        Apakah Anda yakin ingin menghapus <b>"{part.name}"</b> dari katalog? Data yang dihapus tidak dapat dikembalikan.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

@@ -1,4 +1,4 @@
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Eye, EyeOff } from 'lucide-react';
 import { useState } from 'react';
 import Pagination from '@/components/pagination';
 import { Badge } from '@/components/ui/badge';
@@ -7,76 +7,100 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { PaginatedData } from '@/types/global';
-import type { SparePart } from '@/types/inventory';
+import type { SparePart } from '@/types/sparepart';
 import { SparepartAlert } from './sparepart-alert';
 import { SparepartForm } from './sparepart-form';
 
-// Helper untuk format mata uang
-const formatRupiah = (angka: number | string) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Number(angka));
-};
-
 export function SparepartTable({ spareparts }: { spareparts: PaginatedData<SparePart> }) {
-    const [editItem, setEditItem] = useState<SparePart | null>(null);
-    const [alertConfig, setAlertConfig] = useState<{ open: boolean; item: SparePart | null }>({ open: false, item: null });
+    const [showPurchasePrice, setShowPurchasePrice] = useState(false);
+    const [editPart, setEditPart] = useState<SparePart | null>(null);
+    const [alertConfig, setAlertConfig] = useState<{ open: boolean; type: 'delete' | null; part: SparePart | null }>({ 
+        open: false, type: null, part: null 
+    });
+
+    const triggerAlert = (type: typeof alertConfig.type, part: SparePart) => {
+        setAlertConfig({ open: true, type, part });
+    };
+
+    const formatRupiah = (angka: string) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(angka));
 
     return (
         <>
             <Table>
                 <TableHeader>
                     <TableRow className="bg-muted/50">
-                        <TableHead className="w-[50px] text-center">No</TableHead>
-                        <TableHead>Kode / SKU</TableHead>
-                        <TableHead>Nama Barang</TableHead>
-                        <TableHead className="text-right">Harga Modal</TableHead>
-                        <TableHead className="text-right">Harga Jual</TableHead>
-                        <TableHead className="text-center">Stok</TableHead>
+                        <TableHead className="w-[60px] text-center">No</TableHead>
+                        <TableHead>Informasi Barang</TableHead>
+                        <TableHead>
+                            <div className="flex items-center gap-2">
+                                Harga Modal
+                                <button onClick={() => setShowPurchasePrice(!showPurchasePrice)} className="text-muted-foreground hover:text-foreground">
+                                    {showPurchasePrice ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
+                            </div>
+                        </TableHead>
+                        <TableHead>Harga Jual</TableHead>
+                        <TableHead className="text-center">Sisa Stok</TableHead>
                         <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {spareparts.data.length === 0 ? (
                         <TableRow>
-                            <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
-                                Tidak ada data barang yang ditemukan.
+                            <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                                Belum ada barang di katalog.
                             </TableCell>
                         </TableRow>
                     ) : (
-                        spareparts.data.map((p, index) => (
-                            <TableRow key={p.id}>
+                        spareparts.data.map((part, index) => (
+                            <TableRow key={part.id}>
                                 <TableCell className="text-center">
                                     {(spareparts.current_page - 1) * spareparts.per_page + index + 1}
                                 </TableCell>
-                                <TableCell className="text-slate-500 font-mono text-xs">{p.sku}</TableCell>
-                                <TableCell className="font-medium">{p.name}</TableCell>
-                                <TableCell className="text-right text-muted-foreground">{formatRupiah(p.purchase_price)}</TableCell>
-                                <TableCell className="text-right font-semibold text-emerald-600">{formatRupiah(p.selling_price)}</TableCell>
+                                <TableCell>
+                                    <div className="font-medium text-foreground">{part.name}</div>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <span className="font-mono text-xs text-muted-foreground">{part.sku || 'Tanpa SKU'}</span>
+                                        {part.is_always_indent && <Badge variant="outline" className="text-[10px] h-4 py-0 text-orange-600 border-orange-200 bg-orange-50">INDEN</Badge>}
+                                    </div>
+                                </TableCell>
+                                <TableCell>
+                                    <div className={`font-mono text-sm ${showPurchasePrice ? 'text-foreground' : 'text-muted-foreground select-none blur-[4px]'}`}>
+                                        {formatRupiah(part.purchase_price)}
+                                    </div>
+                                </TableCell>
+                                <TableCell>
+                                    <div className="font-mono font-semibold text-blue-600 dark:text-blue-400">
+                                        {formatRupiah(part.selling_price)}
+                                    </div>
+                                </TableCell>
                                 <TableCell className="text-center">
-                                    {p.is_always_indent ? (
-                                        <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">Pre-Order</Badge>
-                                    ) : p.stock > 0 ? (
-                                        <Badge variant="secondary" className="bg-emerald-50 text-emerald-700">{p.stock} Unit</Badge>
+                                    {part.stock > 3 ? (
+                                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-300 hover:bg-emerald-100">{part.stock} Pcs</Badge>
+                                    ) : part.stock > 0 ? (
+                                        <Badge className="bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-100">{part.stock} Pcs</Badge>
                                     ) : (
-                                        <Badge variant="destructive">Habis</Badge>
+                                        <Badge className="bg-red-100 text-red-700 border-red-300 hover:bg-red-100">Habis (0)</Badge>
                                     )}
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex justify-end gap-1">
                                         <Tooltip>
                                             <TooltipTrigger asChild>
-                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-600" onClick={() => setEditItem(p)}>
+                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-600" onClick={() => setEditPart(part)}>
                                                     <Pencil className="h-4 w-4" />
                                                 </Button>
                                             </TooltipTrigger>
                                             <TooltipContent className="text-xs">Edit Data</TooltipContent>
                                         </Tooltip>
+
                                         <Tooltip>
                                             <TooltipTrigger asChild>
-                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => setAlertConfig({ open: true, item: p })}>
+                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => triggerAlert('delete', part)}>
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </TooltipTrigger>
-                                            <TooltipContent className="text-xs">Hapus Katalog</TooltipContent>
+                                            <TooltipContent className="text-xs">Hapus Barang</TooltipContent>
                                         </Tooltip>
                                     </div>
                                 </TableCell>
@@ -88,22 +112,16 @@ export function SparepartTable({ spareparts }: { spareparts: PaginatedData<Spare
 
             <Pagination links={spareparts.links} from={spareparts.from} to={spareparts.to} total={spareparts.total} />
 
-            <Dialog open={!!editItem} onOpenChange={(val) => !val && setEditItem(null)}>
-                <DialogContent className="sm:max-w-[500px]">
+            <Dialog open={!!editPart} onOpenChange={(val) => !val && setEditPart(null)}>
+                <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Edit Barang</DialogTitle>
+                        <DialogTitle>Edit Data Sparepart</DialogTitle>
                     </DialogHeader>
-                    {editItem && (
-                        <SparepartForm item={editItem} onSuccess={() => setEditItem(null)} />
-                    )}
+                    {editPart && <SparepartForm part={editPart} onSuccess={() => setEditPart(null)} />}
                 </DialogContent>
             </Dialog>
 
-            <SparepartAlert
-                open={alertConfig.open}
-                onOpenChange={(val) => setAlertConfig((prev) => ({ ...prev, open: val }))}
-                item={alertConfig.item}
-            />
+            <SparepartAlert open={alertConfig.open} onOpenChange={(val) => setAlertConfig((prev) => ({ ...prev, open: val }))} type={alertConfig.type} part={alertConfig.part} />
         </>
     );
 }

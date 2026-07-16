@@ -18,10 +18,8 @@ return new class extends Migration
             $table->decimal('purchase_price', 12, 2)->default(0)->comment('Harga beli / modal');
             $table->decimal('selling_price', 12, 2)->default(0)->comment('Harga jual ke pelanggan');
             
-            // Stok bisa 0 tanpa membuat sistem error
             $table->integer('stock')->default(0); 
             
-            // Penanda barang yang harus di-inden
             $table->boolean('is_always_indent')->default(false)->comment('True jika barang jarang distok');
             
             $table->timestamps();

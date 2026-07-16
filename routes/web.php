@@ -9,7 +9,10 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\WarrantyController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\SparePartController;
+use App\Http\Controllers\Inventory\SparePartController;
+use App\Http\Controllers\Inventory\ProcurementController;
+use App\Http\Controllers\Inventory\ProductController;
+use App\Http\Controllers\Sales\PosController;
 
 /*
 |--------------------------------------------------------------------------
@@ -45,6 +48,11 @@ Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
     // Kanban Board
     Route::get('/kanban', [ServiceOrderController::class, 'kanban'])->name('kanban.index');
 
+    // Modul POS (Point of Sale)
+    Route::resource('sales/pos', PosController::class)
+        ->parameters(['pos' => 'posTransaction'])
+        ->only(['index', 'store']);
+
     // Modul Garansi
     Route::resource('garansi', WarrantyController::class)
         ->parameters(['garansi' => 'warranty'])
@@ -55,8 +63,13 @@ Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
     Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
 
     // Modul Sparepart / Inventory
-    Route::resource('inventory/spareparts', SparePartController::class)->except(['create', 'edit', 'show']);
-    Route::get('/api/spareparts/search', [SparePartController::class, 'searchApi'])->name('api.spareparts.search');
+    Route::resource('inventory/spareparts', SparePartController::class)
+        ->parameters(['spareparts' => 'sparepart'])
+        ->only(['index', 'store', 'update', 'destroy']);
+    Route::resource('inventory/procurement', ProcurementController::class)->only(['index', 'store']);
+    Route::resource('inventory/products', ProductController::class)
+        ->parameters(['products' => 'product'])
+        ->only(['index', 'store', 'update', 'destroy']);
 
     // Modul Notifikasi
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');

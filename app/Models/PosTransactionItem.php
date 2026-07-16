@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 #[Fillable([
     'pos_transaction_id',
     'spare_part_id',
+    'product_id',
     'quantity',
     'price',
     'subtotal'
@@ -43,5 +44,9 @@ class PosTransactionItem extends Model
     public function sparePart()
     {
         return $this->belongsTo(SparePart::class);
+    }
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
     }
 }

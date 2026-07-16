@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Model;
 
 #[Fillable([
     'service_order_id',
+    'pos_transaction_id',
+    'purchase_order_id',
     'user_id',
     'type',
     'category',
@@ -49,6 +51,17 @@ class Transaction extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function posTransaction()
+    {
+        return $this->belongsTo(PosTransaction::class);
+    }
+
+    // [BARU] Relasi ke Pembelian Bekas
+    public function purchaseOrder()
+    {
+        return $this->belongsTo(PurchaseOrder::class);
     }
 
     /*

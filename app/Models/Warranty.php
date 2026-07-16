@@ -5,8 +5,18 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Enums\WarrantyStatus;
 
-#[Fillable(['service_order_id', 'pos_transaction_id', 'warranty_code', 'start_date', 'end_date', 'status', 'claim_count', 'notes'])]
+#[Fillable([
+    'service_order_id',
+    'pos_transaction_id',
+    'warranty_code',
+    'start_date',
+    'end_date',
+    'status',
+    'claim_count',
+    'notes'
+])]
 class Warranty extends Model
 {
     use HasFactory;
@@ -20,6 +30,7 @@ class Warranty extends Model
             'start_date' => 'date',
             'end_date' => 'date',
             'claim_count' => 'integer',
+            'status' => WarrantyStatus::class,
         ];
     }
 

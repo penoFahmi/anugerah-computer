@@ -63,4 +63,8 @@ class Customer extends Model
     {
         return $this->hasMany(PosTransaction::class);
     }
+    public function purchaseOrders()
+    {
+        return $this->hasMany(PurchaseOrder::class);
+    }
 }

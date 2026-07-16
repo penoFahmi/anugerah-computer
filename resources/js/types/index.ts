@@ -6,3 +6,6 @@ export type * from './customer';
 export type * from './service';
 export type * from './warranty';
 export type * from './sampah';
+export type * from './sparepart';
+export type * from './procurement';
+export type * from './product';

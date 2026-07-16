@@ -46,9 +46,9 @@ class SparePart extends Model
     public function serviceOrders()
     {
         return $this->belongsToMany(ServiceOrder::class, 'service_order_sparepart')
-                    ->withPivot(['quantity', 'price', 'status'])
-                    ->withCasts(['status' => SparepartStatus::class])
-                    ->withTimestamps();
+            ->withPivot(['quantity', 'price', 'status'])
+            ->withCasts(['status' => SparepartStatus::class])
+            ->withTimestamps();
     }
 
     /**

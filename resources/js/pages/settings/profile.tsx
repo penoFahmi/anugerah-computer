@@ -96,11 +96,11 @@ export default function Profile({
 
                                         {status ===
                                             'verification-link-sent' && (
-                                            <div className="mt-2 text-sm font-medium text-green-600">
-                                                Tautan verifikasi baru telah
-                                                dikirim ke alamat email Anda.
-                                            </div>
-                                        )}
+                                                <div className="mt-2 text-sm font-medium text-green-600">
+                                                    Tautan verifikasi baru telah
+                                                    dikirim ke alamat email Anda.
+                                                </div>
+                                            )}
                                     </div>
                                 )}
 

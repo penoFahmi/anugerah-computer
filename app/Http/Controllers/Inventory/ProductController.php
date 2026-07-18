@@ -4,15 +4,16 @@ namespace App\Http\Controllers\Inventory;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Inertia\Inertia;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class ProductController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): Response
     {
         $query = Product::query();
 
@@ -20,7 +21,7 @@ class ProductController extends Controller
         if ($search = $request->search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('brand', 'like', "%{$search}%");
+                    ->orWhere('brand', 'like', "%{$search}%");
             });
         }
 
@@ -39,7 +40,7 @@ class ProductController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -57,7 +58,7 @@ class ProductController extends Controller
         ]);
 
         // Buat slug otomatis dari nama laptop
-        $validated['slug'] = Str::slug($validated['name']) . '-' . time();
+        $validated['slug'] = Str::slug($validated['name']).'-'.time();
 
         // Logika Upload Gambar
         if ($request->hasFile('image')) {
@@ -67,13 +68,15 @@ class ProductController extends Controller
 
         Product::create($validated);
 
-        return back()->with('toast', [
-            'type' => 'success', 
-            'message' => 'Katalog laptop berhasil ditambahkan.'
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Katalog laptop berhasil ditambahkan.',
         ]);
+
+        return back();
     }
 
-    public function update(Request $request, Product $product)
+    public function update(Request $request, Product $product): RedirectResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -92,7 +95,7 @@ class ProductController extends Controller
 
         // Jika nama berubah, update slug
         if ($product->name !== $validated['name']) {
-            $validated['slug'] = Str::slug($validated['name']) . '-' . time();
+            $validated['slug'] = Str::slug($validated['name']).'-'.time();
         }
 
         // Logika Ganti Gambar
@@ -107,20 +110,24 @@ class ProductController extends Controller
 
         $product->update($validated);
 
-        return back()->with('toast', [
-            'type' => 'success', 
-            'message' => 'Data laptop berhasil diperbarui.'
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Data laptop berhasil diperbarui.',
         ]);
+
+        return back();
     }
 
-    public function destroy(Product $product)
+    public function destroy(Product $product): RedirectResponse
     {
         // Pengecekan keamanan, jangan hapus jika sedang di-booking atau sudah terjual
         if ($product->status->value !== 'ready') {
-            return back()->with('toast', [
-                'type' => 'error', 
-                'message' => 'Tidak dapat menghapus laptop yang sudah dibooking atau terjual.'
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => 'Tidak dapat menghapus laptop yang sudah dibooking atau terjual.',
             ]);
+
+            return back();
         }
 
         // Hapus file gambar dari storage server
@@ -130,9 +137,11 @@ class ProductController extends Controller
 
         $product->delete();
 
-        return back()->with('toast', [
-            'type' => 'info', 
-            'message' => 'Data laptop telah dihapus dari katalog.'
+        Inertia::flash('toast', [
+            'type' => 'info',
+            'message' => 'Data laptop telah dihapus dari katalog.',
         ]);
+
+        return back();
     }
 }

@@ -2,14 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class ConfigWaController extends Controller
 {
     private $gatewayUrl = 'http://127.0.0.1:3001';
 
-    public function index()
+    /**
+     * Tampilkan halaman status dan konfigurasi WhatsApp Gateway.
+     */
+    public function index(): Response
     {
         $waStatus = [
             'isConnected' => false,
@@ -32,11 +37,14 @@ class ConfigWaController extends Controller
         }
 
         return Inertia::render('config/config-wa', [
-            'waStatus' => $waStatus
+            'waStatus' => $waStatus,
         ]);
     }
 
-    public function logout()
+    /**
+     * Logout dari sesi WhatsApp Gateway.
+     */
+    public function logout(): RedirectResponse
     {
         try {
             // Ambil token dari config/services.php
@@ -44,7 +52,7 @@ class ConfigWaController extends Controller
             $token = config('services.wa_gateway.token');
 
             Http::withHeaders([
-                'X-Token' => $token
+                'X-Token' => $token,
             ])->timeout(3)->post("{$this->gatewayUrl}/logout");
         } catch (\Exception $e) {
             // Error handling opsional

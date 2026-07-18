@@ -1,5 +1,5 @@
 import { usePage, router } from '@inertiajs/react';
-import { Bell, CheckCheck, Trash2, Wifi, WifiOff } from 'lucide-react';
+import { Bell, CheckCheck, Trash2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import dayjs from 'dayjs';
@@ -103,6 +103,9 @@ export function NotificationPopover() {
                 setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, read_at: new Date().toISOString() } : item));
                 const stillHasUnread = notifications.some(item => item.id !== n.id && !item.read_at);
                 setHasUnread(stillHasUnread);
+                if (n.data?.action_url) {
+                    router.visit(n.data.action_url);
+                }
             }
         });
     };
@@ -130,17 +133,6 @@ export function NotificationPopover() {
 
     return (
         <div className="flex items-center gap-1">
-            {/* INDIKATOR RADAR REVERB (Otomatis deteksi dari hook) */}
-            <div title={`Status Websocket: ${wsStatus}`} className="mr-1">
-                {wsStatus === 'connected' ? (
-                    <Wifi className="h-4 w-4 text-emerald-500" />
-                ) : wsStatus === 'connecting' ? (
-                    <Wifi className="h-4 w-4 text-yellow-500 animate-pulse" />
-                ) : (
-                    <WifiOff className="h-4 w-4 text-red-500" />
-                )}
-            </div>
-
             <Popover>
                 <PopoverTrigger asChild>
                     <Button variant="ghost" size="icon" className="relative h-9 w-9">

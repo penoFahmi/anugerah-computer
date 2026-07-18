@@ -129,6 +129,15 @@ export function ServiceFormModal({ isOpen, onClose }: Props) {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
+        // VALIDASI KHUSUS: Jika inden dan unit tidak ditinggal di toko, WAJIB DP
+        if (data.is_technician_on_site && isIndentCase && !data.is_unit_left_at_store) {
+            const dp = Number(data.down_payment || 0);
+            if (dp <= 0) {
+                toast.error('Gagal: Wajib mengisi DP jika unit dibawa pulang pelanggan selama masa inden!');
+                return;
+            }
+        }
+
         // Menggunakan transform untuk mengubah data tepat sebelum dikirim ke backend
         transform((currentData) => ({
             ...currentData,

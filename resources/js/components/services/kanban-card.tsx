@@ -58,6 +58,19 @@ export function KanbanCard({ service, index, onClick }: KanbanCardProps) {
                         </Badge>
                     )}
 
+                    {/* Indikator Lokasi Unit (Hanya untuk Batal atau Inden/In Progress yg dibawa pulang) */}
+                    {service.status === 'cancelled' && (
+                        <Badge variant="outline" className={`px-1.5 py-0 text-[9px] mb-2 w-full justify-center border-dashed ${service.is_unit_left_at_store ? 'border-amber-400 text-amber-600 dark:text-amber-400' : 'border-rose-400 text-rose-600 dark:text-rose-400'}`}>
+                            {service.is_unit_left_at_store ? 'UNIT MASIH DI TOKO' : 'UNIT SUDAH DIKEMBALIKAN'}
+                        </Badge>
+                    )}
+                    
+                    {service.status === 'in_progress' && !service.is_unit_left_at_store && (
+                        <Badge variant="outline" className="px-1.5 py-0 text-[9px] mb-2 w-full justify-center border-orange-400 text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20">
+                            UNIT DIBAWA PELANGGAN (INDEN)
+                        </Badge>
+                    )}
+
                     {/* PERBAIKAN: Menggunakan bg-muted/50 agar menyesuaikan tema terang/gelap dengan lembut */}
                     <div className="bg-muted/50 p-2 rounded text-[11px] text-muted-foreground line-clamp-2 leading-snug border border-border">
                         {/* Menghilangkan tag [KLAIM GARANSI] dari tampilan deskripsi agar lebih bersih */}

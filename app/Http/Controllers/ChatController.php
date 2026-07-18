@@ -4,12 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\ServiceOrder;
 use App\Services\WaGateway;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ChatController extends Controller
 {
-    // Mengambil histori chat untuk ditampilkan saat kotak chat dibuka
-    public function getHistory(ServiceOrder $serviceOrder)
+    /**
+     * Mengambil histori chat untuk ditampilkan saat kotak chat dibuka.
+     */
+    public function getHistory(ServiceOrder $serviceOrder): JsonResponse
     {
         $chats = $serviceOrder->chatLogs()
             ->select('id', 'direction', 'message', 'resolved_by', 'created_at')
@@ -22,19 +25,20 @@ class ChatController extends Controller
         return response()->json($chats);
     }
 
-    // Mengirim pesan ketikan manual Admin/Kasir ke Pelanggan
-    public function sendManual(Request $request, ServiceOrder $serviceOrder)
+    /**
+     * Mengirim pesan ketikan manual Admin/Kasir ke Pelanggan.
+     */
+    public function sendManual(Request $request, ServiceOrder $serviceOrder): JsonResponse
     {
         $request->validate(['message' => 'required|string|max:2000']);
 
-        // 1. Kirim via WA Gateway (Node.js)
-        // [PERBAIKAN]: Tambahkan parameter ke-5 untuk menandai pengirimnya adalah Admin Web
+        // Kirim via WA Gateway (Node.js) dengan parameter pengirim = Admin
         $isSent = WaGateway::sendMessage(
-            $serviceOrder->customer->phone, 
-            $request->message, 
-            $serviceOrder->id, 
+            $serviceOrder->customer->phone,
+            $request->message,
+            $serviceOrder->id,
             'manual_reply',
-            'Admin (Via Web)' // <-- Ini yang ditambahkan
+            'Admin (Via Web)'
         );
 
         if ($isSent) {

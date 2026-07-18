@@ -2,25 +2,27 @@
 
 namespace App\Http\Controllers\Sales;
 
+use App\Enums\TransactionCategory;
+use App\Enums\TransactionType;
 use App\Http\Controllers\Controller;
 use App\Models\PosTransaction;
 use App\Models\PosTransactionItem;
 use App\Models\Product;
 use App\Models\SparePart;
 use App\Models\Transaction;
-use App\Enums\TransactionType;
-use App\Enums\TransactionCategory;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Inertia\Inertia;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class PosController extends Controller
 {
     /**
      * Menampilkan antarmuka Kasir (POS).
      */
-    public function index()
+    public function index(): Response
     {
         // 1. Ambil data Sparepart yang masih ada stoknya
         $spareparts = SparePart::where('stock', '>', 0)
@@ -43,7 +45,7 @@ class PosController extends Controller
     /**
      * Memproses pembayaran dan memotong stok.
      */
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         // 1. Validasi keranjang belanja dan pembayaran dari React
         $validated = $request->validate([
@@ -62,16 +64,18 @@ class PosController extends Controller
 
         // Cek apakah uang yang dibayar cukup
         if ($validated['paid_amount'] < $validated['final_amount']) {
-            return back()->with('toast', [
-                'type' => 'error', 
-                'message' => 'Uang pembayaran kurang dari total belanja!'
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => 'Uang pembayaran kurang dari total belanja!',
             ]);
+
+            return back();
         }
 
         try {
             DB::transaction(function () use ($validated) {
                 // 2. Buat Nomor Invoice Otomatis (Contoh: INV-20260717-XYZ)
-                $invoiceNumber = 'INV-' . date('Ymd') . '-' . strtoupper(Str::random(5));
+                $invoiceNumber = 'INV-'.date('Ymd').'-'.strtoupper(Str::random(5));
 
                 // 3. Simpan Master Nota (PosTransaction)
                 $pos = PosTransaction::create([
@@ -100,8 +104,7 @@ class PosController extends Controller
                         ]);
                         // Kurangi stok fisik gudang
                         SparePart::where('id', $item['id'])->decrement('stock', $item['quantity']);
-                    } 
-                    else if ($item['type'] === 'product') {
+                    } elseif ($item['type'] === 'product') {
                         // Jika yang dibeli adalah Laptop
                         PosTransactionItem::create([
                             'pos_transaction_id' => $pos->id,
@@ -123,21 +126,25 @@ class PosController extends Controller
                     'category' => TransactionCategory::POS_RETAIL,
                     'amount' => $validated['final_amount'],
                     'payment_method' => $validated['payment_method'],
-                    'notes' => 'Penjualan Kasir POS dengan No Invoice: ' . $invoiceNumber,
+                    'notes' => 'Penjualan Kasir POS dengan No Invoice: '.$invoiceNumber,
                     'transaction_date' => now(),
                 ]);
             });
 
-            return back()->with('toast', [
-                'type' => 'success', 
-                'message' => 'Transaksi berhasil dibayar dan dicatat!'
+            Inertia::flash('toast', [
+                'type' => 'success',
+                'message' => 'Transaksi berhasil dibayar dan dicatat!',
             ]);
 
+            return back();
+
         } catch (\Exception $e) {
-            return back()->with('toast', [
-                'type' => 'error', 
-                'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => 'Terjadi kesalahan sistem: '.$e->getMessage(),
             ]);
+
+            return back();
         }
     }
 }

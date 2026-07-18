@@ -30,7 +30,8 @@ class NewServiceOrderNotification extends Notification implements ShouldQueue
             'service_order_id' => $this->serviceOrder->id,
             'order_number' => $this->serviceOrder->order_number,
             'message' => "{$this->creatorName} menambahkan servisan baru ({$this->serviceOrder->device->brand}).",
-            'type' => 'new_service'
+            'type' => 'new_service',
+            'action_url' => route('kanban.index'),
         ];
     }
 

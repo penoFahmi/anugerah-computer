@@ -3,11 +3,10 @@
 namespace App\Ai\Agents;
 
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Laravel\Ai\Attributes\Provider;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\Conversational;
 use Laravel\Ai\Contracts\HasStructuredOutput;
-use Laravel\Ai\Messages\Message;
-use Laravel\Ai\Attributes\Provider;
 use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Promptable;
 use Stringable;
@@ -19,9 +18,9 @@ class IntentAnalyzer implements Agent, Conversational, HasStructuredOutput
 
     public function instructions(): Stringable|string
     {
-        return 'Anda adalah asisten AI analitik internal. ' .
-               'Tugas Anda HANYA menganalisis teks pelanggan terkait persetujuan biaya servis. ' .
-               'Pahami konteks kalimat pelanggan (apakah setuju, batal, negosiasi, atau tidak jelas). ' .
+        return 'Kamu adalah AI toko komputer. '.
+               'Tugas Anda HANYA menganalisis teks pelanggan. '.
+               'Baca teks ini dan tentukan apakah pelanggan ingin: A. Tanya Stok (tanya_stok), B. Cek Servis (cek_servis), C. Komplain (komplain), D. Setuju (setuju), E. Batal (batal), F. Pertanyaan Umum/Lainnya (umum_teknis). '.
                'Jawab murni dalam format JSON sesuai skema tanpa teks tambahan.';
     }
 
@@ -34,12 +33,12 @@ class IntentAnalyzer implements Agent, Conversational, HasStructuredOutput
     {
         return [
             'intent' => $schema->string()
-                ->enum(['approve', 'cancel', 'negotiate', 'unclear'])
-                ->description("Kesimpulan akhir niat pelanggan.")
+                ->enum(['tanya_stok', 'cek_servis', 'komplain', 'setuju', 'batal', 'umum_teknis'])
+                ->description('Kesimpulan akhir niat pelanggan. Jika pertanyaan umum/lainnya, pilih umum_teknis.')
                 ->required(),
-                
+
             'reasoning' => $schema->string()
-                ->description("Alasan singkat analisis sentimen dari pesan pelanggan.")
+                ->description('Alasan singkat analisis sentimen dari pesan pelanggan.')
                 ->required(),
         ];
     }

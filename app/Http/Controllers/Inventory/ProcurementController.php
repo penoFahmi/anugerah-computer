@@ -2,21 +2,23 @@
 
 namespace App\Http\Controllers\Inventory;
 
+use App\Enums\TransactionCategory;
+use App\Enums\TransactionType;
 use App\Http\Controllers\Controller;
 use App\Models\SparePart;
 use App\Models\Transaction;
-use App\Enums\TransactionType;
-use App\Enums\TransactionCategory;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class ProcurementController extends Controller
 {
     /**
      * Menampilkan halaman riwayat pengadaan dan data sparepart untuk form modal.
      */
-    public function index(Request $request)
+    public function index(Request $request): Response
     {
         // 1. Ambil riwayat uang keluar khusus untuk belanja stok (Kategori: BUY_SPAREPART)
         $query = Transaction::with('user:id,name')
@@ -45,7 +47,7 @@ class ProcurementController extends Controller
     /**
      * Menyimpan transaksi pengadaan, mengupdate stok, dan harga terbaru.
      */
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'spare_part_id' => ['required', 'exists:spare_parts,id'],
@@ -64,7 +66,7 @@ class ProcurementController extends Controller
                 // 2. Catat pengeluaran uang di tabel transactions (Buku Besar)
                 // Kita simpan detail barang yang dibeli di kolom 'notes'
                 $catatanBelanja = "Belanja {$validated['quantity']} Pcs {$sparepart->name}. ";
-                $catatanBelanja .= $validated['supplier_note'] ? "Supplier/Nota: {$validated['supplier_note']}" : "";
+                $catatanBelanja .= $validated['supplier_note'] ? "Supplier/Nota: {$validated['supplier_note']}" : '';
 
                 Transaction::create([
                     'user_id' => auth()->id(), // Admin/Pegawai yang sedang login
@@ -85,16 +87,20 @@ class ProcurementController extends Controller
                 ]);
             });
 
-            return back()->with('toast', [
-                'type' => 'success', 
-                'message' => 'Pengadaan berhasil dicatat. Stok dan harga katalog telah diperbarui!'
+            Inertia::flash('toast', [
+                'type' => 'success',
+                'message' => 'Pengadaan berhasil dicatat. Stok dan harga katalog telah diperbarui!',
             ]);
 
+            return back();
+
         } catch (\Exception $e) {
-            return back()->with('toast', [
-                'type' => 'error', 
-                'message' => 'Terjadi kesalahan sistem saat memproses pengadaan: ' . $e->getMessage()
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => 'Terjadi kesalahan sistem saat memproses pengadaan: '.$e->getMessage(),
             ]);
+
+            return back();
         }
     }
 }

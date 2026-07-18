@@ -2,27 +2,11 @@ import { Head } from '@inertiajs/react';
 import { MapPin, Laptop, Wrench, RefreshCw, Phone, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { FloatingChatbot } from '@/components/chatbot/floating-chatbot';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ProductList } from '@/components/landing/product-list';
+import { LandingProps } from '@/types/landing';
 
-interface Product {
-    id: number;
-    name: string;
-    specs: string;
-    price: string;
-    status: string;
-}
-
-interface Props {
-    products?: Product[];
-}
-
-export default function LandingPage({ products = [] }: Props) {
-    const featuredLaptops = products.length > 0 ? products : [
-        { id: 1, name: 'Lenovo ThinkPad T490', specs: 'Core i5 Gen 8, 8GB RAM, 256GB SSD', price: 'Rp 4.500.000', status: 'Ready' },
-        { id: 2, name: 'MacBook Air 2017', specs: 'Core i5, 8GB RAM, 128GB SSD', price: 'Rp 5.200.000', status: 'Ready' },
-        { id: 3, name: 'Asus VivoBook 14', specs: 'Ryzen 3, 8GB RAM, 512GB SSD', price: 'Rp 4.800.000', status: 'Terjual' },
-    ];
-
+export default function LandingPage({ products = [] }: LandingProps) {
     return (
         <div className="relative min-h-screen bg-slate-50 font-sans text-slate-900">
             <Head title="Beranda | Anugerah Computer" />
@@ -39,8 +23,8 @@ export default function LandingPage({ products = [] }: Props) {
                         <a href="#katalog" className="transition-colors hover:text-blue-600">Katalog Laptop</a>
                         <a href="#lokasi" className="transition-colors hover:text-blue-600">Lokasi</a>
                     </div>
-                    <Button asChild className="rounded-full">
-                        <a href="https://wa.me/628xxxxxxxxxx" target="_blank" rel="noreferrer">Hubungi Kami</a>
+                    <Button asChild className="rounded-full font-semibold">
+                        <a href="/login">Masuk Sistem</a>
                     </Button>
                 </div>
             </nav>
@@ -56,10 +40,10 @@ export default function LandingPage({ products = [] }: Props) {
                     Dapatkan performa terbaik dengan harga yang bersahabat.
                 </p>
                 <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
-                    <Button size="lg" asChild className="rounded-full shadow-lg transition-all hover:shadow-xl">
+                    <Button size="lg" asChild className="rounded-full shadow-lg transition-all hover:shadow-xl font-semibold">
                         <a href="#katalog">Lihat Stok Laptop</a>
                     </Button>
-                    <Button size="lg" variant="outline" asChild className="rounded-full bg-white">
+                    <Button size="lg" variant="outline" asChild className="rounded-full bg-white font-semibold hover:bg-slate-50">
                         <a href="#layanan">Layanan Servis</a>
                     </Button>
                 </div>
@@ -110,42 +94,8 @@ export default function LandingPage({ products = [] }: Props) {
                 </div>
             </section>
 
-            {/* Catalog/Products Section */}
-            <section id="katalog" className="py-20">
-                <div className="container mx-auto px-4 md:px-6">
-                    <div className="mb-12 flex flex-col items-center justify-between md:flex-row">
-                        <div>
-                            <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Laptop Pilihan</h2>
-                            <p className="mt-2 text-slate-600">Stok terbaru, siap pakai untuk kerja, kuliah, atau sekolah.</p>
-                        </div>
-                        <Button variant="ghost" className="mt-4 text-blue-600 md:mt-0">Lihat Semua &rarr;</Button>
-                    </div>
-
-                    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                        {featuredLaptops.map((laptop) => (
-                            <Card key={laptop.id} className="flex flex-col justify-between overflow-hidden">
-                                <CardHeader className="pb-4">
-                                    <div className="flex items-start justify-between">
-                                        <CardTitle className="text-xl">{laptop.name}</CardTitle>
-                                        {laptop.status === 'Ready' ? (
-                                            <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-green-600/20 ring-inset">Ready</span>
-                                        ) : (
-                                            <span className="inline-flex items-center rounded-full bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-500/10 ring-inset">Terjual</span>
-                                        )}
-                                    </div>
-                                    <CardDescription className="mt-2 line-clamp-2 text-slate-600">{laptop.specs}</CardDescription>
-                                </CardHeader>
-                                <CardFooter className="mt-auto flex items-center justify-between pt-0">
-                                    <span className="text-lg font-bold text-slate-900">{laptop.price}</span>
-                                    <Button disabled={laptop.status !== 'Ready'} size="sm">
-                                        {laptop.status === 'Ready' ? 'Detail' : 'Habis'}
-                                    </Button>
-                                </CardFooter>
-                            </Card>
-                        ))}
-                    </div>
-                </div>
-            </section>
+            {/* Dynamic Catalog Section */}
+            <ProductList products={products} />
 
             {/* Location & CTA Section */}
             <section id="lokasi" className="bg-blue-900 py-20 text-white">

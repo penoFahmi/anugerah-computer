@@ -24,6 +24,7 @@ class UpdateServiceOrderRequest extends FormRequest
             'down_payment' => ['nullable', 'numeric', 'min:0'],
             'technician_notes' => ['nullable', 'string', 'max:2000'],
             'warranty_days' => ['nullable', 'integer', 'min:0', 'max:365'],
+            'payment_method' => ['nullable', 'string', 'in:cash,transfer,qris'],
         ];
 
         // Validasi tambahan JIKA ini adalah form Edit Lengkap dari Front Office/Admin

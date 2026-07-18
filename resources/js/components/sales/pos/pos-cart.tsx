@@ -26,6 +26,7 @@ export function PosCart({
     setDiscount, finalAmount, paidAmount, setPaidAmount, change, 
     isPaymentValid, handleCheckout, processing 
 }: Props) {
+
     const formatRupiah = (angka: number) => {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(angka);
     };
@@ -81,8 +82,11 @@ export function PosCart({
                         <span>Diskon (Rp)</span>
                         <Input 
                             className="w-32 h-8 text-right font-mono" 
-                            value={discount === 0 ? '' : discount} 
-                            onChange={e => setDiscount(Number(e.target.value.replace(/\D/g, '')))}
+                            value={discount === 0 ? '' : new Intl.NumberFormat('id-ID').format(discount)} 
+                            onChange={(e) => {
+                                const clean = e.target.value.replace(/\D/g, '');
+                                setDiscount(Number(clean));
+                            }}
                             placeholder="0"
                         />
                     </div>
@@ -100,7 +104,10 @@ export function PosCart({
                     <Input 
                         className="h-12 text-2xl font-mono font-bold text-right bg-muted/50" 
                         value={paidAmount === 0 ? '' : new Intl.NumberFormat('id-ID').format(paidAmount)} 
-                        onChange={e => setPaidAmount(Number(e.target.value.replace(/\D/g, '')))}
+                        onChange={(e) => {
+                            const clean = e.target.value.replace(/\D/g, '');
+                            setPaidAmount(Number(clean));
+                        }}
                         placeholder="0"
                     />
                 </div>

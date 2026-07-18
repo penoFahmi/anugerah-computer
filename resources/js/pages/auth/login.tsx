@@ -28,7 +28,7 @@ export default function Login({
 
     return (
         <>
-            <Head title="Log in" />
+            <Head title="Masuk" />
 
             <Form
                 {...store.form()}
@@ -39,7 +39,7 @@ export default function Login({
                     <>
                         <div className="grid gap-6">
                             <div className="grid gap-2">
-                                <Label htmlFor="email">Email address</Label>
+                                <Label htmlFor="email">Alamat Email</Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -48,7 +48,8 @@ export default function Login({
                                     autoFocus
                                     tabIndex={1}
                                     autoComplete="email"
-                                    placeholder="email@example.com"
+                                    placeholder="admin@anugerah.com"
+                                    className="h-11"
                                 />
                                 <InputError message={errors.email} />
                             </div>
@@ -62,7 +63,7 @@ export default function Login({
                                             className="ml-auto text-sm"
                                             tabIndex={5}
                                         >
-                                            Forgot password?
+                                            Lupa password?
                                         </TextLink>
                                     )}
                                 </div>
@@ -72,7 +73,8 @@ export default function Login({
                                     required
                                     tabIndex={2}
                                     autoComplete="current-password"
-                                    placeholder="Password"
+                                    placeholder="••••••••"
+                                    className="h-11"
                                 />
                                 <InputError message={errors.password} />
                             </div>
@@ -83,18 +85,18 @@ export default function Login({
                                     name="remember"
                                     tabIndex={3}
                                 />
-                                <Label htmlFor="remember">Remember me</Label>
+                                <Label htmlFor="remember">Ingat Sesi Saya</Label>
                             </div>
 
                             <Button
                                 type="submit"
-                                className="mt-4 w-full"
+                                className="mt-4 w-full h-11 text-base font-semibold shadow-md bg-blue-600 hover:bg-blue-700 text-white"
                                 tabIndex={4}
                                 disabled={processing}
                                 data-test="login-button"
                             >
                                 {processing && <Spinner />}
-                                Log in
+                                Masuk ke Sistem
                             </Button>
                         </div>
 
@@ -120,6 +122,6 @@ export default function Login({
 }
 
 Login.layout = {
-    title: 'Log in to your account',
-    description: 'Enter your email and password below to log in',
+    title: 'Masuk ke Akun Anda',
+    description: 'Masukkan kredensial Anda untuk mengakses sistem workspace.',
 };

@@ -2,24 +2,26 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\ServiceOrderCreated;
-use App\Events\ServiceOrderBroadcast;
 use App\Enums\ServiceStatus;
+use App\Enums\TransactionCategory;
+use App\Enums\TransactionType;
+use App\Events\ServiceOrderBroadcast;
+use App\Events\ServiceOrderCreated;
 use App\Http\Requests\StoreServiceOrderRequest;
 use App\Http\Requests\UpdateServiceOrderRequest;
 use App\Models\Customer;
 use App\Models\Device;
-use App\Models\User;
 use App\Models\ServiceOrder;
 use App\Models\SparePart;
+use App\Models\Transaction;
+use App\Models\User;
 use App\Models\Warranty;
-use App\Services\WaGateway;
 use App\Notifications\NewServiceOrderNotification;
-use App\Notifications\ServiceOrderNotification;
+use App\Services\WaGateway;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
@@ -38,17 +40,17 @@ class ServiceOrderController extends Controller
         $limit = $perPage === 'all' ? 500 : (int) $perPage;
 
         $query = ServiceOrder::query()->with([
-            'customer' => fn($q) => $q->withTrashed(),
-            'device' => fn($q) => $q->withTrashed(),
+            'customer' => fn ($q) => $q->withTrashed(),
+            'device' => fn ($q) => $q->withTrashed(),
             'spareParts',
         ]);
 
         // OPTIMASI: Menggunakan Local Scope `scopeSearch` dari Model ServiceOrder!
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $query->search($filters['search']);
         }
 
-        if (!empty($filters['date'])) {
+        if (! empty($filters['date'])) {
             match ($filters['date']) {
                 'today' => $query->whereDate('created_at', today()),
                 'this_week' => $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]),
@@ -57,11 +59,11 @@ class ServiceOrderController extends Controller
             };
         }
 
-        if (!empty($filters['type']) && in_array($filters['type'], ['laptop', 'pc', 'printer'])) {
-            $query->whereHas('device', fn($q) => $q->where('device_type', $filters['type']));
+        if (! empty($filters['type']) && in_array($filters['type'], ['laptop', 'pc', 'printer'])) {
+            $query->whereHas('device', fn ($q) => $q->where('device_type', $filters['type']));
         }
 
-        if (!empty($filters['status']) && $filters['status'] !== 'all') {
+        if (! empty($filters['status']) && $filters['status'] !== 'all') {
             $query->where('status', $filters['status']);
         }
 
@@ -78,7 +80,7 @@ class ServiceOrderController extends Controller
                 'order_number' => $service->order_number,
                 'customer_name' => $service->customer->name,
                 'customer_phone' => $service->customer->phone,
-                'device_name' => $service->device->brand . ' ' . $service->device->model,
+                'device_name' => $service->device->brand.' '.$service->device->model,
                 'complaint' => $service->complaint,
                 'status' => $service->status->value,
                 'status_label' => $service->status->label(),
@@ -87,7 +89,7 @@ class ServiceOrderController extends Controller
                 'down_payment' => $service->down_payment,
                 'technician_notes' => $service->technician_notes,
                 'created_at' => $service->created_at->format('d M Y, H:i'),
-                'spare_parts' => $service->spareParts->map(fn($sp) => [
+                'spare_parts' => $service->spareParts->map(fn ($sp) => [
                     'id' => $sp->id,
                     'name' => $sp->name,
                     'price' => $sp->pivot->price,
@@ -111,7 +113,7 @@ class ServiceOrderController extends Controller
                 'date' => $filters['date'] ?? '',
                 'type' => $filters['type'] ?? '',
                 'per_page' => $perPage,
-            ]
+            ],
         ]);
     }
 
@@ -140,19 +142,19 @@ class ServiceOrderController extends Controller
                 }
 
                 // GENERATE NOMOR ORDER
-                $datePrefix = 'SRV-' . now()->format('Ymd') . '-';
-                $lastOrder = ServiceOrder::where('order_number', 'like', $datePrefix . '%')
+                $datePrefix = 'SRV-'.now()->format('Ymd').'-';
+                $lastOrder = ServiceOrder::where('order_number', 'like', $datePrefix.'%')
                     ->orderBy('order_number', 'desc')
                     ->lockForUpdate()
                     ->first();
 
                 $nextSequence = $lastOrder ? (int) substr($lastOrder->order_number, -3) + 1 : 1;
-                $orderNumber = $datePrefix . str_pad((string)$nextSequence, 3, '0', STR_PAD_LEFT);
+                $orderNumber = $datePrefix.str_pad((string) $nextSequence, 3, '0', STR_PAD_LEFT);
 
                 // LOGIKA FRONTDESK YANG SUPER SIMPEL & BEBAS PUSING
                 $isTechnicianOnSite = $request->boolean('is_technician_on_site');
                 $status = $isTechnicianOnSite ? ServiceStatus::APPROVED : ServiceStatus::WAITING_CHECKING;
-                
+
                 // Jika teknisi gada, pasti 0 dan unit ditinggal. Jika teknisi ada, ambil dari form.
                 $estimatedCost = $isTechnicianOnSite ? ($request->estimated_cost ?? 0) : 0;
                 $downPayment = $isTechnicianOnSite ? ($request->down_payment ?? 0) : 0;
@@ -191,17 +193,18 @@ class ServiceOrderController extends Controller
 
             Inertia::flash('toast', [
                 'type' => 'success',
-                'message' => 'Servisan baru berhasil didaftarkan. Nota akan segera dikirim.'
+                'message' => 'Servisan baru berhasil didaftarkan. Nota akan segera dikirim.',
             ]);
 
             return redirect()->route('services.index');
         } catch (\Exception $e) {
-            Log::error('ServiceOrder Store Error: ' . $e->getMessage());
+            Log::error('ServiceOrder Store Error: '.$e->getMessage());
 
             Inertia::flash('toast', [
                 'type' => 'error',
-                'message' => 'Gagal mendaftarkan servis. Silakan coba lagi.'
+                'message' => 'Gagal mendaftarkan servis. Silakan coba lagi.',
             ]);
+
             return back()->withInput();
         }
     }
@@ -212,12 +215,12 @@ class ServiceOrderController extends Controller
     public function show(ServiceOrder $serviceOrder): Response
     {
         $serviceOrder->load([
-            'customer' => fn($q) => $q->withTrashed(),
-            'device' => fn($q) => $q->withTrashed(),
+            'customer' => fn ($q) => $q->withTrashed(),
+            'device' => fn ($q) => $q->withTrashed(),
             'createdBy:id,name',
             'technician:id,name',
             'handedOverBy:id,name',
-            'warranty'
+            'warranty',
         ]);
 
         $recentServices = ServiceOrder::with(['customer', 'device'])
@@ -226,11 +229,11 @@ class ServiceOrderController extends Controller
             ->orderBy('updated_at', 'desc')
             ->limit(15)
             ->get()
-            ->map(fn($item) => [
+            ->map(fn ($item) => [
                 'id' => $item->id,
                 'order_number' => $item->order_number,
                 'customer_name' => $item->customer->name,
-                'device_name' => $item->device->brand . ' ' . $item->device->model,
+                'device_name' => $item->device->brand.' '.$item->device->model,
                 'status_label' => $item->status->label(),
             ]);
 
@@ -250,6 +253,58 @@ class ServiceOrderController extends Controller
 
         $oldStatus = $serviceOrder->status->value;
         $newStatus = $validated['status'];
+
+        // --- VALIDASI STATE MACHINE (STRICT) ---
+        if ($oldStatus !== $newStatus && ! $user->hasRole('administrator')) {
+            $isValidTransition = false;
+
+            switch ($oldStatus) {
+                case ServiceStatus::WAITING_CHECKING->value:
+                    if (in_array($newStatus, [ServiceStatus::WAITING_APPROVAL->value, ServiceStatus::CANCELLED->value])) {
+                        $estimatedCost = $validated['estimated_cost'] ?? $serviceOrder->estimated_cost;
+                        if ($newStatus === ServiceStatus::WAITING_APPROVAL->value && $estimatedCost <= 0) {
+                            Inertia::flash('toast', ['type' => 'error', 'message' => 'Estimasi biaya harus diisi untuk lanjut ke Menunggu Konfirmasi.']);
+
+                            return back();
+                        }
+                        $isValidTransition = true;
+                    }
+                    break;
+                case ServiceStatus::WAITING_APPROVAL->value:
+                    if (in_array($newStatus, [ServiceStatus::APPROVED->value, ServiceStatus::CANCELLED->value])) {
+                        $isValidTransition = true;
+                    }
+                    break;
+                case ServiceStatus::APPROVED->value:
+                    if ($newStatus === ServiceStatus::IN_PROGRESS->value) {
+                        $isValidTransition = true;
+                    }
+                    break;
+                case ServiceStatus::IN_PROGRESS->value:
+                    if ($newStatus === ServiceStatus::COMPLETED->value) {
+                        $isValidTransition = true;
+                    }
+                    break;
+                case ServiceStatus::COMPLETED->value:
+                case ServiceStatus::CANCELLED->value:
+                    if ($newStatus === ServiceStatus::TAKEN->value) {
+                        $isValidTransition = true;
+                    }
+                    break;
+            }
+
+            if (! $isValidTransition) {
+                $oldLabel = $serviceOrder->status->label();
+                $newLabel = ServiceStatus::from($newStatus)->label();
+                Inertia::flash('toast', [
+                    'type' => 'error',
+                    'message' => "Transisi status tidak valid. Tidak bisa mengubah status dari '{$oldLabel}' menjadi '{$newLabel}' secara langsung.",
+                ]);
+
+                return back();
+            }
+        }
+        // ---------------------------------------
 
         DB::transaction(function () use ($validated, $request, $serviceOrder, $user, $oldStatus, $newStatus) {
 
@@ -285,12 +340,39 @@ class ServiceOrderController extends Controller
 
             $updateData['status'] = $newStatus;
 
-            if (array_key_exists('estimated_cost', $validated)) $updateData['estimated_cost'] = $validated['estimated_cost'];
-            if (array_key_exists('final_cost', $validated)) $updateData['final_cost'] = $validated['final_cost'];
-            if (array_key_exists('down_payment', $validated)) $updateData['down_payment'] = $validated['down_payment'];
-            if (array_key_exists('technician_notes', $validated)) $updateData['technician_notes'] = $validated['technician_notes'];
+            if (array_key_exists('estimated_cost', $validated)) {
+                $updateData['estimated_cost'] = $validated['estimated_cost'];
+            }
+            if (array_key_exists('final_cost', $validated)) {
+                $updateData['final_cost'] = $validated['final_cost'];
+            }
+            if (array_key_exists('down_payment', $validated)) {
+                $updateData['down_payment'] = $validated['down_payment'];
+            }
+            if (array_key_exists('technician_notes', $validated)) {
+                $updateData['technician_notes'] = $validated['technician_notes'];
+            }
 
             $serviceOrder->update($updateData);
+
+            // [BARU] Catat Pemasukan ke Buku Besar jika ada pembayaran saat diambil
+            if ($oldStatus !== ServiceStatus::TAKEN->value && $newStatus === ServiceStatus::TAKEN->value) {
+                // Biaya yang dibayar saat penyerahan = Final Cost - Down Payment (jika sudah bayar DP sebelumnya)
+                // Atau jika kasir input total bayar di DP, kita anggap total payment.
+                $finalCost = $validated['final_cost'] ?? $serviceOrder->final_cost ?? $serviceOrder->estimated_cost ?? 0;
+                $downPayment = $validated['down_payment'] ?? $serviceOrder->down_payment ?? 0;
+
+                Transaction::create([
+                    'service_order_id' => $serviceOrder->id,
+                    'user_id' => auth()->id(),
+                    'type' => TransactionType::INCOME,
+                    'category' => TransactionCategory::FINAL_SERVICE,
+                    'amount' => max(0, $finalCost),
+                    'payment_method' => $request->input('payment_method', 'cash'),
+                    'notes' => 'Pelunasan / Pembayaran Servis Nota: '.$serviceOrder->order_number,
+                    'transaction_date' => now(),
+                ]);
+            }
 
             event(new ServiceOrderBroadcast($serviceOrder, 'updated'));
 
@@ -300,14 +382,14 @@ class ServiceOrderController extends Controller
                 $warrantyDays = (int) $request->input('warranty_days', 0);
 
                 if ($warrantyDays > 0) {
-                    $prefix = 'GAR-' . now()->format('Ymd') . '-';
-                    $lastWarranty = Warranty::where('warranty_code', 'like', $prefix . '%')
+                    $prefix = 'GAR-'.now()->format('Ymd').'-';
+                    $lastWarranty = Warranty::where('warranty_code', 'like', $prefix.'%')
                         ->orderBy('warranty_code', 'desc')
                         ->lockForUpdate()
                         ->first();
 
                     $nextSeq = $lastWarranty ? (int) substr($lastWarranty->warranty_code, -3) + 1 : 1;
-                    $warrantyCode = $prefix . str_pad((string)$nextSeq, 3, '0', STR_PAD_LEFT);
+                    $warrantyCode = $prefix.str_pad((string) $nextSeq, 3, '0', STR_PAD_LEFT);
 
                     $serviceOrder->warranty()->create([
                         'warranty_code' => $warrantyCode,
@@ -317,12 +399,12 @@ class ServiceOrderController extends Controller
                     ]);
 
                     $waMessage = "Terima kasih Kak *{$serviceOrder->customer->name}* telah mempercayakan perbaikan unit *{$serviceOrder->device->brand}* di Anugerah Computer.\n\n"
-                        . "Unit Anda telah diserahkan dan masa garansi perbaikan aktif selama {$warrantyDays} hari hingga *" . now()->addDays($warrantyDays)->format('d M Y') . "*.\n"
-                        . "Kode Garansi: *{$warrantyCode}*\n\n"
-                        . "Harap simpan pesan ini sebagai bukti garansi. Semoga unitnya awet selalu! 🙏";
+                        ."Unit Anda telah diserahkan dan masa garansi perbaikan aktif selama {$warrantyDays} hari hingga *".now()->addDays($warrantyDays)->format('d M Y')."*.\n"
+                        ."Kode Garansi: *{$warrantyCode}*\n\n"
+                        .'Harap simpan pesan ini sebagai bukti garansi. Semoga unitnya awet selalu! 🙏';
                 } else {
                     $waMessage = "Terima kasih Kak *{$serviceOrder->customer->name}* telah mempercayakan perbaikan unit *{$serviceOrder->device->brand}* di Anugerah Computer.\n\n"
-                        . "Unit Anda telah diserahkan. Semoga unitnya awet dan dapat digunakan dengan lancar kembali! Jika ada keluhan lain, jangan ragu untuk menghubungi kami. 🙏";
+                        .'Unit Anda telah diserahkan. Semoga unitnya awet dan dapat digunakan dengan lancar kembali! Jika ada keluhan lain, jangan ragu untuk menghubungi kami. 🙏';
                 }
 
                 // Panggil WhatsApp API Gateway
@@ -332,7 +414,7 @@ class ServiceOrderController extends Controller
 
         Inertia::flash('toast', [
             'type' => 'success',
-            'message' => 'Data nota ' . $serviceOrder->order_number . ' berhasil diperbarui.'
+            'message' => 'Data nota '.$serviceOrder->order_number.' berhasil diperbarui.',
         ]);
 
         return back();
@@ -343,8 +425,9 @@ class ServiceOrderController extends Controller
      */
     public function destroy(ServiceOrder $serviceOrder): RedirectResponse
     {
-        if (!auth()->user()->hasRole('administrator')) {
+        if (! auth()->user()->hasRole('administrator')) {
             Inertia::flash('toast', ['type' => 'error', 'message' => 'Hanya administrator yang dapat menghapus data servisan.']);
+
             return back();
         }
 
@@ -357,6 +440,7 @@ class ServiceOrderController extends Controller
 
         if (in_array($serviceOrder->status->value, $blockedStatuses)) {
             Inertia::flash('toast', ['type' => 'error', 'message' => 'Servisan yang sedang diproses atau sudah selesai tidak dapat dihapus.']);
+
             return back();
         }
 
@@ -367,6 +451,7 @@ class ServiceOrderController extends Controller
         $serviceOrder->delete();
 
         Inertia::flash('toast', ['type' => 'info', 'message' => "Servisan {$orderNumber} telah dihapus."]);
+
         return redirect()->route('services.index');
     }
 
@@ -376,9 +461,12 @@ class ServiceOrderController extends Controller
     public function searchCustomer(Request $request): JsonResponse
     {
         $phone = $request->query('phone');
-        if (strlen((string) $phone) < 4) return response()->json([]);
+        if (strlen((string) $phone) < 4) {
+            return response()->json([]);
+        }
 
         $customers = Customer::with('devices')->where('phone', 'like', "%{$phone}%")->limit(5)->get();
+
         return response()->json($customers);
     }
 
@@ -396,6 +484,7 @@ class ServiceOrderController extends Controller
 
             if ($serviceOrder->estimated_cost <= 0) {
                 Inertia::flash('toast', ['type' => 'error', 'message' => 'Gagal: Estimasi biaya harus diisi terlebih dahulu sebelum mengirim penawaran.']);
+
                 return back();
             }
 
@@ -429,17 +518,17 @@ class ServiceOrderController extends Controller
     }
 
     /**
-     * Menghasilkan dan menampilkan PDF Nota Servis secara langsung (Stream).
+     * Cetak PDF Nota Servis secara langsung (Stream).
      */
-    public function printTicketPDF(ServiceOrder $serviceOrder)
+    public function printTicketPDF(ServiceOrder $serviceOrder): \Illuminate\Http\Response
     {
         $serviceOrder->load([
-            'customer' => fn($q) => $q->withTrashed(),
-            'device' => fn($q) => $q->withTrashed(),
+            'customer' => fn ($q) => $q->withTrashed(),
+            'device' => fn ($q) => $q->withTrashed(),
             'createdBy:id,name',
             'technician:id,name',
             'handedOverBy:id,name',
-            'warranty'
+            'warranty',
         ]);
 
         $pdf = Pdf::loadView('pdf.service_receipt', ['order' => $serviceOrder])
@@ -454,22 +543,22 @@ class ServiceOrderController extends Controller
     public function kanban(): Response
     {
         $services = ServiceOrder::with(['customer', 'device', 'spareParts'])
-            ->whereNotIn('status', [ServiceStatus::TAKEN->value, ServiceStatus::CANCELLED->value])
+            ->whereNotIn('status', [ServiceStatus::TAKEN->value])
             ->orderBy('updated_at', 'desc')
             ->get()
-            ->map(fn($service) => [
+            ->map(fn ($service) => [
                 'id' => $service->id,
                 'order_number' => $service->order_number,
                 'customer_name' => $service->customer->name,
                 'customer_phone' => $service->customer->phone,
-                'device_name' => $service->device->brand . ' ' . $service->device->model,
+                'device_name' => $service->device->brand.' '.$service->device->model,
                 'complaint' => $service->complaint,
                 'status' => $service->status->value,
                 'status_label' => $service->status->label(),
                 'estimated_cost' => $service->estimated_cost,
                 'final_cost' => $service->final_cost,
                 'down_payment' => $service->down_payment,
-                'spare_parts' => $service->spareParts->map(fn($sp) => [
+                'spare_parts' => $service->spareParts->map(fn ($sp) => [
                     'id' => $sp->id,
                     'name' => $sp->name,
                     'price' => $sp->pivot->price,
@@ -477,11 +566,15 @@ class ServiceOrderController extends Controller
                     'subtotal' => $sp->pivot->price * $sp->pivot->quantity,
                 ]),
                 'technician_notes' => $service->technician_notes,
+                'is_unit_left_at_store' => $service->is_unit_left_at_store,
                 'created_at' => $service->created_at->diffForHumans(),
             ]);
 
+        $availableSpareParts = SparePart::select('id', 'name', 'selling_price', 'stock', 'is_always_indent')->get();
+
         return Inertia::render('services/kanban', [
-            'services' => $services
+            'services' => $services,
+            'available_spare_parts' => $availableSpareParts,
         ]);
     }
 
@@ -511,23 +604,23 @@ class ServiceOrderController extends Controller
             ]);
 
             // Kurangi fisik stok di katalog (Bisa jadi minus jika stok awal 0)
-            if (!$sparePart->is_always_indent) {
+            if (! $sparePart->is_always_indent) {
                 $sparePart->decrement('stock', $quantity);
             }
         });
 
         // CEK UNTUK NOTIFIKASI FRONTEND
-        if (!$sparePart->is_always_indent && $sparePart->stock < $quantity) {
+        if (! $sparePart->is_always_indent && $sparePart->stock < $quantity) {
             // Beri notifikasi WARNING (Warna Kuning), tapi proses TETAP LANJUT
             Inertia::flash('toast', [
                 'type' => 'warning',
-                'message' => "Berhasil ditambahkan, TAPI stok {$sparePart->name} sekarang MINUS. Harap lapor Admin untuk merapikan pembukuan."
+                'message' => "Berhasil ditambahkan, TAPI stok {$sparePart->name} sekarang MINUS. Harap lapor Admin untuk merapikan pembukuan.",
             ]);
         } else {
             // Beri notifikasi SUCCESS normal
             Inertia::flash('toast', [
                 'type' => 'success',
-                'message' => "Berhasil menambahkan {$sparePart->name} ke dalam nota servis."
+                'message' => "Berhasil menambahkan {$sparePart->name} ke dalam nota servis.",
             ]);
         }
 

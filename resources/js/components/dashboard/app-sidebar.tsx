@@ -24,13 +24,12 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
-        href: dashboard(),
+        href: '/dashboard',
         icon: LayoutDashboard,
         roles: ['administrator', 'teknisi', 'pegawai'],
     },
@@ -79,8 +78,8 @@ const mainNavItems: NavItem[] = [
         icon: CircleDollarSign,
         roles: ['administrator', 'teknisi', 'pegawai'],
         items: [
-            { title: 'Arus Kas Harian', href: '#' },
-            { title: 'Laporan Laba Rugi', href: '#' },
+            { title: 'Arus Kas Harian', href: '/finance/cashflow' },
+            { title: 'Laporan Laba Rugi', href: '/finance/profit-loss' },
         ],
     },
 ];
@@ -100,7 +99,7 @@ const footerNavItems: NavItem[] = [
     },
     {
         title: 'Log & Webhook',
-        href: '#',
+        href: '/settings/logs',
         icon: Activity,
         roles: ['administrator', 'pegawai'],
     },
@@ -147,7 +146,7 @@ export function AppSidebar() {
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            <Link href={dashboard()} prefetch>
+                            <Link href="/dashboard" prefetch>
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>

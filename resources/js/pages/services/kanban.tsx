@@ -13,9 +13,10 @@ import { useEcho } from '@laravel/echo-react';
 // Extend GlobalPageProps agar bisa membaca flash.toast dari server
 interface KanbanPageProps extends GlobalPageProps {
     services: ServiceListItem[];
+    available_spare_parts: any[];
 }
 
-export default function KanbanPage({ services }: KanbanPageProps) {
+export default function KanbanPage({ services, available_spare_parts }: KanbanPageProps) {
     const { flash } = usePage<KanbanPageProps>().props;
 
 
@@ -64,7 +65,7 @@ export default function KanbanPage({ services }: KanbanPageProps) {
                 </div>
 
                 {/* Render Papan Kanban */}
-                <KanbanBoard services={services} />
+                <KanbanBoard services={services} available_spare_parts={available_spare_parts} />
             </div>
         </>
     );

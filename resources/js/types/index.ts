@@ -9,3 +9,6 @@ export type * from './sampah';
 export type * from './sparepart';
 export type * from './procurement';
 export type * from './product';
+export type * from './sales';
+export type * from './finance';
+export type * from './settings';

@@ -1,7 +1,7 @@
 import { DragDropContext, Droppable } from '@hello-pangea/dnd';
 import type { DropResult } from '@hello-pangea/dnd';
 import { router } from '@inertiajs/react';
-import { Clock, Wrench, CheckCircle, AlertCircle, Play } from 'lucide-react';
+import { Clock, Wrench, CheckCircle, AlertCircle, Play, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -46,13 +46,21 @@ const COLUMNS = [
         color: 'border-emerald-300 bg-emerald-50 dark:border-emerald-900/50 dark:bg-emerald-950/20', 
         headerBg: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' 
     },
+    {
+        id: 'cancelled',
+        title: 'Batal (Menunggu Diambil)',
+        icon: XCircle,
+        color: 'border-red-300 bg-red-50 dark:border-red-900/50 dark:bg-red-950/20',
+        headerBg: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
+    },
 ];
 
 interface KanbanBoardProps {
     services: ServiceListItem[];
+    available_spare_parts?: any[];
 }
 
-export function KanbanBoard({ services }: KanbanBoardProps) {
+export function KanbanBoard({ services, available_spare_parts }: KanbanBoardProps) {
     const [boardData, setBoardData] = useState<ServiceListItem[]>(services);
     const [selectedService, setSelectedService] = useState<ServiceListItem | null>(null);
 
@@ -146,6 +154,7 @@ export function KanbanBoard({ services }: KanbanBoardProps) {
                 isOpen={!!selectedService} 
                 onClose={() => setSelectedService(null)} 
                 service={selectedService} 
+                available_spare_parts={available_spare_parts}
             />
         </div>
     );

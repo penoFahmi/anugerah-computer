@@ -11,7 +11,7 @@ use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Promptable;
 use Stringable;
 
-#[Provider(Lab::Groq)]
+#[Provider(Lab::GEMINI)]
 class IntentAnalyzer implements Agent, Conversational, HasStructuredOutput
 {
     use Promptable;

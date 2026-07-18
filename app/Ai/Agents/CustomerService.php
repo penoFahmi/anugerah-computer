@@ -12,7 +12,7 @@ use Laravel\Ai\Messages\Message;
 use Laravel\Ai\Promptable;
 use Stringable;
 
-#[Provider(Lab::Groq)]
+#[Provider(Lab::Gemini)]
 class CustomerService implements Agent, Conversational, HasTools
 {
     use Promptable;

@@ -262,8 +262,9 @@ class ServiceOrderController extends Controller
                 case ServiceStatus::WAITING_CHECKING->value:
                     if (in_array($newStatus, [ServiceStatus::WAITING_APPROVAL->value, ServiceStatus::CANCELLED->value])) {
                         $estimatedCost = $validated['estimated_cost'] ?? $serviceOrder->estimated_cost;
-                        if ($newStatus === ServiceStatus::WAITING_APPROVAL->value && $estimatedCost <= 0) {
-                            Inertia::flash('toast', ['type' => 'error', 'message' => 'Estimasi biaya harus diisi untuk lanjut ke Menunggu Konfirmasi.']);
+                        $isWarranty = str_starts_with($serviceOrder->complaint ?? '', 'KLAIM GARANSI');
+                        if ($newStatus === ServiceStatus::WAITING_APPROVAL->value && $estimatedCost <= 0 && !$isWarranty) {
+                            Inertia::flash('toast', ['type' => 'error', 'message' => 'Estimasi biaya harus diisi untuk lanjut ke Menunggu Konfirmasi. (Kecuali klaim garansi)']);
 
                             return back();
                         }
@@ -482,8 +483,9 @@ class ServiceOrderController extends Controller
         // ==========================================
         if (in_array($status, [ServiceStatus::WAITING_CHECKING->value, ServiceStatus::WAITING_APPROVAL->value])) {
 
-            if ($serviceOrder->estimated_cost <= 0) {
-                Inertia::flash('toast', ['type' => 'error', 'message' => 'Gagal: Estimasi biaya harus diisi terlebih dahulu sebelum mengirim penawaran.']);
+            $isWarranty = str_starts_with($serviceOrder->complaint ?? '', 'KLAIM GARANSI');
+            if ($serviceOrder->estimated_cost <= 0 && !$isWarranty) {
+                Inertia::flash('toast', ['type' => 'error', 'message' => 'Gagal: Estimasi biaya harus diisi terlebih dahulu sebelum mengirim penawaran. (Kecuali klaim garansi)']);
 
                 return back();
             }

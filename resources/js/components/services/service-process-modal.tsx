@@ -72,8 +72,9 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
         setSelectedSparepart('');
         setSparepartQty(1);
 
-        if (isTriggerWa && (!data.estimated_cost || Number(data.estimated_cost) <= 0)) {
-            toast.error('Gagal: Estimasi biaya harus diisi di atas Rp 0 untuk mengirim penawaran.');
+        const isWarranty = service?.complaint?.startsWith('KLAIM GARANSI');
+        if (isTriggerWa && (!data.estimated_cost || Number(data.estimated_cost) <= 0) && !isWarranty) {
+            toast.error('Gagal: Estimasi biaya harus diisi di atas Rp 0 untuk mengirim penawaran (Kecuali Klaim Garansi).');
             return;
         }
 

@@ -7,10 +7,12 @@ import { Plus, Search, FilterX } from 'lucide-react';
 import { useState } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 import { TradeInTable } from '@/components/sales/trade-in-table';
+import { TradeInFormModal } from '@/components/sales/trade-in-form-modal';
 import type { TradeInPageProps } from '@/types/sales';
 
 export default function TradeInList({ tradeIns, filters }: TradeInPageProps) {
     const [search, setSearch] = useState(filters.search ?? '');
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     const applyFilters = (value: string) => {
         const query: Record<string, string> = {};
@@ -36,11 +38,13 @@ export default function TradeInList({ tradeIns, filters }: TradeInPageProps) {
                         <h2 className="text-2xl font-bold tracking-tight">Pembelian Bekas (Trade In)</h2>
                         <p className="text-muted-foreground">Catat dan pantau perangkat bekas yang dibeli dari pelanggan.</p>
                     </div>
-                    <Button>
+                    <Button onClick={() => setIsModalOpen(true)}>
                         <Plus className="w-4 h-4 mr-2" /> Tambah Pembelian
                     </Button>
                 </div>
-                
+
+                <TradeInFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+
                 <div className="flex items-center gap-3">
                     <div className="relative w-full max-w-sm">
                         <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
@@ -76,7 +80,7 @@ export default function TradeInList({ tradeIns, filters }: TradeInPageProps) {
 }
 
 TradeInList.layout = (page: React.ReactNode) => (
-    <AppLayout breadcrumbs={[{ title: 'Penjualan' }, { title: 'Pembelian Bekas', href: '/sales/trade-in' }]}>
+    <AppLayout breadcrumbs={[{ title: 'Pembelian' }, { title: 'Pembelian Bekas', href: '/sales/trade-in' }]}>
         {page}
     </AppLayout>
 );

@@ -60,6 +60,7 @@ Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
         ->parameters(['pos' => 'posTransaction'])
         ->only(['index', 'store']);
     Route::get('sales/trade-in', [TradeInController::class, 'index'])->name('sales.trade-in.index');
+    Route::post('sales/trade-in', [TradeInController::class, 'store'])->name('sales.trade-in.store');
     Route::get('sales/online', [OnlineBookingController::class, 'index'])->name('sales.online.index');
 
     // Modul Keuangan

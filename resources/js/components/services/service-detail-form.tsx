@@ -30,6 +30,11 @@ export function ServiceDetailForm({ service }: { service: ExtendedService }) {
         is_full_update: true, 
     });
 
+    const formatRupiah = (angka: string | number | null | undefined) => {
+        if (!angka) return '';
+        return new Intl.NumberFormat('id-ID').format(Number(angka));
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         
@@ -120,7 +125,18 @@ export function ServiceDetailForm({ service }: { service: ExtendedService }) {
                             </div>
                             <div className="space-y-1.5">
                                 <Label className="text-xs text-blue-900/80 dark:text-blue-200">Total Biaya (Rp)</Label>
-                                <Input type="number" min="0" value={data.estimated_cost} onChange={e => setData('estimated_cost', e.target.value)} className="h-8 text-xs bg-background border-blue-200 dark:border-blue-800 font-mono" />
+                                <div className="relative">
+                                    <span className="absolute left-2 top-2 text-xs font-bold text-blue-900/50 dark:text-blue-200/50">Rp</span>
+                                    <Input 
+                                        type="text" 
+                                        value={data.estimated_cost ? formatRupiah(data.estimated_cost) : ''} 
+                                        onChange={e => {
+                                            const clean = e.target.value.replace(/\D/g, '');
+                                            setData('estimated_cost', clean);
+                                        }} 
+                                        className="h-8 pl-8 text-xs bg-background border-blue-200 dark:border-blue-800 font-mono" 
+                                    />
+                                </div>
                             </div>
                         </div>
 

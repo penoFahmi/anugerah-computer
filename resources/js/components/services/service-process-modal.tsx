@@ -73,10 +73,11 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
         setSparepartQty(1);
 
         const isWarranty = service?.complaint?.startsWith('KLAIM GARANSI');
-        if (isTriggerWa && (!data.estimated_cost || Number(data.estimated_cost) <= 0) && !isWarranty) {
-            toast.error('Gagal: Estimasi biaya harus diisi di atas Rp 0 untuk mengirim penawaran (Kecuali Klaim Garansi).');
-            return;
-        }
+        // Validasi dihapus sesuai permintaan user agar bisa tes kirim penawaran dengan harga Rp 0
+        // if (isTriggerWa && (!data.estimated_cost || Number(data.estimated_cost) <= 0) && !isWarranty) {
+        //     toast.error('Gagal: Estimasi biaya harus diisi di atas Rp 0 untuk mengirim penawaran (Kecuali Klaim Garansi).');
+        //     return;
+        // }
 
         const payload = {
             status: targetStatus,
@@ -136,7 +137,15 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                         <Label className="text-xs font-semibold text-foreground">Estimasi Biaya Pengecekan (Rp)</Label>
                         <div className="relative">
                             <span className="absolute left-3 top-2.5 text-xs font-bold text-muted-foreground">Rp</span>
-                            <Input type="number" min="0" className="pl-9 bg-background font-mono" value={data.estimated_cost} onChange={(e) => setData('estimated_cost', e.target.value)} />
+                            <Input 
+                                type="text" 
+                                className="pl-9 bg-background font-mono" 
+                                value={data.estimated_cost ? formatRupiah(data.estimated_cost) : ''} 
+                                onChange={(e) => {
+                                    const clean = e.target.value.replace(/\D/g, '');
+                                    setData('estimated_cost', clean);
+                                }} 
+                            />
                         </div>
                     </div>
                     

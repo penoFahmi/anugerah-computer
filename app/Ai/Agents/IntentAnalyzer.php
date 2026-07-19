@@ -11,17 +11,22 @@ use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Promptable;
 use Stringable;
 
-#[Provider(Lab::GEMINI)]
+#[Provider(Lab::Groq)]
 class IntentAnalyzer implements Agent, Conversational, HasStructuredOutput
 {
     use Promptable;
 
     public function instructions(): Stringable|string
     {
-        return 'Kamu adalah AI toko komputer. '.
-               'Tugas Anda HANYA menganalisis teks pelanggan. '.
-               'Baca teks ini dan tentukan apakah pelanggan ingin: A. Tanya Stok (tanya_stok), B. Cek Servis (cek_servis), C. Komplain (komplain), D. Setuju (setuju), E. Batal (batal), F. Pertanyaan Umum/Lainnya (umum_teknis). '.
-               'Jawab murni dalam format JSON sesuai skema tanpa teks tambahan.';
+        return 'Anda adalah mesin pemroses NLP otomatis. DILARANG MERESPON DENGAN TEKS BIASA. '.
+               'Tugas Anda HANYA mengklasifikasikan intent pelanggan ke opsi berikut: '.
+               '1. tanya_stok: Ketersediaan barang.'.
+               '2. cek_servis: Menanyakan status laptop/servisan.'.
+               '3. komplain: Marah, garansi, atau komplain.'.
+               '4. setuju: Kata-kata persetujuan seperti "oke", "lanjut", "setuju", "gas", "kerjakan", "mantap". '.
+               '5. batal: Kata-kata penolakan seperti "batal", "tidak", "cancel", "kemahalan", "jangan". '.
+               '6. umum_teknis: Pertanyaan umum atau basa-basi di luar kategori di atas. '.
+               'WAJIB KEMBALIKAN OUTPUT HANYA DALAM BENTUK JSON MURNI SESUAI SKEMA.';
     }
 
     public function messages(): iterable

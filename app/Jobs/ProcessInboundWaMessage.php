@@ -178,7 +178,27 @@ class ProcessInboundWaMessage implements ShouldQueue
         try {
             $intentAgent = new IntentAnalyzer;
             $analysis = $intentAgent->prompt($originalMessage);
-            $analysisData = is_array($analysis) ? $analysis : (array) $analysis;
+
+            Log::info('IntentAnalyzer Raw Output:', ['output' => $analysis, 'type' => gettype($analysis)]);
+
+            if (is_string($analysis)) {
+                // LLM kadang membalas dengan teks tambahan sebelum JSON, ekstrak paksa JSON-nya
+                $jsonStart = strpos($analysis, '{');
+                $jsonEnd = strrpos($analysis, '}');
+
+                if ($jsonStart !== false && $jsonEnd !== false && $jsonEnd > $jsonStart) {
+                    $cleanJson = substr($analysis, $jsonStart, $jsonEnd - $jsonStart + 1);
+                    $analysisData = json_decode($cleanJson, true) ?? [];
+                } else {
+                    $analysisData = [];
+                }
+            } else {
+                // Jika object (misal response khusus dari Laravel AI), ubah ke array json
+                $analysisData = json_decode(json_encode($analysis), true);
+                if (! is_array($analysisData)) {
+                    $analysisData = [];
+                }
+            }
 
             $llmIntent = $analysisData['intent'] ?? 'umum_teknis';
             $reasoning = $analysisData['reasoning'] ?? 'Dianalisis oleh Fallback LLM';

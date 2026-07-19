@@ -73,9 +73,10 @@ class PosController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($validated) {
-                // 2. Buat Nomor Invoice Otomatis (Contoh: INV-20260717-XYZ)
-                $invoiceNumber = 'INV-'.date('Ymd').'-'.strtoupper(Str::random(5));
+            // 2. Buat Nomor Invoice Otomatis (Contoh: INV-20260717-XYZ)
+            $invoiceNumber = 'INV-'.date('Ymd').'-'.strtoupper(Str::random(5));
+
+            $pos = DB::transaction(function () use ($validated, $invoiceNumber) {
 
                 // 3. Simpan Master Nota (PosTransaction)
                 $pos = PosTransaction::create([
@@ -129,11 +130,30 @@ class PosController extends Controller
                     'notes' => 'Penjualan Kasir POS dengan No Invoice: '.$invoiceNumber,
                     'transaction_date' => now(),
                 ]);
+
+                return $pos;
             });
 
             Inertia::flash('toast', [
                 'type' => 'success',
                 'message' => 'Transaksi berhasil dibayar dan dicatat!',
+            ]);
+
+            Inertia::flash('invoice_data', [
+                'invoice_number' => $invoiceNumber,
+                'total_amount' => $pos->total_amount,
+                'discount' => $pos->discount,
+                'final_amount' => $pos->final_amount,
+                'paid_amount' => $pos->paid_amount,
+                'change' => max(0, $pos->paid_amount - $pos->final_amount),
+                'items' => collect($validated['cart_items'])->map(function ($item) {
+                    return [
+                        'name' => $item['name'] ?? 'Item',
+                        'quantity' => $item['quantity'],
+                        'price' => $item['price'],
+                        'subtotal' => $item['quantity'] * $item['price'],
+                    ];
+                })->toArray(),
             ]);
 
             return back();

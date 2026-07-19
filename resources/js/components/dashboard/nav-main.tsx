@@ -1,10 +1,17 @@
 import { Link } from '@inertiajs/react';
-import { ChevronRight } from 'lucide-react'; // Import icon panah
+import { ChevronRight } from 'lucide-react';
 import {
     Collapsible,
     CollapsibleContent,
     CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
     SidebarGroup,
     SidebarGroupLabel,
@@ -14,12 +21,14 @@ import {
     SidebarMenuSub,
     SidebarMenuSubButton,
     SidebarMenuSubItem,
+    useSidebar,
 } from '@/components/ui/sidebar';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import type { NavItem } from '@/types';
 
 export function NavMain({ items = [] }: { items: NavItem[] }) {
     const { isCurrentUrl } = useCurrentUrl();
+    const { state, isMobile } = useSidebar();
 
     return (
         <SidebarGroup className="px-2 py-0">
@@ -29,6 +38,34 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                     const hasChildren = item.items && item.items.length > 0;
                     
                     if (hasChildren) {
+                        // Jika sidebar dalam mode icon (collapsed) dan bukan di mobile,
+                        // gunakan DropdownMenu agar submenu bisa muncul di samping (floating).
+                        if (state === 'collapsed' && !isMobile) {
+                            return (
+                                <SidebarMenuItem key={item.title}>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <SidebarMenuButton tooltip={item.title}>
+                                                {item.icon && <item.icon />}
+                                                <span>{item.title}</span>
+                                                <ChevronRight className="ml-auto" />
+                                            </SidebarMenuButton>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent side="right" align="start" sideOffset={16} className="min-w-48">
+                                            <DropdownMenuLabel className="text-xs text-muted-foreground">{item.title}</DropdownMenuLabel>
+                                            {item.items?.map((subItem) => (
+                                                <DropdownMenuItem asChild key={subItem.title} className={isCurrentUrl(subItem.href) ? 'bg-accent' : ''}>
+                                                    <Link href={subItem.href} className="w-full cursor-pointer">
+                                                        {subItem.title}
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                            ))}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </SidebarMenuItem>
+                            );
+                        }
+
                         return (
                             <Collapsible
                                 key={item.title}

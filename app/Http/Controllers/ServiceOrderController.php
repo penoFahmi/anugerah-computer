@@ -263,11 +263,12 @@ class ServiceOrderController extends Controller
                     if (in_array($newStatus, [ServiceStatus::WAITING_APPROVAL->value, ServiceStatus::CANCELLED->value])) {
                         $estimatedCost = $validated['estimated_cost'] ?? $serviceOrder->estimated_cost;
                         $isWarranty = str_starts_with($serviceOrder->complaint ?? '', 'KLAIM GARANSI');
-                        if ($newStatus === ServiceStatus::WAITING_APPROVAL->value && $estimatedCost <= 0 && !$isWarranty) {
-                            Inertia::flash('toast', ['type' => 'error', 'message' => 'Estimasi biaya harus diisi untuk lanjut ke Menunggu Konfirmasi. (Kecuali klaim garansi)']);
-
-                            return back();
-                        }
+                        // Validasi dihapus sesuai permintaan user agar bisa tes kirim penawaran dengan harga Rp 0
+                        // if ($newStatus === ServiceStatus::WAITING_APPROVAL->value && $estimatedCost <= 0 && !$isWarranty) {
+                        //     Inertia::flash('toast', ['type' => 'error', 'message' => 'Estimasi biaya harus diisi untuk lanjut ke Menunggu Konfirmasi. (Kecuali klaim garansi)']);
+                        //
+                        //     return back();
+                        // }
                         $isValidTransition = true;
                     }
                     break;
@@ -380,32 +381,36 @@ class ServiceOrderController extends Controller
             // C. OTOMATISASI GARANSI (Hanya Dibuat Saat Unit Diambil Pertama Kali)
             if ($oldStatus !== ServiceStatus::TAKEN->value && $newStatus === ServiceStatus::TAKEN->value) {
 
-                $warrantyDays = (int) $request->input('warranty_days', 0);
-
-                if ($warrantyDays > 0) {
-                    $prefix = 'GAR-'.now()->format('Ymd').'-';
-                    $lastWarranty = Warranty::where('warranty_code', 'like', $prefix.'%')
-                        ->orderBy('warranty_code', 'desc')
-                        ->lockForUpdate()
-                        ->first();
-
-                    $nextSeq = $lastWarranty ? (int) substr($lastWarranty->warranty_code, -3) + 1 : 1;
-                    $warrantyCode = $prefix.str_pad((string) $nextSeq, 3, '0', STR_PAD_LEFT);
-
-                    $serviceOrder->warranty()->create([
-                        'warranty_code' => $warrantyCode,
-                        'start_date' => now(),
-                        'end_date' => now()->addDays($warrantyDays),
-                        'status' => 'active',
-                    ]);
-
-                    $waMessage = "Terima kasih Kak *{$serviceOrder->customer->name}* telah mempercayakan perbaikan unit *{$serviceOrder->device->brand}* di Anugerah Computer.\n\n"
-                        ."Unit Anda telah diserahkan dan masa garansi perbaikan aktif selama {$warrantyDays} hari hingga *".now()->addDays($warrantyDays)->format('d M Y')."*.\n"
-                        ."Kode Garansi: *{$warrantyCode}*\n\n"
-                        .'Harap simpan pesan ini sebagai bukti garansi. Semoga unitnya awet selalu! 🙏';
+                if ($oldStatus === ServiceStatus::CANCELLED->value) {
+                    $waMessage = "Halo Kak *{$serviceOrder->customer->name}*,\n\nUnit *{$serviceOrder->device->brand}* telah Anda ambil kembali (Status: Batal Servis).\n\nTerima kasih telah berkunjung ke Anugerah Computer. Jika butuh bantuan di lain waktu, jangan ragu untuk menghubungi kami. 🙏";
                 } else {
-                    $waMessage = "Terima kasih Kak *{$serviceOrder->customer->name}* telah mempercayakan perbaikan unit *{$serviceOrder->device->brand}* di Anugerah Computer.\n\n"
-                        .'Unit Anda telah diserahkan. Semoga unitnya awet dan dapat digunakan dengan lancar kembali! Jika ada keluhan lain, jangan ragu untuk menghubungi kami. 🙏';
+                    $warrantyDays = (int) $request->input('warranty_days', 0);
+
+                    if ($warrantyDays > 0) {
+                        $prefix = 'GAR-'.now()->format('Ymd').'-';
+                        $lastWarranty = Warranty::where('warranty_code', 'like', $prefix.'%')
+                            ->orderBy('warranty_code', 'desc')
+                            ->lockForUpdate()
+                            ->first();
+
+                        $nextSeq = $lastWarranty ? (int) substr($lastWarranty->warranty_code, -3) + 1 : 1;
+                        $warrantyCode = $prefix.str_pad((string) $nextSeq, 3, '0', STR_PAD_LEFT);
+
+                        $serviceOrder->warranty()->create([
+                            'warranty_code' => $warrantyCode,
+                            'start_date' => now(),
+                            'end_date' => now()->addDays($warrantyDays),
+                            'status' => 'active',
+                        ]);
+
+                        $waMessage = "Terima kasih Kak *{$serviceOrder->customer->name}* telah mempercayakan perbaikan unit *{$serviceOrder->device->brand}* di Anugerah Computer.\n\n"
+                            ."Unit Anda telah diserahkan dan masa garansi perbaikan aktif selama {$warrantyDays} hari hingga *".now()->addDays($warrantyDays)->format('d M Y')."*.\n"
+                            ."Kode Garansi: *{$warrantyCode}*\n\n"
+                            .'Harap simpan pesan ini sebagai bukti garansi. Semoga unitnya awet selalu! 🙏';
+                    } else {
+                        $waMessage = "Terima kasih Kak *{$serviceOrder->customer->name}* telah mempercayakan perbaikan unit *{$serviceOrder->device->brand}* di Anugerah Computer.\n\n"
+                            .'Unit Anda telah diserahkan. Semoga unitnya awet dan dapat digunakan dengan lancar kembali! Jika ada keluhan lain, jangan ragu untuk menghubungi kami. 🙏';
+                    }
                 }
 
                 // Panggil WhatsApp API Gateway
@@ -484,7 +489,7 @@ class ServiceOrderController extends Controller
         if (in_array($status, [ServiceStatus::WAITING_CHECKING->value, ServiceStatus::WAITING_APPROVAL->value])) {
 
             $isWarranty = str_starts_with($serviceOrder->complaint ?? '', 'KLAIM GARANSI');
-            if ($serviceOrder->estimated_cost <= 0 && !$isWarranty) {
+            if ($serviceOrder->estimated_cost <= 0 && ! $isWarranty) {
                 Inertia::flash('toast', ['type' => 'error', 'message' => 'Gagal: Estimasi biaya harus diisi terlebih dahulu sebelum mengirim penawaran. (Kecuali klaim garansi)']);
 
                 return back();

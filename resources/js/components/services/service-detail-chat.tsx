@@ -34,15 +34,22 @@ export function ServiceDetailChat({ service }: ServiceDetailChatProps) {
     const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
 
     useEffect(() => {
-        if (!service) return;
+        if (!service || !service.customer?.phone) return;
         
         setLoading(true);
-        fetch(`/services/${service.id}/chat`)
-            .then(res => res.json())
+        fetch(`/api/chats/${service.customer.phone}`)
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to fetch chat logs');
+                return res.json();
+            })
             .then((data: ChatMessage[]) => { 
                 setMessages(data); 
                 setLoading(false); 
                 setTimeout(scrollToBottom, 100); 
+            })
+            .catch(err => {
+                console.error(err);
+                setLoading(false);
             });
     }, [service]);
 
@@ -57,13 +64,13 @@ export function ServiceDetailChat({ service }: ServiceDetailChatProps) {
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newMessage.trim()) return;
+        if (!newMessage.trim() || !service.customer?.phone) return;
         
         const text = newMessage;
         setNewMessage('');
 
         try {
-            await fetch(`/services/${service.id}/chat`, {
+            const res = await fetch(`/api/chats/${service.customer.phone}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -71,6 +78,8 @@ export function ServiceDetailChat({ service }: ServiceDetailChatProps) {
                 },
                 body: JSON.stringify({ message: text }),
             });
+            
+            if (!res.ok) throw new Error('Failed to send message');
         } catch (error) {
             console.error('Failed to send message:', error);
         }

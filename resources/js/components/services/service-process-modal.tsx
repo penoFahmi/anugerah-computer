@@ -155,35 +155,6 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                         </Label>
                         <Textarea className="flex-1 text-sm resize-none bg-background p-3 custom-scrollbar min-h-[80px]" placeholder="Misal: Sparepart kosong, IC Power mati..." value={data.technician_notes} onChange={(e) => setData('technician_notes', e.target.value)} />
                     </div>
-                    
-                    {/* [PERBAIKAN]: Area Tombol dengan penambahan Tombol Batal di sebelah kiri */}
-                    <div className="flex justify-between items-center pt-4 border-t border-border shrink-0">
-                        
-                        <Button 
-                            type="button" 
-                            size="sm" 
-                            variant="destructive" 
-                            onClick={() => setAlertConfig({ 
-                                open: true, 
-                                action: 'cancelled', 
-                                title: 'Batalkan Servis', 
-                                desc: 'Yakin membatalkan servis ini? (Pilih ini jika unit tidak bisa diperbaiki atau sparepart kosong).' 
-                            })} 
-                            disabled={processing}
-                        >
-                            <XCircle className="h-4 w-4 mr-1.5" /> Batal
-                        </Button>
-
-                        <div className="flex gap-2">
-                            <Button type="button" size="sm" variant="outline" onClick={() => processAction('waiting_checking')} disabled={processing}>
-                                {processing ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Check className="h-4 w-4 mr-1.5" />} Simpan Draf
-                            </Button>
-                            <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm" onClick={() => processAction('waiting_approval', true)} disabled={processing}>
-                                <Send className="h-4 w-4 mr-2" /> Kirim Penawaran WA
-                            </Button>
-                        </div>
-
-                    </div>
                 </div>
             );
         }
@@ -208,18 +179,6 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                         </Label>
                         <Textarea className="flex-1 text-sm resize-none bg-background p-3 custom-scrollbar min-h-[80px]" value={data.technician_notes} onChange={(e) => setData('technician_notes', e.target.value)} />
                     </div>
-                    
-                    <div className="flex justify-between items-center pt-4 border-t border-border shrink-0">
-                        <Button type="button" size="sm" variant="destructive" onClick={() => setAlertConfig({ open: true, action: 'cancelled', title: 'Batalkan Servis', desc: 'Yakin membatalkan servis ini? Status nota akan ditutup.' })} disabled={processing}>
-                            <XCircle className="h-4 w-4 mr-1.5" /> Batal
-                        </Button>
-                        <div className="flex gap-2">
-                            <Button type="button" size="sm" variant="outline" onClick={() => processAction(status)} disabled={processing}>Simpan</Button>
-                            <Button type="button" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm" onClick={() => processAction('in_progress')} disabled={processing}>
-                                <Play className="h-4 w-4 mr-1.5 fill-current" /> Mulai Kerjakan
-                            </Button>
-                        </div>
-                    </div>
                 </div>
             );
         }
@@ -236,16 +195,12 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                     onSuccess: () => {
                         setSelectedSparepart('');
                         setSparepartQty(1);
-                        
-                        // Perbarui data final_cost di form secara reaktif jika diperlukan
-                        // Tapi karena ini Inertia, prop service akan otomatis terupdate.
                     }
                 });
             };
 
             return (
                 <div className="flex flex-col h-full space-y-4">
-                    {/* UI Input Sparepart */}
                     <div className="p-4 border border-border rounded-xl bg-muted/40 space-y-4 shrink-0">
                         <Label className="text-sm font-bold text-foreground flex items-center gap-2">
                             <Wrench className="h-4 w-4 text-blue-600 dark:text-blue-500" />
@@ -318,18 +273,6 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                         </Label>
                         <Textarea placeholder="Sparepart yang diganti..." className="flex-1 text-sm resize-none bg-background p-3 custom-scrollbar min-h-[80px]" value={data.technician_notes} onChange={(e) => setData('technician_notes', e.target.value)} />
                     </div>
-                    
-                    <div className="flex justify-between items-center pt-4 border-t border-border shrink-0">
-                        <Button type="button" size="sm" variant="destructive" onClick={() => setAlertConfig({ open: true, action: 'cancelled', title: 'Batalkan Servis', desc: 'Yakin membatalkan servis ini? Status nota akan ditutup.' })} disabled={processing}>
-                            <XCircle className="h-4 w-4 mr-1.5" /> Batal
-                        </Button>
-                        <div className="flex gap-2">
-                            <Button type="button" size="sm" variant="outline" onClick={() => processAction('in_progress')} disabled={processing}>Simpan Progress</Button>
-                            <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm" onClick={() => processAction('completed')} disabled={processing}>
-                                <CheckCircle2 className="h-4 w-4 mr-1.5" /> Tandai Selesai
-                            </Button>
-                        </div>
-                    </div>
                 </div>
             );
         }
@@ -338,11 +281,11 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
             const dp = Number(data.down_payment || 0);
             const finalCost = Number(data.final_cost || data.estimated_cost || 0);
             const remaining = finalCost - dp;
+            const isOverpaid = remaining < 0;
 
             return (
                 <div className="flex flex-col h-full space-y-4">
                     <div className="bg-slate-900 dark:bg-slate-950 rounded-xl p-5 text-slate-100 shadow-xl border border-slate-800 shrink-0 relative overflow-hidden">
-                        {/* Decorative Receipt Edge */}
                         <div className="absolute left-0 right-0 top-0 h-1 bg-gradient-to-r from-emerald-500/50 via-teal-500/50 to-emerald-500/50" />
                         
                         <div className="flex justify-between items-center mb-4 border-b border-slate-700/80 pb-4">
@@ -370,13 +313,14 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                         </div>
 
                         <div className="flex justify-between items-center pt-2 mb-6 bg-slate-950/50 -mx-5 px-5 py-3 border-y border-slate-800/50">
-                            <span className="text-sm font-bold text-white tracking-widest uppercase">Sisa Tagihan</span>
-                            <span className={`text-2xl font-black font-mono tracking-tight ${remaining > 0 ? 'text-orange-400' : 'text-emerald-400'}`}>
-                                Rp {formatRupiah(remaining > 0 ? remaining : 0)}
+                            <span className="text-sm font-bold text-white tracking-widest uppercase">
+                                {isOverpaid ? 'Uang Kembali' : (remaining === 0 ? 'Status Pembayaran' : 'Sisa Tagihan')}
+                            </span>
+                            <span className={`text-2xl font-black font-mono tracking-tight ${isOverpaid ? 'text-blue-400' : remaining > 0 ? 'text-orange-400' : 'text-emerald-400'}`}>
+                                {remaining === 0 && !isOverpaid ? 'LUNAS' : `Rp ${formatRupiah(Math.abs(remaining))}`}
                             </span>
                         </div>
 
-                        {/* Pilihan Pembayaran */}
                         <div className="flex flex-col gap-2.5">
                             <span className="text-xs text-slate-400 font-medium tracking-wide uppercase">Metode Pembayaran</span>
                             <div className="grid grid-cols-3 gap-2">
@@ -407,8 +351,7 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                         </div>
                     </div>
                     
-                    {/* Input Masa Garansi */}
-                    <div className="bg-emerald-500/10 border border-emerald-500/20 p-3.5 rounded-xl flex flex-col gap-2">
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 p-3.5 rounded-xl flex flex-col gap-2 mb-4">
                         <Label className="text-xs font-bold text-emerald-800 dark:text-emerald-400 flex items-center gap-1.5">
                             <ShieldCheck className="h-4 w-4" /> Masa Berlaku Garansi (Hari)
                         </Label>
@@ -434,24 +377,11 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                         </div>
                     </div>
 
-                    {/* Area Catatan Baca Saja */}
                     <div className="space-y-1.5 flex-1 flex flex-col min-h-0">
                         <Label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
                             <FileText className="h-3.5 w-3.5" /> Histori Teknisi
                         </Label>
                         <Textarea disabled className="flex-1 resize-none bg-muted text-xs p-3 text-muted-foreground custom-scrollbar min-h-[60px]" value={data.technician_notes} />
-                    </div>
-
-                    <div className="flex justify-between items-center gap-2 pt-4 border-t border-border shrink-0">
-                        <Button type="button" size="sm" variant="ghost" onClick={onClose} disabled={processing}>Tutup</Button>
-                        <div className="flex gap-2">
-                            <Button type="button" size="sm" variant="outline" onClick={() => processAction('completed')} disabled={processing}>
-                                <Save className="h-4 w-4 mr-1.5" /> Update Tagihan
-                            </Button>
-                            <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm" onClick={() => setAlertConfig({ open: true, action: 'taken', title: 'Serahkan Unit', desc: 'Pastikan pembayaran sesuai tagihan. Nota akan ditutup permanen dan garansi diaktifkan.' })} disabled={processing}>
-                                <HandCoins className="h-4 w-4 mr-1.5" /> Serahkan Unit
-                            </Button>
-                        </div>
                     </div>
                 </div>
             );
@@ -469,13 +399,6 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                             Servis ini telah dibatalkan. Menunggu pelanggan untuk mengambil unitnya.
                         </p>
                     </div>
-                    
-                    <div className="flex justify-between items-center gap-2 pt-4 border-t border-border shrink-0">
-                        <Button type="button" size="sm" variant="ghost" onClick={onClose} disabled={processing}>Tutup</Button>
-                        <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm" onClick={() => setAlertConfig({ open: true, action: 'taken', title: 'Serahkan Unit', desc: 'Nota akan ditutup permanen.' })} disabled={processing}>
-                            <HandCoins className="h-4 w-4 mr-1.5" /> Serahkan Unit
-                        </Button>
-                    </div>
                 </div>
             );
         }
@@ -490,8 +413,94 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                         <h4 className="font-bold text-foreground uppercase tracking-wide">{service.status_label}</h4>
                         <p className="text-sm text-muted-foreground">Siklus operasional nota ini telah ditutup secara permanen.</p>
                     </div>
-                    <Button type="button" size="sm" variant="outline" className="w-full" onClick={onClose}>Tutup Panel</Button>
                 </div>
+            );
+        }
+    };
+
+    const renderFormActions = () => {
+        const status = service.status;
+        
+        if (status === 'waiting_checking') {
+            return (
+                <div className="flex justify-between items-center w-full">
+                    <Button type="button" size="sm" variant="destructive" onClick={() => setAlertConfig({ open: true, action: 'cancelled', title: 'Batalkan Servis', desc: 'Yakin membatalkan servis ini? (Pilih ini jika unit tidak bisa diperbaiki atau sparepart kosong).' })} disabled={processing}>
+                        <XCircle className="h-4 w-4 mr-1.5" /> Batal
+                    </Button>
+                    <div className="flex gap-2">
+                        <Button type="button" size="sm" variant="outline" onClick={() => processAction('waiting_checking')} disabled={processing}>
+                            {processing ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Check className="h-4 w-4 mr-1.5" />} Simpan Draf
+                        </Button>
+                        <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm" onClick={() => processAction('waiting_approval', true)} disabled={processing}>
+                            <Send className="h-4 w-4 mr-2" /> Kirim Penawaran WA
+                        </Button>
+                    </div>
+                </div>
+            );
+        }
+        
+        if (status === 'waiting_approval' || status === 'approved') {
+            return (
+                <div className="flex justify-between items-center w-full">
+                    <Button type="button" size="sm" variant="destructive" onClick={() => setAlertConfig({ open: true, action: 'cancelled', title: 'Batalkan Servis', desc: 'Yakin membatalkan servis ini? Status nota akan ditutup.' })} disabled={processing}>
+                        <XCircle className="h-4 w-4 mr-1.5" /> Batal
+                    </Button>
+                    <div className="flex gap-2">
+                        <Button type="button" size="sm" variant="outline" onClick={() => processAction(status)} disabled={processing}>Simpan</Button>
+                        <Button type="button" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm" onClick={() => processAction('in_progress')} disabled={processing}>
+                            <Play className="h-4 w-4 mr-1.5 fill-current" /> Mulai Kerjakan
+                        </Button>
+                    </div>
+                </div>
+            );
+        }
+        
+        if (status === 'in_progress') {
+            return (
+                <div className="flex justify-between items-center w-full">
+                    <Button type="button" size="sm" variant="destructive" onClick={() => setAlertConfig({ open: true, action: 'cancelled', title: 'Batalkan Servis', desc: 'Yakin membatalkan servis ini? Status nota akan ditutup.' })} disabled={processing}>
+                        <XCircle className="h-4 w-4 mr-1.5" /> Batal
+                    </Button>
+                    <div className="flex gap-2">
+                        <Button type="button" size="sm" variant="outline" onClick={() => processAction('in_progress')} disabled={processing}>Simpan Progress</Button>
+                        <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm" onClick={() => processAction('completed')} disabled={processing}>
+                            <CheckCircle2 className="h-4 w-4 mr-1.5" /> Tandai Selesai
+                        </Button>
+                    </div>
+                </div>
+            );
+        }
+        
+        if (status === 'completed') {
+            return (
+                <div className="flex justify-between items-center w-full">
+                    <Button type="button" size="sm" variant="ghost" onClick={onClose} disabled={processing}>Tutup</Button>
+                    <div className="flex gap-2">
+                        <Button type="button" size="sm" variant="outline" onClick={() => processAction('completed')} disabled={processing}>
+                            <Save className="h-4 w-4 mr-1.5" /> Update Tagihan
+                        </Button>
+                        <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm" onClick={() => setAlertConfig({ open: true, action: 'taken', title: 'Serahkan Unit', desc: 'Pastikan pembayaran sesuai tagihan. Nota akan ditutup permanen dan garansi diaktifkan.' })} disabled={processing}>
+                            <HandCoins className="h-4 w-4 mr-1.5" /> Serahkan Unit
+                        </Button>
+                    </div>
+                </div>
+            );
+        }
+        
+        if (status === 'cancelled') {
+            return (
+                <div className="flex justify-between items-center w-full">
+                    <Button type="button" size="sm" variant="ghost" onClick={onClose} disabled={processing}>Tutup</Button>
+                    <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm" onClick={() => setAlertConfig({ open: true, action: 'taken', title: 'Serahkan Unit', desc: 'Nota akan ditutup permanen.' })} disabled={processing}>
+                        <HandCoins className="h-4 w-4 mr-1.5" /> Serahkan Unit
+                    </Button>
+                </div>
+            );
+        }
+        
+        if (status === 'taken') {
+            return (
+                <Button type="button" size="sm" variant="outline" className="w-full" onClick={onClose}>Tutup Panel</Button>
             );
         }
     };
@@ -499,10 +508,8 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
     return (
         <>
             <Dialog open={isOpen} onOpenChange={onClose}>
-                {/* Modal dibuat elegan dan terkunci dengan tinggi dinamis tapi membatasi overflow */}
                 <DialogContent className="max-h-[90vh] flex flex-col sm:max-w-[500px] p-0 rounded-xl shadow-2xl border-border overflow-hidden bg-card">
                     
-                    {/* Header Terkunci */}
                     <div className="p-5 border-b border-border bg-muted/20 shrink-0">
                         <DialogHeader>
                             <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
@@ -519,11 +526,14 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                         </div>
                     </div>
 
-                    {/* Area Konten Dinamis yang mengatur scroll-nya sendiri jika diperlukan */}
-                    <div className="flex-1 overflow-hidden p-5">
+                    <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
                         <form onSubmit={(e) => e.preventDefault()} className="h-full">
                             {renderFormContent()}
                         </form>
+                    </div>
+
+                    <div className="p-4 border-t border-border bg-card shrink-0 flex items-center shadow-[0_-4px_10px_-5px_rgba(0,0,0,0.05)]">
+                        {renderFormActions()}
                     </div>
                 </DialogContent>
             </Dialog>

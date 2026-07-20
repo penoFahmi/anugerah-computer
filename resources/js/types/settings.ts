@@ -21,4 +21,6 @@ export interface LogsPageProps extends GlobalPageProps {
         search: string | null;
         intent: string | null;
     };
+    intentStats?: { name: string; value: number }[];
+    sourceStats?: { name: string; value: number }[];
 }

@@ -154,7 +154,7 @@ class IntentHandler
         $existingCompletion = $chatLog->llm_completion_tokens ?? 0;
 
         $chatLog->update([
-            'resolved_by' => 'agent_llm_customer_service',
+            'resolved_by' => $source, // Gunakan source (agent_nlp_fasttext / agent_intent_analyzer_fallback)
             'final_intent' => $intent,
             'llm_raw_response' => ['text' => $aiResponse],
             'llm_prompt_tokens' => $existingPrompt + $csPromptTokens,

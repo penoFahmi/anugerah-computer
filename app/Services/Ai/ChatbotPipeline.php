@@ -58,11 +58,15 @@ class ChatbotPipeline
             $intentAgent = new IntentAnalyzer;
             // Instruksikan LLM Analyzer HANYA untuk mendeteksi intent KRITIS (Setuju/Batal/Harga).
             // Jika pertanyaan umum, kembalikan 'umum_teknis' agar ditangani oleh LLM Generatif (CustomerService).
+            // Sinkronisasi dengan 12 Intent dari Python NLP
             $analysis = $intentAgent->prompt(
                 "Pesan: {$originalMessage}\n".
-                "Klasifikasikan HANYA jika pesan ini jelas mengandung niat berikut: 'setuju', 'batal', 'tanya_harga_servis', 'nego_harga', 'komplain', 'klaim_garansi', atau 'butuh_admin'. ".
-                "Jika pelanggan marah atau terang-terangan minta bicara dengan manusia/admin, kembalikan 'butuh_admin'. ".
-                "Selain niat-niat tersebut (misal sekadar sapaan, tanya info, atau tanya perbaikan), WAJIB kembalikan 'umum_teknis' agar bisa dijawab natural oleh AI."
+                "Klasifikasikan pesan di atas ke dalam SALAH SATU niat (intent) berikut: ".
+                "'setuju', 'batal', 'nego_harga', 'komplain', 'klaim_garansi', 'butuh_admin', ".
+                "'tanya_status', 'info_toko', 'sapaan', 'konsultasi_kerusakan', 'tanya_estimasi_waktu', 'umum_teknis'.\n".
+                "ATURAN KHUSUS:\n".
+                "- Jika pelanggan marah, mengancam, atau minta bicara dengan admin/manusia, WAJIB pilih 'butuh_admin'.\n".
+                "- Jika tidak yakin, pilih 'umum_teknis'."
             );
             
             $analysisData = [];

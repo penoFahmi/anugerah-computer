@@ -9,8 +9,12 @@ import { useState } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 import { LogTable } from '@/components/settings/logs-table';
 import type { LogsPageProps } from '@/types/settings';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 
-export default function LogList({ logs, filters }: LogsPageProps) {
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#d0ed57', '#a4de6c', '#ff99e6', '#c984ff', '#ff6666'];
+
+
+export default function LogList({ logs, filters, intentStats = [], sourceStats = [] }: LogsPageProps) {
     const [filterState, setFilterState] = useState({
         search: filters.search ?? '',
         intent: filters.intent ?? 'all'
@@ -71,9 +75,18 @@ export default function LogList({ logs, filters }: LogsPageProps) {
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">Semua Intent</SelectItem>
-                            <SelectItem value="service_status">Cek Status Servis</SelectItem>
-                            <SelectItem value="price_inquiry">Tanya Harga</SelectItem>
-                            <SelectItem value="human_escalation">Eskalasi CS</SelectItem>
+                            <SelectItem value="batal">Batal</SelectItem>
+                            <SelectItem value="butuh_admin">Butuh Admin</SelectItem>
+                            <SelectItem value="info_toko">Info Toko</SelectItem>
+                            <SelectItem value="klaim_garansi">Klaim Garansi</SelectItem>
+                            <SelectItem value="komplain">Komplain</SelectItem>
+                            <SelectItem value="konsultasi_kerusakan">Konsultasi</SelectItem>
+                            <SelectItem value="nego_harga">Nego Harga</SelectItem>
+                            <SelectItem value="sapaan">Sapaan</SelectItem>
+                            <SelectItem value="setuju">Setuju</SelectItem>
+                            <SelectItem value="tanya_estimasi_waktu">Estimasi Waktu</SelectItem>
+                            <SelectItem value="tanya_status">Cek Status</SelectItem>
+                            <SelectItem value="umum_teknis">Umum Teknis</SelectItem>
                         </SelectContent>
                     </Select>
 
@@ -82,6 +95,77 @@ export default function LogList({ logs, filters }: LogsPageProps) {
                             <FilterX className="h-4 w-4 text-muted-foreground" />
                         </Button>
                     )}
+                </div>
+
+                {/* Dashboard Visuals */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Distribusi Intent (Niat)</CardTitle>
+                            <CardDescription>Persentase kategori pesan dari pelanggan secara keseluruhan.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="h-[300px]">
+                            {intentStats.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={intentStats}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={60}
+                                            outerRadius={80}
+                                            paddingAngle={5}
+                                            dataKey="value"
+                                            nameKey="name"
+                                            label
+                                        >
+                                            {intentStats.map((entry, index) => (
+                                                <Cell key={`cell-intent-${index}`} fill={COLORS[index % COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <RechartsTooltip />
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="flex h-full items-center justify-center text-muted-foreground">Tidak ada data</div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Resolusi AI (Beban Kerja)</CardTitle>
+                            <CardDescription>Proporsi pesan yang diselesaikan oleh NLP, LLM, atau Manusia.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="h-[300px]">
+                            {sourceStats.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={sourceStats}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={60}
+                                            outerRadius={80}
+                                            paddingAngle={5}
+                                            dataKey="value"
+                                            nameKey="name"
+                                            label
+                                        >
+                                            {sourceStats.map((entry, index) => (
+                                                <Cell key={`cell-source-${index}`} fill={COLORS[(index + 3) % COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <RechartsTooltip />
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="flex h-full items-center justify-center text-muted-foreground">Tidak ada data</div>
+                            )}
+                        </CardContent>
+                    </Card>
                 </div>
 
                 <Card>

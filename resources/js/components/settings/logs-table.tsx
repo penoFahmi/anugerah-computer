@@ -15,15 +15,66 @@ export function LogTable({ logs }: LogTableProps) {
         if (!intent) return <Badge variant="secondary">Tidak Diketahui</Badge>;
         
         switch (intent) {
-            case 'service_status':
-            case 'check_service':
-                return <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">Cek Servis</Badge>;
-            case 'price_inquiry':
-                return <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200">Tanya Harga</Badge>;
-            case 'human_escalation':
-                return <Badge variant="destructive">Eskalasi CS</Badge>;
+            case 'setuju':
+                return <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200">Setuju</Badge>;
+            case 'batal':
+                return <Badge variant="outline" className="bg-rose-50 text-rose-600 border-rose-200">Batal</Badge>;
+            case 'tanya_status':
+                return <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">Cek Status</Badge>;
+            case 'nego_harga':
+                return <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200">Nego Harga</Badge>;
+            case 'komplain':
+                return <Badge variant="destructive">Komplain</Badge>;
+            case 'klaim_garansi':
+                return <Badge variant="outline" className="bg-purple-50 text-purple-600 border-purple-200">Klaim Garansi</Badge>;
+            case 'butuh_admin':
+                return <Badge variant="destructive">Eskalasi Admin</Badge>;
+            case 'info_toko':
+                return <Badge variant="outline" className="bg-teal-50 text-teal-600 border-teal-200">Info Toko</Badge>;
+            case 'sapaan':
+                return <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-200">Sapaan</Badge>;
+            case 'konsultasi_kerusakan':
+                return <Badge variant="outline" className="bg-indigo-50 text-indigo-600 border-indigo-200">Konsultasi Kerusakan</Badge>;
+            case 'tanya_estimasi_waktu':
+                return <Badge variant="outline" className="bg-cyan-50 text-cyan-600 border-cyan-200">Estimasi Waktu</Badge>;
+            case 'umum_teknis':
+                return <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-300">Umum / Teknis</Badge>;
+            case 'llm_cs_reply':
+                return <Badge variant="outline" className="bg-sky-50 text-sky-600 border-sky-200">Balasan LLM</Badge>;
             default:
-                return <Badge variant="outline">{intent}</Badge>;
+                return <Badge variant="outline" className="capitalize">{intent.replace(/_/g, ' ')}</Badge>;
+        }
+    };
+
+    const getResolverBadge = (resolver: string | null) => {
+        if (!resolver) return <Badge variant="secondary">Proses / Error</Badge>;
+        
+        if (resolver === 'agent_nlp_fasttext') {
+            return (
+                <Badge variant="outline" className="border-indigo-200 text-indigo-600 bg-indigo-50">
+                    <Bot className="w-3 h-3 mr-1" /> NLP Python (Utama)
+                </Badge>
+            );
+        } else if (resolver === 'agent_intent_analyzer_fallback') {
+            return (
+                <Badge variant="outline" className="border-fuchsia-200 text-fuchsia-600 bg-fuchsia-50">
+                    <Bot className="w-3 h-3 mr-1" /> LLM Groq (Fallback)
+                </Badge>
+            );
+        } else if (resolver === 'agent_llm_customer_service') {
+             return (
+                <Badge variant="outline" className="border-sky-200 text-sky-600 bg-sky-50">
+                    <Bot className="w-3 h-3 mr-1" /> LLM Groq (Penjawab)
+                </Badge>
+            );
+        } else if (resolver === 'human') {
+            return (
+                <Badge variant="outline" className="border-amber-200 text-amber-600 bg-amber-50">
+                    Admin / Manusia
+                </Badge>
+            );
+        } else {
+             return <Badge variant="secondary" className="capitalize">{resolver.replace(/_/g, ' ')}</Badge>;
         }
     };
 
@@ -41,12 +92,12 @@ export function LogTable({ logs }: LogTableProps) {
         <Table>
             <TableHeader>
                 <TableRow>
-                    <TableHead>Waktu</TableHead>
-                    <TableHead>Pengirim</TableHead>
-                    <TableHead>Pesan</TableHead>
-                    <TableHead>Intent AI</TableHead>
-                    <TableHead>Akurasi (SVM)</TableHead>
-                    <TableHead>Penyelesai</TableHead>
+                    <TableHead title="Waktu pesan diterima atau dikirim">Waktu Pesan</TableHead>
+                    <TableHead title="Nama dan Nomor WhatsApp pelanggan/bot">Pelanggan / Nomor</TableHead>
+                    <TableHead title="Isi teks murni dari percakapan">Isi Pesan</TableHead>
+                    <TableHead title="Niat (Intent) yang berhasil disimpulkan oleh AI">Keputusan Niat</TableHead>
+                    <TableHead title="Tingkat keyakinan model NLP (SVM). Jika di bawah 75%, maka LLM Groq akan mengambil alih penentuan niat.">Skor Keyakinan (NLP)</TableHead>
+                    <TableHead title="Pihak yang berhasil mengeksekusi pesan ini">Ditangani Oleh</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -73,17 +124,7 @@ export function LogTable({ logs }: LogTableProps) {
                             ) : '-'}
                         </TableCell>
                         <TableCell>
-                            {item.resolved_by === 'ai' ? (
-                                <Badge variant="outline" className="border-indigo-200 text-indigo-600 bg-indigo-50">
-                                    <Bot className="w-3 h-3 mr-1" /> AI
-                                </Badge>
-                            ) : item.resolved_by === 'human' ? (
-                                <Badge variant="outline" className="border-amber-200 text-amber-600 bg-amber-50">
-                                    Admin
-                                </Badge>
-                            ) : (
-                                <Badge variant="secondary">Proses</Badge>
-                            )}
+                            {getResolverBadge(item.resolved_by)}
                         </TableCell>
                     </TableRow>
                 ))}

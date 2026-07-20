@@ -59,9 +59,7 @@ class ChatLog extends Model
     {
         // 1. Broadcast event ketika ada pesan baru (dari Pelanggan, AI, atau Agen) untuk pembaruan UI secara real-time.
         static::created(function ($chatLog) {
-            if ($chatLog->service_order_id) {
-                broadcast(new NewChatMessage($chatLog));
-            }
+            broadcast(new NewChatMessage($chatLog));
         });
 
         // 2. Broadcast event eskalasi ketika AI mengalihkan percakapan ke Agen Manusia (Customer Service).

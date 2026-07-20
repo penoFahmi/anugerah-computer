@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ServiceOrder;
 use App\Services\WaGateway;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -10,11 +9,16 @@ use Illuminate\Http\Request;
 class ChatController extends Controller
 {
     /**
-     * Mengambil histori chat untuk ditampilkan saat kotak chat dibuka.
+     * Mengambil histori chat untuk ditampilkan saat kotak chat dibuka (Berdasarkan Nomor HP).
      */
-    public function getHistory(ServiceOrder $serviceOrder): JsonResponse
+    public function getHistoryByPhone(string $phone): JsonResponse
     {
-        $chats = $serviceOrder->chatLogs()
+        $searchPhone = str_starts_with($phone, '62') ? '0' . substr($phone, 2) : $phone;
+        $searchPhone62 = str_starts_with($phone, '0') ? '62' . substr($phone, 1) : $phone;
+
+        $chats = \App\Models\ChatLog::where(function ($q) use ($searchPhone, $searchPhone62) {
+                $q->where('phone', $searchPhone)->orWhere('phone', $searchPhone62);
+            })
             ->select('id', 'direction', 'message', 'resolved_by', 'created_at')
             ->latest()
             ->take(50)
@@ -26,24 +30,33 @@ class ChatController extends Controller
     }
 
     /**
-     * Mengirim pesan ketikan manual Admin/Kasir ke Pelanggan.
+     * Mengirim pesan ketikan manual Admin/Kasir ke Pelanggan (Berdasarkan Nomor HP).
      */
-    public function sendManual(Request $request, ServiceOrder $serviceOrder): JsonResponse
+    public function sendManualByPhone(Request $request, string $phone): JsonResponse
     {
         $request->validate(['message' => 'required|string|max:2000']);
 
+        // Cari service order terakhir jika ada (untuk logging)
+        $searchPhone = str_starts_with($phone, '62') ? '0' . substr($phone, 2) : $phone;
+        $searchPhone62 = str_starts_with($phone, '0') ? '62' . substr($phone, 1) : $phone;
+        $latestService = \App\Models\ServiceOrder::whereHas('customer', function($q) use ($searchPhone, $searchPhone62) {
+            $q->where('phone', $searchPhone)->orWhere('phone', $searchPhone62);
+        })->latest()->first();
+
         // Kirim via WA Gateway (Node.js) dengan parameter pengirim = Admin
         $isSent = WaGateway::sendMessage(
-            $serviceOrder->customer->phone,
+            $phone,
             $request->message,
-            $serviceOrder->id,
+            $latestService?->id,
             'manual_reply',
             'Admin (Via Web)'
         );
 
         if ($isSent) {
-            // 2. Tandai pesan pelanggan sebelumnya bahwa "sudah dibalas manusia"
-            $serviceOrder->chatLogs()
+            // Tandai pesan pelanggan sebelumnya bahwa "sudah dibalas manusia"
+            \App\Models\ChatLog::where(function ($q) use ($searchPhone, $searchPhone62) {
+                    $q->where('phone', $searchPhone)->orWhere('phone', $searchPhone62);
+                })
                 ->where('direction', 'inbound')
                 ->where('resolved_by', 'human')
                 ->update(['resolved_by' => 'human_replied']);

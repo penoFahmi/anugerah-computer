@@ -38,8 +38,8 @@ Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Modul Chat & Layanan Pesanan (Service Orders)
-    Route::get('/services/{serviceOrder}/chat', [ChatController::class, 'getHistory'])->name('chat.history');
-    Route::post('/services/{serviceOrder}/chat', [ChatController::class, 'sendManual'])->name('chat.send');
+    Route::get('/api/chats/{phone}', [ChatController::class, 'getHistoryByPhone'])->name('chat.history.phone');
+    Route::post('/api/chats/{phone}', [ChatController::class, 'sendManualByPhone'])->name('chat.send.phone');
     Route::post('/services/{serviceOrder}/trigger-wa', [ServiceOrderController::class, 'triggerWhatsappOffer'])->name('services.trigger-wa');
     Route::get('/services/{serviceOrder}/print-ticket', [ServiceOrderController::class, 'printTicketPDF'])->name('services.print-ticket');
     Route::get('/services/{serviceOrder}/print-receipt', [ServiceOrderController::class, 'printTicketPDF'])->name('services.print-receipt');

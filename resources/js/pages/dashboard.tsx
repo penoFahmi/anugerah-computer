@@ -1,19 +1,18 @@
 import { Head, Link } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
-import { 
-    ArrowUpRight, 
-    ArrowDownRight, 
-    Wrench, 
-    AlertTriangle, 
+import {
+    ArrowUpRight,
+    ArrowDownRight,
+    Wrench,
+    AlertTriangle,
     DollarSign,
     Package
 } from 'lucide-react';
-import { dashboard } from '@/routes';
 
 // Shadcn UI Components
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import AppLayout from '@/layouts/app-layout';
 
 interface DashboardProps {
     stats: {
@@ -42,7 +41,7 @@ export default function Dashboard({ stats, low_stock_spareparts }: DashboardProp
         <>
             <Head title="Dashboard" />
             <div className="flex flex-1 flex-col gap-6 p-6">
-                
+
                 {/* Bagian Atas: Kartu Statistik Utama */}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     {/* Kartu Pemasukan */}
@@ -122,7 +121,7 @@ export default function Dashboard({ stats, low_stock_spareparts }: DashboardProp
 
                 {/* Bagian Bawah: Widget Detail */}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mt-2">
-                    
+
                     {/* Daftar Stok Sparepart Menipis */}
                     <Card className="col-span-full lg:col-span-3">
                         <CardHeader>
@@ -153,7 +152,7 @@ export default function Dashboard({ stats, low_stock_spareparts }: DashboardProp
                                             </Badge>
                                         </div>
                                     ))}
-                                    
+
                                     <div className="pt-2">
                                         <Link href="/inventory/procurement">
                                             <Button variant="outline" className="w-full text-xs">
@@ -165,7 +164,7 @@ export default function Dashboard({ stats, low_stock_spareparts }: DashboardProp
                             )}
                         </CardContent>
                     </Card>
-                    
+
                     {/* Tempat untuk Widget masa depan (misal: Transaksi Terakhir atau Grafik) */}
                     <Card className="col-span-full lg:col-span-4 bg-muted/30 border-dashed">
                         <div className="flex flex-col items-center justify-center h-full min-h-[250px] text-muted-foreground">

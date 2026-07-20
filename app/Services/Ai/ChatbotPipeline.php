@@ -1,0 +1,109 @@
+<?php
+
+namespace App\Services\Ai;
+
+use App\Ai\Agents\IntentAnalyzer;
+use App\Models\ChatLog;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+
+class ChatbotPipeline
+{
+    /**
+     * @return array{intent: string, tokens: array{prompt: int, completion: int}, source: string}
+     */
+    public function process(ChatLog $chatLog): array
+    {
+        $originalMessage = $chatLog->message;
+        $nlpIntent = 'umum_teknis';
+        $nlpConfidence = 0.0;
+        $isSvmSuccessful = 0;
+        
+        $tokens = ['prompt' => 0, 'completion' => 0];
+
+        // 1. Panggil NLP Python Lokal (FastText SVM)
+        try {
+            $response = Http::timeout(5)->post('http://127.0.0.1:8001/api/predict-intent', [
+                'text' => $originalMessage,
+            ]);
+
+            if ($response->successful()) {
+                $nlpData = $response->json();
+                $nlpIntent = $nlpData['intent'] ?? 'umum_teknis';
+                $nlpConfidence = $nlpData['confidence'] ?? 0.0;
+                $isSvmSuccessful = 1;
+            }
+        } catch (\Exception $e) {
+            Log::error('Koneksi ke NLP Python gagal: '.$e->getMessage());
+        }
+
+        $chatLog->update([
+            'svm_predicted_intent' => $nlpIntent,
+            'svm_confidence_score' => $nlpConfidence,
+            'is_svm_successful' => $isSvmSuccessful,
+        ]);
+
+        // 2. Evaluasi Threshold
+        if ($nlpConfidence >= 0.75) {
+            return [
+                'intent' => $nlpIntent,
+                'tokens' => $tokens,
+                'source' => 'agent_nlp_fasttext'
+            ];
+        }
+
+        // 3. Fallback ke LLM (Groq)
+        $chatLog->update(['is_llm_triggered' => 1]);
+        try {
+            $intentAgent = new IntentAnalyzer;
+            // Instruksikan LLM Analyzer HANYA untuk mendeteksi intent KRITIS (Setuju/Batal/Harga).
+            // Jika pertanyaan umum, kembalikan 'umum_teknis' agar ditangani oleh LLM Generatif (CustomerService).
+            $analysis = $intentAgent->prompt(
+                "Pesan: {$originalMessage}\n".
+                "Klasifikasikan HANYA jika pesan ini jelas mengandung niat berikut: 'setuju', 'batal', 'tanya_harga_servis', 'nego_harga', 'komplain', 'klaim_garansi', atau 'butuh_admin'. ".
+                "Jika pelanggan marah atau terang-terangan minta bicara dengan manusia/admin, kembalikan 'butuh_admin'. ".
+                "Selain niat-niat tersebut (misal sekadar sapaan, tanya info, atau tanya perbaikan), WAJIB kembalikan 'umum_teknis' agar bisa dijawab natural oleh AI."
+            );
+            
+            $analysisData = [];
+            if (is_string($analysis)) {
+                $jsonStart = strpos($analysis, '{');
+                $jsonEnd = strrpos($analysis, '}');
+                if ($jsonStart !== false && $jsonEnd !== false && $jsonEnd > $jsonStart) {
+                    $cleanJson = substr($analysis, $jsonStart, $jsonEnd - $jsonStart + 1);
+                    $analysisData = json_decode($cleanJson, true) ?? [];
+                }
+            } else {
+                $analysisData = json_decode(json_encode($analysis), true);
+            }
+            if (!is_array($analysisData)) {
+                $analysisData = [];
+            }
+
+            $llmIntent = $analysisData['intent'] ?? 'umum_teknis';
+            $reasoning = $analysisData['reasoning'] ?? 'Dianalisis oleh Fallback LLM';
+
+            // Estimasi Token
+            $tokens['prompt'] = (int) ceil(str_word_count((string) $intentAgent->instructions().' '.$originalMessage) * 1.5);
+            $tokens['completion'] = (int) ceil(str_word_count(json_encode($analysisData)) * 1.5);
+
+            $chatLog->update([
+                'llm_raw_response' => ['reasoning' => $reasoning],
+            ]);
+
+            return [
+                'intent' => $llmIntent,
+                'tokens' => $tokens,
+                'source' => 'agent_intent_analyzer_fallback'
+            ];
+
+        } catch (\Throwable $e) {
+            Log::error('Fallback LLM Error: '.$e->getMessage());
+            return [
+                'intent' => 'needs_manual_override',
+                'tokens' => $tokens,
+                'source' => 'error'
+            ];
+        }
+    }
+}

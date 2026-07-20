@@ -45,7 +45,7 @@ class WhatsappWebhookController extends Controller
 
             $serviceOrder = ServiceOrder::whereHas('customer', function ($query) use ($rawPhone, $searchPhone) {
                 $query->where('phone', $rawPhone)->orWhere('phone', $searchPhone);
-            })->where('status', 'waiting_approval')->latest()->first();
+            })->whereNotIn('status', ['completed', 'cancelled', 'returned'])->latest()->first();
 
             $chatLog = ChatLog::create([
                 'service_order_id' => $serviceOrder?->id, 
@@ -60,6 +60,8 @@ class WhatsappWebhookController extends Controller
             ]);
 
             if (!$isFromMe) {
+                $admins = \App\Models\User::all();
+                \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\NewWhatsappMessage($chatLog));
                 ProcessInboundWaMessage::dispatch($chatLog, $serviceOrder, $rawPhone);
             }
 

@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import Heading from '@/components/heading';
 import { ServiceAlert } from '@/components/services/service-alert';
-import { ServiceChatModal } from '@/components/services/service-chat-modal';
 import { ServiceFilters } from '@/components/services/service-filters';
 import { ServiceFormModal } from '@/components/services/service-form-modal';
 import { ServiceProcessModal } from '@/components/services/service-process-modal';
@@ -20,9 +19,8 @@ export default function ServicesIndex({ serviceOrders, filters }: ServiceIndexPr
     // State Manajemen Modal
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [selectedServiceToProcess, setSelectedServiceToProcess] = useState<ServiceListItem | null>(null);
-    const [selectedServiceToChat, setSelectedServiceToChat] = useState<ServiceListItem | null>(null);
     const [selectedServiceToDelete, setSelectedServiceToDelete] = useState<ServiceListItem | null>(null);
-    const [unreadChatIds, setUnreadChatIds] = useState<number[]>([]);
+    const [unreadPhones, setUnreadPhones] = useState<string[]>([]);
 
     const { auth } = usePage<any>().props;
 
@@ -49,11 +47,10 @@ export default function ServicesIndex({ serviceOrders, filters }: ServiceIndexPr
 
     useEcho('admin.notifications', '.chat.new_message', (e: any) => {
         if (e.chatLog && e.chatLog.direction === 'inbound') {
-            const serviceId = e.chatLog.service_order_id;
-            if (serviceId) {
-                // Tambahkan ID ke daftar unread jika belum ada
-                setUnreadChatIds(prev => 
-                    prev.includes(serviceId) ? prev : [...prev, serviceId]
+            const phone = e.chatLog.phone;
+            if (phone) {
+                setUnreadPhones(prev => 
+                    prev.includes(phone) ? prev : [...prev, phone]
                 );
             }
         }
@@ -67,8 +64,9 @@ export default function ServicesIndex({ serviceOrders, filters }: ServiceIndexPr
     }, [flash]);
 
     const handleOpenChat = (service: ServiceListItem) => {
-        setSelectedServiceToChat(service);
-        setUnreadChatIds(prev => prev.filter(id => id !== service.id));
+        const phone = service.customer_phone;
+        window.dispatchEvent(new CustomEvent('open-global-chat', { detail: { phone } }));
+        setUnreadPhones(prev => prev.filter(p => p !== phone));
     };
 
     return (
@@ -92,10 +90,9 @@ export default function ServicesIndex({ serviceOrders, filters }: ServiceIndexPr
                 {/* Tabel */}
                 <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
                     <ServiceTable
-                    unreadChatIds={unreadChatIds}
+                        unreadChatPhones={unreadPhones}
                         serviceOrders={serviceOrders}
                         onProcessClick={setSelectedServiceToProcess}
-                        // onChatClick={setSelectedServiceToChat}
                         onDeleteClick={setSelectedServiceToDelete}
                         onChatClick={handleOpenChat}
                     />
@@ -112,13 +109,6 @@ export default function ServicesIndex({ serviceOrders, filters }: ServiceIndexPr
                 onClose={() => setSelectedServiceToProcess(null)}
                 service={selectedServiceToProcess}
             />
-            {selectedServiceToChat && (
-                <ServiceChatModal
-                    isOpen={!!selectedServiceToChat}
-                    onClose={() => setSelectedServiceToChat(null)}
-                    service={selectedServiceToChat}
-                />
-            )}
             <ServiceAlert
                 open={!!selectedServiceToDelete}
                 onOpenChange={(val) => !val && setSelectedServiceToDelete(null)}

@@ -35,7 +35,7 @@ interface ServiceTableProps {
     onProcessClick: (service: ServiceListItem) => void;
     onChatClick: (service: ServiceListItem) => void;
     onDeleteClick: (service: ServiceListItem) => void;
-    unreadChatIds: number[];
+    unreadChatPhones: string[];
 }
 
 export function ServiceTable({
@@ -43,7 +43,7 @@ export function ServiceTable({
     onProcessClick,
     onChatClick,
     onDeleteClick,
-    unreadChatIds,
+    unreadChatPhones,
 }: ServiceTableProps) {
     const { auth } = usePage().props as any;
     const isAdmin =
@@ -351,8 +351,8 @@ export function ServiceTable({
                                                         }
                                                     >
                                                         <MessageSquare className="h-4 w-4" />
-                                                        {unreadChatIds.includes(
-                                                            item.id,
+                                                        {unreadChatPhones.includes(
+                                                            item.customer_phone,
                                                         ) && (
                                                             <span className="absolute top-1 right-1 h-2 w-2 animate-pulse rounded-full border border-background bg-red-500" />
                                                         )}

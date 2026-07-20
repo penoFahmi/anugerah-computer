@@ -3,6 +3,7 @@ import AppLayoutTemplate from '@/layouts/app/app-sidebar-layout';
 import type { BreadcrumbItem } from '@/types';
 import { useEcho } from '@laravel/echo-react';
 import { toast } from 'sonner';
+import { GlobalChatModal } from '@/components/services/global-chat-modal';
 
 export default function AppLayout({
     breadcrumbs = [],
@@ -20,10 +21,9 @@ export default function AppLayout({
             duration: Infinity, 
             description: e.chatLog?.message || 'Sistem AI meminta bantuan Admin/Kasir.',
             action: {
-                label: 'Lihat',
+                label: 'Balas',
                 onClick: () => {
-                    // Jika ada logic link ke chat
-                    window.location.href = `/kanban`; 
+                    window.dispatchEvent(new CustomEvent('open-global-chat', { detail: { phone } }));
                 }
             }
         });
@@ -32,6 +32,7 @@ export default function AppLayout({
     return (
         <AppLayoutTemplate breadcrumbs={breadcrumbs}>
             {children}
+            <GlobalChatModal />
         </AppLayoutTemplate>
     );
 }

@@ -34,41 +34,7 @@ export function NotificationPopover() {
     // 1. PANTAU KONEKSI REVERB MENGGUNAKAN HOOK BAWAAN (Bukan window.Echo)
     const wsStatus = useConnectionStatus(); 
 
-    // 2. DENGARKAN NOTIFIKASI GLOBAL (Panggilan Bantuan Manual CS)
-    useEcho('admin.notifications', '.chat.requires_human', (e: any) => {
-        const msg = `⚠️ Pelanggan butuh admin manual! (Nota: ${e.chatLog?.service_order_id || 'N/A'})`;
-        toast.error(msg, { duration: 8000 }); // Gunakan error agar lebih mencolok
-        
-        const tempNotif: DatabaseNotification = {
-            id: Math.random().toString(),
-            data: { type: 'chat_alert', message: msg },
-            created_at: new Date().toISOString(),
-            read_at: null,
-        };
-        setHasUnread(true);
-        setNotifications(prev => [tempNotif, ...prev]);
-    });
-
-    // [TAMBAHAN BARU]: DENGARKAN PESAN MASUK BIASA
-    useEcho('admin.notifications', '.chat.new_message', (e: any) => {
-        // FILTER: Hanya bunyikan bel jika pesannya dari Pelanggan (inbound)
-        if (e.chatLog && e.chatLog.direction === 'inbound') {
-            const msg = `Pesan baru dari ${e.chatLog.sender_name}: "${e.chatLog.message.substring(0, 25)}..."`;
-            toast.info(msg);
-            
-            const tempNotif: DatabaseNotification = {
-                id: Math.random().toString(),
-                data: { type: 'chat_message', message: msg },
-                created_at: new Date().toISOString(),
-                read_at: null,
-            };
-            setHasUnread(true);
-            setNotifications(prev => [tempNotif, ...prev]);
-        }
-    });
-
-    // 3. DENGARKAN NOTIFIKASI DATABASE LARAVEL (Servis Baru/Update)
-    // Hook useEcho memiliki akses ke method khusus .notification() untuk broadcast Laravel
+    // 2. DENGARKAN NOTIFIKASI DATABASE LARAVEL ASLI (Termasuk Chat Masuk & Panggilan Manual)
     const { channel } = useEcho(`App.Models.User.${auth?.user?.id}`);
     
     useEffect(() => {
@@ -77,15 +43,19 @@ export function NotificationPopover() {
         // Mendengarkan broadcast spesifik notifikasi Laravel
         channel().notification((notification: any) => {
             const pesan = notification.message || notification.data?.message || "Ada pemberitahuan sistem baru!";
-            toast.success(pesan);
+            
+            // Tampilkan toast sesuai tipe
+            if (notification.data?.type === 'chat_alert') {
+                toast.error(pesan, { duration: 8000 });
+            } else if (notification.data?.type === 'chat_message') {
+                toast.info(pesan);
+            } else {
+                toast.success(pesan);
+            }
             
             const formattedNotif: DatabaseNotification = {
                 id: notification.id || Math.random().toString(),
-                data: {
-                    type: notification.data?.type || 'system',
-                    message: pesan,
-                    action_url: notification.data?.action_url
-                },
+                data: notification.data || { type: 'system', message: pesan },
                 created_at: notification.created_at || new Date().toISOString(),
                 read_at: null,
             };
@@ -97,13 +67,22 @@ export function NotificationPopover() {
     }, [channel]);
 
     const handleNotificationClick = (n: DatabaseNotification) => {
+        // Tandai dibaca ke database Laravel
         router.post(`/notifications/${n.id}/read`, {}, {
             preserveScroll: true,
             onSuccess: () => {
                 setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, read_at: new Date().toISOString() } : item));
                 const stillHasUnread = notifications.some(item => item.id !== n.id && !item.read_at);
                 setHasUnread(stillHasUnread);
-                if (n.data?.action_url) {
+                
+                // Jika ini notifikasi chat, buka Modal Chat Global
+                if (n.data?.type === 'chat_alert' || n.data?.type === 'chat_message') {
+                    // Ambil nomor HP dari payload chat_log
+                    const phone = (n.data as any).chat_log?.phone;
+                    if (phone) {
+                        window.dispatchEvent(new CustomEvent('open-global-chat', { detail: { phone } }));
+                    }
+                } else if (n.data?.action_url) {
                     router.visit(n.data.action_url);
                 }
             }

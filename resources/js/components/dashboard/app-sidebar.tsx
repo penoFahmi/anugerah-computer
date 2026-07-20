@@ -24,6 +24,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [

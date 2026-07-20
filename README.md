@@ -11,13 +11,13 @@ Aplikasi manajemen servis komputer, Point of Sale (POS), dan layanan pelanggan c
 - **Point of Sale (POS) & Inventaris**
   Manajemen transaksi kasir, stok sparepart, dan perangkat.
 - **Dashboard Analitik & Log Webhook**
-  Memantau performa keuangan toko serta metrik akurasi dari respons AI terhadap pelanggan secara transparan (sangat berguna untuk analisis data skripsi/akademis).
+  Memantau performa keuangan toko serta metrik akurasi dari respons AI terhadap pelanggan secara transparan.
 - **Cetak Tiket & Nota Digital (PDF)**
   Memudahkan pencetakan tanda terima servis untuk pelanggan secara instan.
 
 ## 🛠️ Teknologi yang Digunakan
 
-- **Backend:** Laravel 11, PHP 8.2+
+- **Backend:** Laravel 13, PHP 8.2+
 - **Frontend:** Inertia.js (React), Tailwind CSS v4, shadcn/ui
 - **Database:** MySQL
 - **AI / Pihak Ketiga:** API Groq (LLM), Node.js (WhatsApp Web API Gateway)
@@ -57,6 +57,12 @@ Aplikasi manajemen servis komputer, Point of Sale (POS), dan layanan pelanggan c
    ```
    ```bash
    npm run dev
+   ```
+    ```reverb
+   php artisan reverb:start
+   ```
+    ```queue
+   php artisan queue:work
    ```
 
 ## 🤖 Integrasi AI (NLP & LLM)

@@ -19,41 +19,53 @@ class WaGateway
         return config('services.wa_gateway.token', 'anugerah2026');
     }
 
-    public static function sendReceiptWithPdf(ServiceOrder $order, string $pdfUrl): bool
+    public static function sendDocument(string $phone, string $caption, string $pdfUrl, string $filename, ?int $serviceOrderId = null, string $intent = 'notification'): bool
     {
         $endpoint = self::getBaseUrl() . '/send-document';
-        $message = "Halo Kak *{$order->customer->name}*,\n\nUnit *{$order->device->brand} {$order->device->model}* telah berhasil didaftarkan di toko kami dengan No. Nota: *{$order->order_number}*.\n\nBerikut lampiran tanda terima unit perbaikan dalam format PDF.\n\nTerima kasih banyak atas kepercayaan Anda.";
 
         try {
             $response = Http::withHeaders(['X-Token' => self::getToken()])
-                ->timeout(15) // Tambah timeout karena bawa file besar
+                ->timeout(15) 
                 ->post($endpoint, [
-                    'phone' => $order->customer->phone,
-                    'caption' => $message,
+                    'phone' => $phone,
+                    'caption' => $caption,
                     'document' => $pdfUrl,
-                    'filename' => "Nota-{$order->order_number}.pdf"
+                    'filename' => $filename
                 ]);
 
             if ($response->successful()) {
                 $data = $response->json();
                 ChatLog::create([
-                    'service_order_id' => $order->id,
-                    'phone' => $order->customer->phone,
+                    'service_order_id' => $serviceOrderId,
+                    'phone' => $phone,
                     'wa_message_id' => $data['messageId'] ?? null,
                     'sender_name' => 'System',
                     'message_type' => 'document',
                     'direction' => 'outbound',
-                    'message' => "[Dokumen PDF Nota] " . $message,
+                    'message' => "[Dokumen PDF] " . $caption,
                     'resolved_by' => 'system',
-                    'final_intent' => 'send_receipt'
+                    'final_intent' => $intent
                 ]);
                 return true;
             }
             return false;
         } catch (\Exception $e) {
-            Log::error("Baileys API - Gagal PDF: " . $e->getMessage());
+            Log::error("Baileys API - Gagal Kirim Dokumen: " . $e->getMessage());
             return false;
         }
+    }
+
+    public static function sendReceiptWithPdf(ServiceOrder $order, string $pdfUrl): bool
+    {
+        $message = "Halo Kak *{$order->customer->name}*,\n\nUnit *{$order->device->brand} {$order->device->model}* telah berhasil didaftarkan di toko kami dengan No. Nota: *{$order->order_number}*.\n\nBerikut lampiran tanda terima unit perbaikan dalam format PDF.\n\nTerima kasih banyak atas kepercayaan Anda.";
+        return self::sendDocument(
+            $order->customer->phone, 
+            $message, 
+            $pdfUrl, 
+            "TandaTerima-{$order->order_number}.pdf", 
+            $order->id, 
+            'send_receipt'
+        );
     }
 
     public static function sendOffer(ServiceOrder $order): bool
@@ -128,6 +140,8 @@ class WaGateway
                 $message .= "Status unit Kakak saat ini: *" . $order->status->label() . "*";
                 break;
         }
+
+        $message .= "\n\n-System";
 
         return self::sendMessage($order->customer->phone, $message, $order->id, 'status_update', 'System');
     }

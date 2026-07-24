@@ -15,7 +15,7 @@ class ChatbotPipeline
     public function process(ChatLog $chatLog): array
     {
         $originalMessage = $chatLog->message;
-        $nlpIntent = 'umum_teknis';
+        $nlpIntent = 'lainnya';
         $nlpConfidence = 0.0;
         $isSvmSuccessful = 0;
         
@@ -29,7 +29,7 @@ class ChatbotPipeline
 
             if ($response->successful()) {
                 $nlpData = $response->json();
-                $nlpIntent = $nlpData['intent'] ?? 'umum_teknis';
+                $nlpIntent = $nlpData['intent'] ?? 'lainnya';
                 $nlpConfidence = $nlpData['confidence'] ?? 0.0;
                 $isSvmSuccessful = 1;
             }
@@ -56,17 +56,17 @@ class ChatbotPipeline
         $chatLog->update(['is_llm_triggered' => 1]);
         try {
             $intentAgent = new IntentAnalyzer;
-            // Instruksikan LLM Analyzer HANYA untuk mendeteksi intent KRITIS (Setuju/Batal/Harga).
-            // Jika pertanyaan umum, kembalikan 'umum_teknis' agar ditangani oleh LLM Generatif (CustomerService).
-            // Sinkronisasi dengan 12 Intent dari Python NLP
+            // Instruksikan LLM Analyzer HANYA untuk mendeteksi intent KRITIS (Setuju/Batal).
+            // Jika pertanyaan umum, kembalikan 'lainnya' agar ditangani oleh LLM Generatif (CustomerService).
+            // Sinkronisasi dengan 3 Intent dari Python NLP
             $analysis = $intentAgent->prompt(
                 "Pesan: {$originalMessage}\n".
                 "Klasifikasikan pesan di atas ke dalam SALAH SATU niat (intent) berikut: ".
-                "'setuju', 'batal', 'nego_harga', 'komplain', 'klaim_garansi', 'butuh_admin', ".
-                "'tanya_status', 'info_toko', 'sapaan', 'konsultasi_kerusakan', 'tanya_estimasi_waktu', 'umum_teknis'.\n".
+                "'setuju', 'batal', 'lainnya'.\n".
                 "ATURAN KHUSUS:\n".
-                "- Jika pelanggan marah, mengancam, atau minta bicara dengan admin/manusia, WAJIB pilih 'butuh_admin'.\n".
-                "- Jika tidak yakin, pilih 'umum_teknis'."
+                "- Jika pelanggan mengkonfirmasi untuk lanjut servis, pilih 'setuju'.\n".
+                "- Jika pelanggan membatalkan servis, pilih 'batal'.\n".
+                "- Selain dari itu (tanya harga, marah, sapaan, dll), pilih 'lainnya'."
             );
             
             $analysisData = [];
@@ -84,7 +84,7 @@ class ChatbotPipeline
                 $analysisData = [];
             }
 
-            $llmIntent = $analysisData['intent'] ?? 'umum_teknis';
+            $llmIntent = $analysisData['intent'] ?? 'lainnya';
             $reasoning = $analysisData['reasoning'] ?? 'Dianalisis oleh Fallback LLM';
 
             // Estimasi Token

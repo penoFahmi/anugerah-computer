@@ -19,26 +19,8 @@ export function LogTable({ logs }: LogTableProps) {
                 return <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200">Setuju</Badge>;
             case 'batal':
                 return <Badge variant="outline" className="bg-rose-50 text-rose-600 border-rose-200">Batal</Badge>;
-            case 'tanya_status':
-                return <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">Cek Status</Badge>;
-            case 'nego_harga':
-                return <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200">Nego Harga</Badge>;
-            case 'komplain':
-                return <Badge variant="destructive">Komplain</Badge>;
-            case 'klaim_garansi':
-                return <Badge variant="outline" className="bg-purple-50 text-purple-600 border-purple-200">Klaim Garansi</Badge>;
-            case 'butuh_admin':
-                return <Badge variant="destructive">Eskalasi Admin</Badge>;
-            case 'info_toko':
-                return <Badge variant="outline" className="bg-teal-50 text-teal-600 border-teal-200">Info Toko</Badge>;
-            case 'sapaan':
-                return <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-200">Sapaan</Badge>;
-            case 'konsultasi_kerusakan':
-                return <Badge variant="outline" className="bg-indigo-50 text-indigo-600 border-indigo-200">Konsultasi Kerusakan</Badge>;
-            case 'tanya_estimasi_waktu':
-                return <Badge variant="outline" className="bg-cyan-50 text-cyan-600 border-cyan-200">Estimasi Waktu</Badge>;
-            case 'umum_teknis':
-                return <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-300">Umum / Teknis</Badge>;
+            case 'lainnya':
+                return <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-300">Lainnya</Badge>;
             case 'llm_cs_reply':
                 return <Badge variant="outline" className="bg-sky-50 text-sky-600 border-sky-200">Balasan LLM</Badge>;
             default:

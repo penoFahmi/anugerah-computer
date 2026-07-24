@@ -48,7 +48,34 @@ class ProcessInboundWaMessage implements ShouldQueue
         // ==========================================
         // CEK JEDA AI (MUTE) JIKA ADMIN SEDANG AKTIF
         // ==========================================
-        // Cari pesan outbound terakhir yang dikirim oleh Admin dalam 15 menit terakhir
+        
+        // 1. Cek apakah ada permintaan Handoff yang belum dibalas Admin
+        $latestHandoffRequest = ChatLog::where('phone', $this->rawPhone)
+            ->where('direction', 'inbound')
+            ->where('resolved_by', 'human')
+            ->where('created_at', '>=', now()->subMinutes(30))
+            ->latest()
+            ->first();
+
+        if ($latestHandoffRequest) {
+            $adminRepliedSinceHandoff = ChatLog::where('phone', $this->rawPhone)
+                ->where('direction', 'outbound')
+                ->whereNotIn('sender_name', ['AI Assistant', 'System'])
+                ->where('created_at', '>=', $latestHandoffRequest->created_at)
+                ->exists();
+                
+            if (!$adminRepliedSinceHandoff) {
+                // Mute AI karena menunggu balasan Admin
+                $this->chatLog->update([
+                    'resolved_by' => 'human',
+                    'final_intent' => 'muted_waiting_for_admin',
+                ]);
+                Log::info("AI di-mute untuk nomor {$this->rawPhone} karena sedang menunggu antrean balasan Admin.");
+                return;
+            }
+        }
+
+        // 2. Cari pesan outbound terakhir yang dikirim oleh Admin dalam 15 menit terakhir
         $recentAdminReply = ChatLog::where('phone', $this->rawPhone)
             ->where('direction', 'outbound')
             ->whereNotIn('sender_name', ['AI Assistant', 'System'])

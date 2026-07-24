@@ -75,18 +75,9 @@ export default function LogList({ logs, filters, intentStats = [], sourceStats =
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">Semua Intent</SelectItem>
-                            <SelectItem value="batal">Batal</SelectItem>
-                            <SelectItem value="butuh_admin">Butuh Admin</SelectItem>
-                            <SelectItem value="info_toko">Info Toko</SelectItem>
-                            <SelectItem value="klaim_garansi">Klaim Garansi</SelectItem>
-                            <SelectItem value="komplain">Komplain</SelectItem>
-                            <SelectItem value="konsultasi_kerusakan">Konsultasi</SelectItem>
-                            <SelectItem value="nego_harga">Nego Harga</SelectItem>
-                            <SelectItem value="sapaan">Sapaan</SelectItem>
                             <SelectItem value="setuju">Setuju</SelectItem>
-                            <SelectItem value="tanya_estimasi_waktu">Estimasi Waktu</SelectItem>
-                            <SelectItem value="tanya_status">Cek Status</SelectItem>
-                            <SelectItem value="umum_teknis">Umum Teknis</SelectItem>
+                            <SelectItem value="batal">Batal</SelectItem>
+                            <SelectItem value="lainnya">Lainnya</SelectItem>
                         </SelectContent>
                     </Select>
 

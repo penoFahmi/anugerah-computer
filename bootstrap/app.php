@@ -20,6 +20,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Percayai semua proksi (termasuk HTTPS dari Cloudflare Tunnels)
+        // Pengaturan ini AMAN untuk Local (Laptop) maupun Production (PC Toko)
+        $middleware->trustProxies(at: '*');
+
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->alias([

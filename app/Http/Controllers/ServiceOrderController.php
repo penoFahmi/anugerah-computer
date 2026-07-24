@@ -9,6 +9,7 @@ use App\Events\ServiceOrderBroadcast;
 use App\Events\ServiceOrderCreated;
 use App\Http\Requests\StoreServiceOrderRequest;
 use App\Http\Requests\UpdateServiceOrderRequest;
+use App\Jobs\SendFinalReceiptPdf;
 use App\Models\Customer;
 use App\Models\Device;
 use App\Models\ServiceOrder;
@@ -413,8 +414,8 @@ class ServiceOrderController extends Controller
                     }
                 }
 
-                // Panggil WhatsApp API Gateway
-                WaGateway::sendMessage($serviceOrder->customer->phone, $waMessage, $serviceOrder->id, 'send_warranty');
+                // Panggil WhatsApp API Gateway (melalui Job agar UI tidak lambat)
+                SendFinalReceiptPdf::dispatch($serviceOrder, $waMessage);
             }
         });
 

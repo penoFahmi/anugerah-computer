@@ -43,10 +43,16 @@ class ChatController extends Controller
             $q->where('phone', $searchPhone)->orWhere('phone', $searchPhone62);
         })->latest()->first();
 
+        // Ambil inisial admin yang sedang login untuk Tanda Tangan (Signature)
+        $fullName = auth()->user() ? auth()->user()->name : 'Admin';
+        $words = explode(' ', trim($fullName));
+        $initials = count($words) >= 2 ? strtoupper(substr($words[0], 0, 1) . substr(end($words), 0, 1)) : strtoupper(substr($words[0], 0, 1));
+        $finalMessage = trim($request->message) . "\n\n-{$initials}";
+
         // Kirim via WA Gateway (Node.js) dengan parameter pengirim = Admin
         $isSent = WaGateway::sendMessage(
             $phone,
-            $request->message,
+            $finalMessage,
             $latestService?->id,
             'manual_reply',
             'Admin (Via Web)'

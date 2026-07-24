@@ -14,12 +14,18 @@ class BotAutoReplySeeder extends Seeder
     public function run(): void
     {
         $replies = [
-            ['intent_name' => 'info_toko', 'response_text' => 'Toko Anugerah Computer berlokasi di Jl. Sepakat 2 No 79. Buka Senin-minggu setiap hari jam 09.00 - 21.00.'],
-            ['intent_name' => 'garansi_servis', 'response_text' => 'Garansi servis kami bervariasi tergantung kerusakannya dan sparepart yang diganti, di luar human error. Pastikan nota disimpan ya Kak!'],
-            ['intent_name' => 'tanya_estimasi_waktu', 'response_text' => 'Untuk pengecekan standar membutuhkan waktu 1-3 hari kerja Kak. Kami akan segera infokan jika ada perkembangan.'],
-            ['intent_name' => 'salam_pembuka', 'response_text' => 'Halo Kak! Ada yang bisa kami bantu seputar servis laptop/PC di Anugerah Computer?'],
-            ['intent_name' => 'penutup_terimakasih', 'response_text' => 'Sama-sama Kak! Ditunggu kedatangannya ya.'],
-            ['intent_name' => 'konsultasi_kerusakan', 'response_text' => 'Keluhan tersebut bisa disebabkan oleh beberapa faktor komponen. Agar lebih pasti, silakan bawa unitnya ke toko untuk dicek langsung oleh teknisi kami ya Kak. Gratis biaya pengecekan kok!'],
+            [
+                'intent_name' => 'setuju',
+                'response_text' => 'Baik Kak, konfirmasi persetujuan servis telah kami terima. Kami akan menghubungi Kakak kembali jika unit sudah selesai dikerjakan. Terima kasih!'
+            ],
+            [
+                'intent_name' => 'batal',
+                'response_text' => 'Baik Kak, konfirmasi pembatalan servis telah kami terima. Proses perbaikan kami hentikan. Silakan datang ke toko untuk mengambil unit Kakak. Terima kasih! 🙏'
+            ],
+            [
+                'intent_name' => 'lainnya',
+                'response_text' => 'Halo Kak, mohon maaf saat ini asisten AI kami sedang mengalami gangguan koneksi. Pesan Kakak akan segera dibalas oleh Admin kami. Terima kasih kesabarannya 🙏'
+            ],
         ];
 
         foreach ($replies as $reply) {

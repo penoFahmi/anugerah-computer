@@ -101,5 +101,41 @@ pm2 save
 Karena CMD disembunyikan, gunakan perintah ini di terminal apa saja untuk memantau server:
 - `pm2 list` (Melihat status online/offline setiap peladen)
 - `pm2 logs` (Melihat aktivitas/log error secara *real-time*)
-- `pm2 restart wa-gateway` (Me-restart WhatsApp Gateway saja)
 - `pm2 stop all` (Mematikan seluruh peladen)
+
+---
+
+## TAHAP 4: Konfigurasi Remote Akses (SSH via Tailscale)
+Untuk memudahkan *maintenance* atau pembaruan kode tanpa harus datang ke toko (atau membuka Monitor PC Toko), Anda bisa meremote PC Toko dari laptop menggunakan SSH dan VSCode.
+
+**1. Instalasi Jaringan Gaib (Tailscale)**
+- Unduh dan instal Tailscale di **PC Toko** dan **Laptop Anda**.
+- Login menggunakan akun Google yang **sama persis** di kedua perangkat.
+- Catat **IP Tailscale** PC Toko (contoh: `100.73.108.111`).
+- Cek *Username Windows* PC Toko (Buka CMD di PC Toko, ketik `whoami`).
+
+**2. Instalasi OpenSSH Server di PC Toko (Wajib)**
+Buka **PowerShell** di PC Toko dengan mode **Run as Administrator**, lalu *copy-paste* perintah berikut secara berurutan:
+```powershell
+# 1. Menginstal Pelayan SSH bawaan Windows
+Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+
+# 2. Menyalakan Pelayan SSH dan membuatnya otomatis menyala saat PC hidup
+Start-Service sshd
+Set-Service -Name sshd -StartupType 'Automatic'
+
+# 3. Membuka pintu Firewall untuk Port 22 (SSH)
+New-NetFirewallRule -Name sshd -DisplayName 'OpenSSH Server (sshd)' -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22
+```
+
+**3. Meremote Kodingan Menggunakan VSCode (Di Laptop Anda)**
+- Buka VSCode di **Laptop Anda**.
+- Pergi ke menu *Extensions* dan instal ekstensi bernama **Remote - SSH** (buatan Microsoft).
+- Tekan tombol **F1**, lalu cari dan pilih `Remote-SSH: Connect to Host...`
+- Pilih **+ Add New SSH Host...**
+- Ketik perintah koneksi: `ssh UsernamePCToko@IPTailscalePCToko` (Contoh: `ssh kasir@100.73.108.111`).
+- Pilih Sistem Operasi: **Windows**.
+- Masukkan *password* PC Toko jika diminta.
+- Setelah terhubung, klik menu *Explorer* di VSCode $\rightarrow$ *Open Folder* $\rightarrow$ arahkan ke direktori `C:\laragon\www\anugerah-computer` milik PC Toko.
+
+🎉 *Selesai! Sekarang Anda bisa mengedit file (seperti .env) atau menjalankan Terminal/CMD PC Toko langsung dari VSCode di laptop Anda, kapan pun dan dari mana pun!*

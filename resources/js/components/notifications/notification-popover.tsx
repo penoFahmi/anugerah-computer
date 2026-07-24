@@ -1,5 +1,5 @@
 import { usePage, router } from '@inertiajs/react';
-import { Bell, CheckCheck, Trash2 } from 'lucide-react';
+import { Bell, CheckCheck, Trash2, MessageSquareWarning, Laptop, Hourglass, CheckCircle2, XCircle, PartyPopper } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import dayjs from 'dayjs';
@@ -43,14 +43,32 @@ export function NotificationPopover() {
         // Mendengarkan broadcast spesifik notifikasi Laravel
         channel().notification((notification: any) => {
             const pesan = notification.message || notification.data?.message || "Ada pemberitahuan sistem baru!";
+            const tipe = notification.data?.type;
+            const judul = notification.data?.title || 'Notifikasi';
             
             // Tampilkan toast sesuai tipe
-            if (notification.data?.type === 'chat_alert') {
-                toast.error(pesan, { duration: 8000 });
-            } else if (notification.data?.type === 'chat_message') {
-                toast.info(pesan);
+            if (tipe === 'chat_alert') {
+                const phone = notification.chatLog?.phone || notification.data?.chat_log?.phone || 'Pelanggan';
+                toast.error(judul, { 
+                    duration: 10000,
+                    description: pesan,
+                    action: {
+                        label: 'Balas',
+                        onClick: () => {
+                            window.dispatchEvent(new CustomEvent('open-global-chat', { detail: { phone } }));
+                        }
+                    }
+                });
+            } else if (tipe === 'service_new') {
+                toast.info(judul, { description: pesan });
+            } else if (tipe === 'service_waiting') {
+                toast.warning(judul, { description: pesan, duration: 8000 });
+            } else if (tipe === 'service_completed' || tipe === 'service_approved') {
+                toast.success(judul, { description: pesan });
+            } else if (tipe === 'service_cancelled') {
+                toast.error(judul, { description: pesan });
             } else {
-                toast.success(pesan);
+                toast(judul, { description: pesan });
             }
             
             const formattedNotif: DatabaseNotification = {
@@ -75,8 +93,8 @@ export function NotificationPopover() {
                 const stillHasUnread = notifications.some(item => item.id !== n.id && !item.read_at);
                 setHasUnread(stillHasUnread);
                 
-                // Jika ini notifikasi chat, buka Modal Chat Global
-                if (n.data?.type === 'chat_alert' || n.data?.type === 'chat_message') {
+                // Jika ini peringatan darurat chat, buka Modal Chat Global
+                if (n.data?.type === 'chat_alert') {
                     // Ambil nomor HP dari payload chat_log
                     const phone = (n.data as any).chat_log?.phone;
                     if (phone) {
@@ -147,38 +165,93 @@ export function NotificationPopover() {
                                 <div className="space-y-1">
                                     {notifications.map((n) => {
                                         const isUnread = !n.read_at;
+                                        
+                                        // Tentukan Ikon dan Warna berdasarkan Tipe Notifikasi
+                                        let Icon = Bell;
+                                        let iconColor = 'text-slate-500';
+                                        let iconBg = 'bg-slate-100 dark:bg-slate-800';
+                                        let title = n.data?.title || 'Pemberitahuan Sistem';
+
+                                        switch(n.data?.type) {
+                                            case 'chat_alert':
+                                                Icon = MessageSquareWarning;
+                                                iconColor = 'text-blue-500';
+                                                iconBg = 'bg-blue-100 dark:bg-blue-900/30';
+                                                break;
+                                            case 'service_new':
+                                                Icon = Laptop;
+                                                iconColor = 'text-purple-500';
+                                                iconBg = 'bg-purple-100 dark:bg-purple-900/30';
+                                                break;
+                                            case 'service_waiting':
+                                                Icon = Hourglass;
+                                                iconColor = 'text-amber-500';
+                                                iconBg = 'bg-amber-100 dark:bg-amber-900/30';
+                                                break;
+                                            case 'service_approved':
+                                                Icon = CheckCircle2;
+                                                iconColor = 'text-emerald-500';
+                                                iconBg = 'bg-emerald-100 dark:bg-emerald-900/30';
+                                                break;
+                                            case 'service_cancelled':
+                                                Icon = XCircle;
+                                                iconColor = 'text-red-500';
+                                                iconBg = 'bg-red-100 dark:bg-red-900/30';
+                                                break;
+                                            case 'service_completed':
+                                                Icon = PartyPopper;
+                                                iconColor = 'text-emerald-600';
+                                                iconBg = 'bg-emerald-100 dark:bg-emerald-900/30';
+                                                break;
+                                        }
+
                                         return (
                                             <div 
                                                 key={n.id} 
                                                 onClick={() => handleNotificationClick(n)}
-                                                className={`group relative flex flex-col gap-1 rounded-md p-2.5 text-xs transition-colors cursor-pointer ${
+                                                className={`group relative flex gap-3 rounded-md p-3 transition-colors cursor-pointer border border-transparent ${
                                                     isUnread 
-                                                        ? 'bg-blue-50/60 dark:bg-blue-950/20 hover:bg-blue-100/40 dark:hover:bg-blue-950/40' 
-                                                        : 'hover:bg-muted/60'
+                                                        ? 'bg-blue-50/40 dark:bg-blue-950/20 hover:bg-blue-50/80 hover:border-blue-100 dark:hover:border-blue-900/50' 
+                                                        : 'hover:bg-muted/60 hover:border-border/50'
                                                 }`}
                                             >
-                                                {isUnread && <div className="absolute left-1.5 top-3.5 h-1.5 w-1.5 rounded-full bg-blue-600 dark:bg-blue-500" />}
+                                                {/* Unread Dot */}
+                                                {isUnread && <div className="absolute left-1 top-4 h-1.5 w-1.5 rounded-full bg-blue-600 dark:bg-blue-500 shadow-sm shadow-blue-500/50" />}
                                                 
-                                                <div className={`pl-2.5 pr-6 leading-relaxed ${isUnread ? 'font-bold text-foreground' : 'text-muted-foreground font-medium'}`}>
-                                                    {n.data?.message}
+                                                {/* Icon */}
+                                                <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${iconBg}`}>
+                                                    <Icon className={`h-4 w-4 ${iconColor}`} />
                                                 </div>
                                                 
-                                                <div className="pl-2.5 flex items-center justify-between mt-1">
-                                                    <span className="text-[9px] font-semibold text-slate-400 font-mono">
-                                                        {dayjs(n.created_at).fromNow()}
-                                                    </span>
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="icon" 
-                                                        className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:bg-destructive/10" 
-                                                        onClick={(e) => { 
-                                                            e.stopPropagation(); 
-                                                            deleteNotification(n.id); 
-                                                        }}
-                                                    >
-                                                        <Trash2 className="h-3 w-3" />
-                                                    </Button>
+                                                {/* Content */}
+                                                <div className="flex flex-1 flex-col overflow-hidden">
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <span className={`truncate text-[11px] uppercase tracking-wider ${isUnread ? 'font-bold text-slate-800 dark:text-slate-200' : 'font-semibold text-slate-500 dark:text-slate-400'}`}>
+                                                            {title}
+                                                        </span>
+                                                        <span className="shrink-0 text-[9px] font-medium text-slate-400 font-mono mt-0.5">
+                                                            {dayjs(n.created_at).fromNow()}
+                                                        </span>
+                                                    </div>
+                                                    
+                                                    <div className={`mt-0.5 pr-6 text-xs leading-relaxed ${isUnread ? 'text-slate-700 dark:text-slate-300 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
+                                                        {n.data?.message}
+                                                    </div>
                                                 </div>
+
+                                                {/* Delete Button (Hover Only) */}
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-destructive hover:bg-destructive/10 rounded-full" 
+                                                    onClick={(e) => { 
+                                                        e.stopPropagation(); 
+                                                        deleteNotification(n.id); 
+                                                    }}
+                                                    title="Hapus notifikasi"
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                </Button>
                                             </div>
                                         );
                                     })}

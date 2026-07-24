@@ -28,6 +28,8 @@ class AppServiceProvider extends ServiceProvider
         if (config('app.env') === 'production') {
             URL::forceScheme('https');
         }
+        
+        \App\Models\ServiceOrder::observe(\App\Observers\ServiceOrderObserver::class);
     }
 
     /**

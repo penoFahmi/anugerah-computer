@@ -37,7 +37,8 @@ Route::get('/', [LandingController::class, 'index'])->name('home');
 Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Modul Chat & Layanan Pesanan (Service Orders)
+    // Modul Chat & Whatsapp
+    Route::get('/api/chats/contacts', [ChatController::class, 'getContacts'])->name('chat.contacts');
     Route::get('/api/chats/{phone}', [ChatController::class, 'getHistoryByPhone'])->name('chat.history.phone');
     Route::post('/api/chats/{phone}', [ChatController::class, 'sendManualByPhone'])->name('chat.send.phone');
     Route::post('/services/{serviceOrder}/trigger-wa', [ServiceOrderController::class, 'triggerWhatsappOffer'])->name('services.trigger-wa');

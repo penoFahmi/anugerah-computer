@@ -25,7 +25,8 @@ class RequiresHumanAttention extends Notification implements ShouldBroadcast
     {
         return [
             'type' => 'chat_alert',
-            'message' => "⚠️ Butuh bantuan admin manual untuk membalas WA!",
+            'title' => 'Panggilan Darurat Chat',
+            'message' => 'Sistem AI meminta bantuan Admin untuk membalas WA pelanggan.',
             'action_url' => null,
             'chat_log' => $this->chatLog->toArray()
         ];

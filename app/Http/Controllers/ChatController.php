@@ -72,4 +72,25 @@ class ChatController extends Controller
 
         return response()->json(['error' => 'Gagal mengirim pesan, pastikan WhatsApp terhubung.'], 500);
     }
+
+    /**
+     * Mengambil daftar kontak (pelanggan) yang baru-baru ini melakukan chat.
+     */
+    public function getContacts(): JsonResponse
+    {
+        // Gunakan Raw Query sederhana dan cepat untuk mendapatkan aktivitas terakhir dari setiap nomor
+        $contacts = \App\Models\ChatLog::selectRaw('
+                phone, 
+                MAX(created_at) as last_activity, 
+                (SELECT message FROM chat_logs as cl2 WHERE cl2.phone = chat_logs.phone ORDER BY created_at DESC LIMIT 1) as last_message,
+                (SELECT sender_name FROM chat_logs as cl3 WHERE cl3.phone = chat_logs.phone AND sender_name NOT IN ("System", "AI Assistant", "Admin (Via Web)", "Admin (Via HP)") ORDER BY created_at DESC LIMIT 1) as customer_name,
+                (SELECT COUNT(id) FROM chat_logs as cl4 WHERE cl4.phone = chat_logs.phone AND direction = "inbound" AND resolved_by IN ("pending", "human")) as unread_count
+            ')
+            ->groupBy('phone')
+            ->orderByDesc('last_activity')
+            ->take(30) // Ambil 30 kontak terakhir
+            ->get();
+
+        return response()->json($contacts);
+    }
 }

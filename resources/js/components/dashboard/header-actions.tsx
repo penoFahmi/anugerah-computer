@@ -36,7 +36,7 @@ export function HeaderActions() {
                 <Moon className="absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
             </Button>
 
-            {/* KOMPONEN NOTIFIKASI YANG SUDAH DIPISAH */}
+            {/* KOMPONEN NOTIFIKASI SISTEM (LONCENG) */}
             <NotificationPopover />
 
             {/* DROPDOWN USER */}

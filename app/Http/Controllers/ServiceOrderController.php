@@ -17,7 +17,6 @@ use App\Models\SparePart;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Warranty;
-use App\Notifications\NewServiceOrderNotification;
 use App\Services\WaGateway;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
@@ -179,16 +178,6 @@ class ServiceOrderController extends Controller
 
             // Trigger Event untuk generate PDF dan Kirim WA secara antrean (Queued)
             ServiceOrderCreated::dispatch($serviceOrder);
-
-            // Kirim notifikasi In-App ke Teknisi & Administrator
-            $usersToNotify = User::role(['teknisi', 'administrator'])
-                ->where('id', '!=', auth()->id())
-                ->get();
-
-            Notification::send(
-                $usersToNotify,
-                new NewServiceOrderNotification($serviceOrder, auth()->user()->name)
-            );
 
             event(new ServiceOrderBroadcast($serviceOrder, 'created'));
 

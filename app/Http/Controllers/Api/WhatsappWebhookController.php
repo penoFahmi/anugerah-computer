@@ -60,8 +60,9 @@ class WhatsappWebhookController extends Controller
             ]);
 
             if (!$isFromMe) {
-                $admins = \App\Models\User::all();
-                \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\NewWhatsappMessage($chatLog));
+                // Jangan gunakan Notifikasi Database untuk chat biasa agar tidak sesak!
+                // Gunakan Broadcast Event agar hanya Real-time UI yang bereaksi.
+                broadcast(new \App\Events\NewChatMessage($chatLog));
                 ProcessInboundWaMessage::dispatch($chatLog, $serviceOrder, $rawPhone);
             }
 

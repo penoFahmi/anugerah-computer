@@ -8,9 +8,17 @@ import {
     FolderPen,
     MapPin,
     Home,
+    MoreHorizontal,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Pagination from '@/components/pagination';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -168,24 +176,24 @@ export function ServiceTable({
         <TooltipProvider>
             <Table>
                 <TableHeader>
-                    <TableRow className="bg-muted/50">
+                    <TableRow className="hover:bg-transparent">
                         <TableHead className="w-[60px] text-center font-bold">
                             No
                         </TableHead>
                         <TableHead className="font-bold whitespace-nowrap">
-                            Nota & Waktu
+                            Nota
                         </TableHead>
                         <TableHead className="font-bold whitespace-nowrap">
                             Pelanggan
                         </TableHead>
                         <TableHead className="min-w-[200px] font-bold">
-                            Perangkat & Keluhan
+                            Perangkat
                         </TableHead>
                         <TableHead className="font-bold whitespace-nowrap">
-                            Biaya & Tagihan
+                            Tagihan
                         </TableHead>
                         <TableHead className="text-center font-bold whitespace-nowrap">
-                            Status & Lokasi
+                            Status
                         </TableHead>
                         <TableHead className="pr-4 text-right font-bold whitespace-nowrap">
                             Aksi
@@ -265,7 +273,7 @@ export function ServiceTable({
                                         </Tooltip>
                                     </TableCell>
                                     <TableCell className="py-3 align-top min-w-[200px]">
-                                        <div className={`flex w-full flex-col gap-1 rounded-md border p-2 text-[11px] ${item.financials?.is_paid ? 'border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20' : 'border-border/50 bg-muted/20'}`}>
+                                        <div className="flex flex-col gap-1.5 text-[11px] px-1">
                                             <div className="flex items-center justify-between gap-4">
                                                 <span className="text-muted-foreground">
                                                     Estimasi:
@@ -282,9 +290,9 @@ export function ServiceTable({
                                                 0 && (
                                                 <div className="flex items-center justify-between gap-4">
                                                     <span className="text-muted-foreground">
-                                                        Final Cost:
+                                                        Biaya Akhir:
                                                     </span>
-                                                    <span className="font-mono font-semibold text-blue-600 dark:text-blue-400">
+                                                    <span className="font-mono font-semibold text-foreground">
                                                         {formatCurrency(
                                                             item.financials
                                                                 ?.final,
@@ -368,100 +376,54 @@ export function ServiceTable({
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        className="h-8 w-8 text-slate-500"
-                                                        onClick={() =>
-                                                            handlePrint(item)
-                                                        }
-                                                    >
-                                                        <Printer className="h-4 w-4" />
-                                                    </Button>
-                                                </TooltipTrigger>
-                                                <TooltipContent className="text-xs">
-                                                    Cetak Dokumen
-                                                </TooltipContent>
-                                            </Tooltip>
-
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-blue-600"
-                                                        onClick={() =>
-                                                            onProcessClick(item)
-                                                        }
+                                                        className="h-8 w-8 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50"
+                                                        onClick={() => onProcessClick(item)}
                                                     >
                                                         <Pencil className="h-4 w-4" />
                                                     </Button>
                                                 </TooltipTrigger>
-                                                <TooltipContent className="text-xs">
-                                                    Proses Operasional
-                                                </TooltipContent>
+                                                <TooltipContent className="text-xs">Proses Operasional</TooltipContent>
                                             </Tooltip>
 
-                                            {(isAdmin || isPegawai) && (
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <Button
-                                                            asChild
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8 text-slate-700"
-                                                        >
-                                                            <Link
-                                                                href={`/services/${item.id}`}
-                                                            >
-                                                                <FolderPen className="h-4 w-4" />
-                                                            </Link>
-                                                        </Button>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent className="text-xs">
-                                                        Lihat & Edit Lengkap
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            )}
-
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-emerald-600"
-                                                        onClick={() =>
-                                                            handlePrintWaManual(
-                                                                item,
-                                                            )
-                                                        }
-                                                    >
-                                                        <Send className="h-4 w-4" />
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500">
+                                                        <MoreHorizontal className="h-4 w-4" />
                                                     </Button>
-                                                </TooltipTrigger>
-                                                <TooltipContent className="text-xs">
-                                                    Kirim Update WhatsApp
-                                                </TooltipContent>
-                                            </Tooltip>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-48">
+                                                    <DropdownMenuItem onClick={() => handlePrint(item)}>
+                                                        <Printer className="mr-2 h-4 w-4 text-slate-500" />
+                                                        Cetak Dokumen
+                                                    </DropdownMenuItem>
+                                                    
+                                                    {(isAdmin || isPegawai) && (
+                                                        <DropdownMenuItem asChild>
+                                                            <Link href={`/services/${item.id}`} className="flex cursor-pointer items-center w-full">
+                                                                <FolderPen className="mr-2 h-4 w-4 text-slate-500" />
+                                                                Lihat/Edit Lengkap
+                                                            </Link>
+                                                        </DropdownMenuItem>
+                                                    )}
 
-                                            {isAdmin && (
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8 text-destructive"
-                                                            onClick={() =>
-                                                                onDeleteClick(
-                                                                    item,
-                                                                )
-                                                            }
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent className="text-xs">
-                                                        Buang ke Sampah
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            )}
+                                                    <DropdownMenuSeparator />
+                                                    
+                                                    <DropdownMenuItem onClick={() => handlePrintWaManual(item)}>
+                                                        <Send className="mr-2 h-4 w-4 text-emerald-600" />
+                                                        Kirim Update WA
+                                                    </DropdownMenuItem>
+
+                                                    {isAdmin && (
+                                                        <>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem onClick={() => onDeleteClick(item)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                Buang ke Sampah
+                                                            </DropdownMenuItem>
+                                                        </>
+                                                    )}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </div>
                                     </TableCell>
                                 </TableRow>

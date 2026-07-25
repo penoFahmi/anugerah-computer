@@ -11,12 +11,12 @@ class WaGateway
 {
     private static function getBaseUrl(): string
     {
-        return 'http://127.0.0.1:3001';
+        return config('services.wa_gateway.url');
     }
 
     private static function getToken(): string
     {
-        return config('services.wa_gateway.token', 'anugerah2026');
+        return config('services.wa_gateway.token');
     }
 
     public static function sendDocument(string $phone, string $caption, string $pdfUrl, string $filename, ?int $serviceOrderId = null, string $intent = 'notification'): bool

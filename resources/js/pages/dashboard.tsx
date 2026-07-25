@@ -5,14 +5,21 @@ import {
     Wrench,
     AlertTriangle,
     DollarSign,
-    Package
+    Package,
+    PlusCircle,
+    ShoppingCart,
+    Wallet,
+    Clock
 } from 'lucide-react';
 
-// Shadcn UI Components
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import AppLayout from '@/layouts/app-layout';
+
+import { QuickActions } from '@/components/dashboard/quick-actions';
+import { LowStockWidget } from '@/components/dashboard/low-stock-widget';
+import { RecentServicesWidget } from '@/components/dashboard/recent-services-widget';
+import { ServiceStatusChart } from '@/components/dashboard/service-status-chart';
+import { FinanceTrendChart } from '@/components/dashboard/finance-trend-chart';
 
 interface DashboardProps {
     stats: {
@@ -26,9 +33,29 @@ interface DashboardProps {
         sku: string;
         stock: number;
     }>;
+    recent_services?: Array<{
+        id: number;
+        order_number: string;
+        customer_id: number;
+        device_id: number;
+        status: string;
+        created_at: string;
+        customer?: {
+            id: number;
+            name: string;
+        };
+        device?: {
+            id: number;
+            name: string;
+        };
+    }>;
+    chart_data?: {
+        services: Array<{ status: string; count: number }>;
+        finance: Array<{ date: string; income: number; expense: number }>;
+    };
 }
 
-export default function Dashboard({ stats, low_stock_spareparts }: DashboardProps) {
+export default function Dashboard({ stats, low_stock_spareparts, recent_services = [], chart_data }: DashboardProps) {
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('id-ID', {
             style: 'currency',
@@ -119,60 +146,24 @@ export default function Dashboard({ stats, low_stock_spareparts }: DashboardProp
                     </Card>
                 </div>
 
-                {/* Bagian Bawah: Widget Detail */}
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mt-2">
+                {/* Baris 2: Quick Actions (Tombol Aksi Cepat) */}
+                <QuickActions />
 
-                    {/* Daftar Stok Sparepart Menipis */}
-                    <Card className="col-span-full lg:col-span-3">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <AlertTriangle className="h-5 w-5 text-amber-500" />
-                                Stok Sparepart Menipis
-                            </CardTitle>
-                            <CardDescription>
-                                Barang dengan stok fisik 5 atau kurang. Segera lakukan pengadaan.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            {!low_stock_spareparts || low_stock_spareparts.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-8 text-center text-slate-500">
-                                    <Package className="h-10 w-10 mb-2 opacity-20" />
-                                    <p className="text-sm font-medium">Stok sparepart masih aman.</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    {low_stock_spareparts.map((item) => (
-                                        <div key={item.id} className="flex items-center justify-between border-b border-border pb-3 last:border-0 last:pb-0">
-                                            <div className="flex flex-col">
-                                                <span className="font-semibold text-sm text-foreground">{item.name}</span>
-                                                <span className="text-xs text-muted-foreground font-mono">{item.sku || 'No SKU'}</span>
-                                            </div>
-                                            <Badge variant={item.stock === 0 ? "destructive" : "secondary"} className="font-mono px-2 py-0.5">
-                                                {item.stock} Sisa
-                                            </Badge>
-                                        </div>
-                                    ))}
+                {/* Baris 3: Kolom Konten Utama (Kiri & Kanan) */}
+                <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-7">
+                    
+                    {/* Kolom Kiri (Lebar: 4) */}
+                    <div className="flex flex-col gap-4 lg:col-span-4">
+                        <FinanceTrendChart data={chart_data?.finance || []} />
+                        <RecentServicesWidget services={recent_services} />
+                    </div>
 
-                                    <div className="pt-2">
-                                        <Link href="/inventory/procurement">
-                                            <Button variant="outline" className="w-full text-xs">
-                                                Lakukan Pengadaan Stok
-                                            </Button>
-                                        </Link>
-                                    </div>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    {/* Tempat untuk Widget masa depan (misal: Transaksi Terakhir atau Grafik) */}
-                    <Card className="col-span-full lg:col-span-4 bg-muted/30 border-dashed">
-                        <div className="flex flex-col items-center justify-center h-full min-h-[250px] text-muted-foreground">
-                            <p className="font-medium text-sm">Ruang Widget Tambahan</p>
-                            <p className="text-xs mt-1">Dapat diisi grafik laporan bulanan nantinya.</p>
-                        </div>
-                    </Card>
-
+                    {/* Kolom Kanan (Lebar: 3) */}
+                    <div className="flex flex-col gap-4 lg:col-span-3">
+                        <ServiceStatusChart data={chart_data?.services || []} />
+                        <LowStockWidget items={low_stock_spareparts} />
+                    </div>
+                    
                 </div>
             </div>
         </>

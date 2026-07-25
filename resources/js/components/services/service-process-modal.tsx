@@ -510,19 +510,27 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
             <Dialog open={isOpen} onOpenChange={onClose}>
                 <DialogContent className="max-h-[90vh] flex flex-col sm:max-w-[500px] p-0 rounded-xl shadow-2xl border-border overflow-hidden bg-card">
                     
-                    <div className="p-5 border-b border-border bg-muted/20 shrink-0">
-                        <DialogHeader>
-                            <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
-                                <Wrench className="h-5 w-5 text-blue-600 dark:text-blue-500" /> Pusat Kendali Operasional
-                            </DialogTitle>
-                            <DialogDescription className="text-xs mt-1.5">
-                                Unit: <span className="font-semibold text-foreground">{service.device_name}</span> &nbsp;|&nbsp; Nota: <span className="font-bold text-blue-600 dark:text-blue-400 font-mono">{service.order_number}</span>
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="mt-3">
-                            <Badge variant="outline" className="uppercase bg-background shadow-sm text-[10px] px-2.5 py-0.5 tracking-wider border-border text-foreground">
-                                {service.status_label}
-                            </Badge>
+                    <div className="shrink-0 flex items-center justify-between border-b border-border bg-muted/20 p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="rounded-lg bg-primary/10 p-2">
+                                <Wrench className="h-5 w-5 text-primary" />
+                            </div>
+                            <DialogHeader className="text-left space-y-0 text-left sm:text-left">
+                                <div className="flex items-center gap-2">
+                                    <DialogTitle className="text-sm font-bold text-foreground">
+                                        {service.order_number}
+                                    </DialogTitle>
+                                    <Badge
+                                        variant="secondary"
+                                        className="text-[9px] px-1.5 h-4 bg-primary/10 text-primary uppercase shadow-none border-none tracking-wider"
+                                    >
+                                        {service.status_label}
+                                    </Badge>
+                                </div>
+                                <DialogDescription className="text-[11px] mt-0.5">
+                                    Unit: {service.device_name}
+                                </DialogDescription>
+                            </DialogHeader>
                         </div>
                     </div>
 
@@ -532,7 +540,7 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                         </form>
                     </div>
 
-                    <div className="p-4 border-t border-border bg-card shrink-0 flex items-center shadow-[0_-4px_10px_-5px_rgba(0,0,0,0.05)]">
+                    <div className="flex shrink-0 items-center border-t border-border bg-muted/20 p-4">
                         {renderFormActions()}
                     </div>
                 </DialogContent>

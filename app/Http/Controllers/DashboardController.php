@@ -48,6 +48,32 @@ class DashboardController extends Controller
             ->limit(5)
             ->get(['id', 'name', 'stock', 'sku']);
 
+        // 5. Servis Terbaru (5 terakhir)
+        $recentServices = ServiceOrder::with(['customer:id,name', 'device:id,brand,model'])
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get(['id', 'order_number', 'customer_id', 'device_id', 'status', 'created_at']);
+
+        // 6. Data Grafik Status Servis
+        $serviceChartData = \Illuminate\Support\Facades\DB::table('service_orders')
+            ->select('status', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
+            ->whereNull('deleted_at')
+            ->groupBy('status')
+            ->get();
+
+        // 7. Data Grafik Tren Keuangan (7 Hari Terakhir)
+        $sevenDaysAgo = Carbon::today()->subDays(6);
+        $financeChartData = \Illuminate\Support\Facades\DB::table('transactions')
+            ->select(
+                \Illuminate\Support\Facades\DB::raw('DATE(transaction_date) as date'),
+                \Illuminate\Support\Facades\DB::raw("SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income"),
+                \Illuminate\Support\Facades\DB::raw("SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense")
+            )
+            ->whereDate('transaction_date', '>=', $sevenDaysAgo)
+            ->groupBy('date')
+            ->orderBy('date', 'asc')
+            ->get();
+
         return Inertia::render('dashboard', [
             'stats' => [
                 'income' => [
@@ -61,6 +87,11 @@ class DashboardController extends Controller
                 'active_services' => $activeServicesCount,
             ],
             'low_stock_spareparts' => $lowStockSpareparts,
+            'recent_services' => $recentServices,
+            'chart_data' => [
+                'services' => $serviceChartData,
+                'finance' => $financeChartData,
+            ],
         ]);
     }
 }

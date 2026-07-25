@@ -9,8 +9,6 @@ use Inertia\Response;
 
 class ConfigWaController extends Controller
 {
-    private $gatewayUrl = 'http://127.0.0.1:3001';
-
     /**
      * Tampilkan halaman status dan konfigurasi WhatsApp Gateway.
      */
@@ -23,7 +21,8 @@ class ConfigWaController extends Controller
         ];
 
         try {
-            $response = Http::timeout(2)->get("{$this->gatewayUrl}/status");
+            $gatewayUrl = config('services.wa_gateway.url');
+            $response = Http::timeout(2)->get("{$gatewayUrl}/status");
             if ($response->successful()) {
                 $data = $response->json();
                 $waStatus = [
@@ -50,10 +49,11 @@ class ConfigWaController extends Controller
             // Ambil token dari config/services.php
             // Catatan: Ubah 'services.wa_gateway.token' sesuai dengan key yang kamu buat di services.php
             $token = config('services.wa_gateway.token');
+            $gatewayUrl = config('services.wa_gateway.url');
 
             Http::withHeaders([
                 'X-Token' => $token,
-            ])->timeout(3)->post("{$this->gatewayUrl}/logout");
+            ])->timeout(3)->post("{$gatewayUrl}/logout");
         } catch (\Exception $e) {
             // Error handling opsional
         }

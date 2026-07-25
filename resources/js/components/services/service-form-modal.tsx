@@ -1,5 +1,5 @@
 import { useForm } from '@inertiajs/react';
-import { AlertCircle, Loader2, Search } from 'lucide-react';
+import { AlertCircle, Loader2, Search, Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -168,13 +168,16 @@ export function ServiceFormModal({ isOpen, onClose }: Props) {
             <DialogContent className="flex max-h-[95vh] flex-col overflow-hidden rounded-xl border-border p-0 shadow-xl sm:max-w-[850px]">
                 <form onSubmit={handleSubmit} className="flex h-full flex-col overflow-hidden">
                     {/* Header Formal */}
-                    <div className="shrink-0 border-b border-border bg-slate-50 dark:bg-slate-900/50 p-6">
-                        <DialogHeader>
-                            <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
+                    <div className="shrink-0 flex items-center gap-3 border-b border-border bg-muted/20 p-4">
+                        <div className="rounded-lg bg-primary/10 p-2">
+                            <Plus className="h-5 w-5 text-primary" />
+                        </div>
+                        <DialogHeader className="text-left space-y-0 text-left sm:text-left">
+                            <DialogTitle className="text-sm font-bold text-foreground">
                                 Registrasi Penerimaan Servis
                             </DialogTitle>
-                            <DialogDescription className="text-sm mt-1">
-                                Sistem akan mendeteksi otomatis data pelanggan yang sudah terdaftar.
+                            <DialogDescription className="text-[11px] mt-0.5">
+                                Sistem akan mendeteksi otomatis data pelanggan terdaftar.
                             </DialogDescription>
                         </DialogHeader>
                     </div>
@@ -390,11 +393,11 @@ export function ServiceFormModal({ isOpen, onClose }: Props) {
                     </div>
 
                     {/* Footer Dialog */}
-                    <div className="flex shrink-0 justify-end gap-3 border-t border-border bg-slate-50 dark:bg-slate-900/50 p-5">
-                        <Button type="button" variant="outline" onClick={onClose} disabled={processing} className="min-w-[100px] border-slate-300">
+                    <div className="flex shrink-0 justify-end gap-3 border-t border-border bg-muted/20 p-4">
+                        <Button type="button" variant="outline" onClick={onClose} disabled={processing} className="min-w-[100px] h-9 text-xs border-slate-300">
                             Batal
                         </Button>
-                        <Button type="submit" disabled={processing} className="min-w-[160px] font-semibold tracking-wide">
+                        <Button type="submit" disabled={processing} className="min-w-[160px] h-9 text-xs font-semibold tracking-wide shadow-sm">
                             {processing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memproses...</> : 'Simpan Transaksi'}
                         </Button>
                     </div>

@@ -32,7 +32,7 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
 
     return (
         <SidebarGroup className="px-2 py-0">
-            <SidebarGroupLabel>Platform</SidebarGroupLabel>
+            <SidebarGroupLabel>Modul Utama</SidebarGroupLabel>
             <SidebarMenu>
                 {items.map((item) => {
                     const hasChildren = item.items && item.items.length > 0;

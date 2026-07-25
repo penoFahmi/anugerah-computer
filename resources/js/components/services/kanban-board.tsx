@@ -2,7 +2,7 @@ import { DragDropContext, Droppable } from '@hello-pangea/dnd';
 import type { DropResult } from '@hello-pangea/dnd';
 import { router } from '@inertiajs/react';
 import { Clock, Wrench, CheckCircle, AlertCircle, Play, XCircle } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { toast } from 'sonner';
 
 import { KanbanCard } from '@/components/services/kanban-card';
@@ -15,43 +15,43 @@ const COLUMNS = [
         id: 'waiting_checking', 
         title: 'Antrean Baru', 
         icon: AlertCircle, 
-        color: 'border-pink-300 bg-pink-50 dark:border-pink-900/50 dark:bg-pink-950/20', 
-        headerBg: 'bg-pink-100 text-pink-800 dark:bg-pink-900/40 dark:text-pink-300' 
+        color: 'text-pink-500',
+        badgeColor: 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300'
     },
     { 
         id: 'waiting_approval', 
         title: 'Menunggu Konfirmasi', 
         icon: Clock, 
-        color: 'border-orange-300 bg-orange-50 dark:border-orange-900/50 dark:bg-orange-950/20', 
-        headerBg: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300' 
+        color: 'text-orange-500',
+        badgeColor: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300'
     },
     { 
         id: 'approved', 
         title: 'Disetujui', 
         icon: Play, 
-        color: 'border-teal-300 bg-teal-50 dark:border-teal-900/50 dark:bg-teal-950/20', 
-        headerBg: 'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300' 
+        color: 'text-teal-500',
+        badgeColor: 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300'
     },
     { 
         id: 'in_progress', 
         title: 'Dikerjakan', 
         icon: Wrench, 
-        color: 'border-blue-300 bg-blue-50 dark:border-blue-900/50 dark:bg-blue-950/20', 
-        headerBg: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300' 
+        color: 'text-blue-500',
+        badgeColor: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
     },
     { 
         id: 'completed', 
         title: 'Selesai (Siap Diambil)', 
         icon: CheckCircle, 
-        color: 'border-emerald-300 bg-emerald-50 dark:border-emerald-900/50 dark:bg-emerald-950/20', 
-        headerBg: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' 
+        color: 'text-emerald-500',
+        badgeColor: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
     },
     {
         id: 'cancelled',
-        title: 'Batal (Menunggu Diambil)',
+        title: 'Batal',
         icon: XCircle,
-        color: 'border-red-300 bg-red-50 dark:border-red-900/50 dark:bg-red-950/20',
-        headerBg: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
+        color: 'text-red-500',
+        badgeColor: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
     },
 ];
 
@@ -98,8 +98,58 @@ export function KanbanBoard({ services, available_spare_parts }: KanbanBoardProp
         });
     };
 
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const isDown = useRef(false);
+    const startX = useRef(0);
+    const scrollLeft = useRef(0);
+
+    const onMouseDown = (e: React.MouseEvent) => {
+        // Jangan aktifkan pan jika sedang mengklik elemen interaktif (tombol, link, kartu)
+        const target = e.target as HTMLElement;
+        if (target.closest('.group') || target.closest('button')) return;
+
+        isDown.current = true;
+        if (scrollRef.current) {
+            scrollRef.current.classList.add('cursor-grabbing');
+            scrollRef.current.classList.remove('cursor-grab');
+            startX.current = e.pageX - scrollRef.current.offsetLeft;
+            scrollLeft.current = scrollRef.current.scrollLeft;
+        }
+    };
+
+    const onMouseLeave = () => {
+        isDown.current = false;
+        if (scrollRef.current) {
+            scrollRef.current.classList.remove('cursor-grabbing');
+            scrollRef.current.classList.add('cursor-grab');
+        }
+    };
+
+    const onMouseUp = () => {
+        isDown.current = false;
+        if (scrollRef.current) {
+            scrollRef.current.classList.remove('cursor-grabbing');
+            scrollRef.current.classList.add('cursor-grab');
+        }
+    };
+
+    const onMouseMove = (e: React.MouseEvent) => {
+        if (!isDown.current || !scrollRef.current) return;
+        e.preventDefault();
+        const x = e.pageX - scrollRef.current.offsetLeft;
+        const walk = (x - startX.current) * 1.5; // Kecepatan geser
+        scrollRef.current.scrollLeft = scrollLeft.current - walk;
+    };
+
     return (
-        <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4 custom-scrollbar">
+        <div 
+            ref={scrollRef}
+            onMouseDown={onMouseDown}
+            onMouseLeave={onMouseLeave}
+            onMouseUp={onMouseUp}
+            onMouseMove={onMouseMove}
+            className="flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar select-none cursor-grab"
+        >
             <DragDropContext onDragEnd={onDragEnd}>
                 <div className="flex h-full gap-4 items-start w-max min-w-full">
                     {COLUMNS.map(column => {
@@ -107,16 +157,14 @@ export function KanbanBoard({ services, available_spare_parts }: KanbanBoardProp
                         const Icon = column.icon;
 
                         return (
-                            <div key={column.id} className={`flex flex-col h-full w-[320px] rounded-xl border ${column.color} shadow-sm shrink-0`}>
+                            <div key={column.id} className="flex flex-col h-full w-[320px] rounded-xl border border-border bg-muted/10 shrink-0">
                                 
-                                {/* PERBAIKAN: Menggunakan border-border agar menyesuaikan tema terang/gelap */}
-                                <div className={`flex items-center justify-between p-3 border-b border-border/50 rounded-t-xl ${column.headerBg}`}>
-                                    <div className="flex items-center gap-2 font-bold text-sm">
-                                        <Icon className="h-4 w-4" />
+                                <div className="flex items-center justify-between p-3 border-b border-border/50">
+                                    <div className="flex items-center gap-2 font-bold text-sm text-foreground">
+                                        <Icon className={`h-4 w-4 ${column.color}`} />
                                         {column.title}
                                     </div>
-                                    {/* PERBAIKAN: Badge jumlah kartu menggunakan bg-background dan text-foreground */}
-                                    <Badge variant="secondary" className="bg-background/60 text-foreground shadow-none border-0 dark:bg-background/40">
+                                    <Badge variant="secondary" className={`shadow-none border-0 ${column.badgeColor}`}>
                                         {columnServices.length}
                                     </Badge>
                                 </div>
@@ -126,9 +174,8 @@ export function KanbanBoard({ services, available_spare_parts }: KanbanBoardProp
                                         <div 
                                             ref={provided.innerRef} 
                                             {...provided.droppableProps}
-                                            /* PERBAIKAN: dark:bg-white/5 saat kartu digeser di atasnya */
                                             className={`flex-1 overflow-y-auto p-3 space-y-3 transition-colors ${
-                                                snapshot.isDraggingOver ? 'bg-black/5 dark:bg-white/5' : ''
+                                                snapshot.isDraggingOver ? 'bg-muted/30' : ''
                                             }`}
                                         >
                                             {columnServices.map((service, index) => (

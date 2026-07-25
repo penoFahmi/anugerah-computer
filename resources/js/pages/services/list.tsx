@@ -3,7 +3,6 @@ import { useEcho } from '@laravel/echo-react';
 import { Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import Heading from '@/components/heading';
 import { ServiceAlert } from '@/components/services/service-alert';
 import { ServiceFilters } from '@/components/services/service-filters';
 import { ServiceFormModal } from '@/components/services/service-form-modal';
@@ -75,10 +74,10 @@ export default function ServicesIndex({ serviceOrders, filters }: ServiceIndexPr
 
             <div className="flex flex-col space-y-6 p-4">
                 <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                    <Heading
-                        title="Pusat Servis"
-                        description="Manajemen pekerjaan teknisi dan Live Chat WA pelanggan"
-                    />
+                    <div>
+                        <h2 className="text-lg font-bold text-foreground">Pusat Servis</h2>
+                        <p className="text-sm text-muted-foreground mt-0.5">Manajemen pekerjaan teknisi dan Live Chat WA pelanggan</p>
+                    </div>
                     <Button size="sm" onClick={() => setIsCreateModalOpen(true)}>
                         <Plus className="mr-2 h-4 w-4" /> Terima Servisan
                     </Button>

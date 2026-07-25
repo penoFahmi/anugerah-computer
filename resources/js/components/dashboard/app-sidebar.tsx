@@ -35,14 +35,14 @@ const mainNavItems: NavItem[] = [
         roles: ['administrator', 'teknisi', 'pegawai'],
     },
     {
-        title: 'Antrean Servis',
+        title: 'Operasional Servis',
         href: '/services',
         icon: Wrench,
         roles: ['administrator', 'teknisi', 'pegawai'],
         items: [
-            { title: 'Pusat Servis ', href: '/services' },
-            { title: 'Papan Teknisi', href: '/kanban' },
-            { title: 'Garansi', href: '/garansi' },
+            { title: 'Daftar Antrean', href: '/services' },
+            { title: 'Kanban Board', href: '/kanban' },
+            { title: 'Klaim Garansi', href: '/garansi' },
         ],
     },
     {
@@ -57,18 +57,18 @@ const mainNavItems: NavItem[] = [
         ],
     },
     {
-        title: 'Inventaris & Gudang',
+        title: 'Manajemen Inventaris',
         href: '#',
         icon: Package,
         roles: ['administrator', 'teknisi', 'pegawai'],
         items: [
             { title: 'Katalog Produk', href: '/inventory/products' },
-            { title: 'Stok Sparepart', href: '/inventory/spareparts' },
+            { title: 'Data Sparepart', href: '/inventory/spareparts' },
             { title: 'Pengadaan Barang', href: '/inventory/procurement' },
         ],
     },
     {
-        title: 'Manajemen Pelanggan',
+        title: 'Data Pelanggan (CRM)',
         href: '/customers',
         icon: Users,
         roles: ['administrator', 'teknisi', 'pegawai'],
@@ -87,25 +87,25 @@ const mainNavItems: NavItem[] = [
 
 const footerNavItems: NavItem[] = [
     {
-        title: 'Pegawai',
+        title: 'SDM & Pengguna',
         href: '/pegawai',
         icon: UserRoundCog,
         roles: ['administrator'],
     },
     {
-        title: 'WhatsApp Gateway',
+        title: 'Integrasi WhatsApp',
         href: '/config/wa',
         icon: MessageCircle,
         roles: ['administrator'],
     },
     {
-        title: 'Log & Webhook',
+        title: 'Log Sistem',
         href: '/settings/logs',
         icon: Activity,
         roles: ['administrator', 'pegawai'],
     },
     {
-        title: 'Sampah & Arsip',
+        title: 'Arsip Data',
         href: '/sampah',
         icon: Trash2,
         roles: ['administrator', 'teknisi'],

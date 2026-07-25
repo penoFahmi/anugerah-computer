@@ -55,7 +55,7 @@ export function ServiceStatusTabs({ status, onStatusChange }: ServiceStatusTabsP
     ];
 
     return (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4 w-full h-auto">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-3 w-full h-auto">
             {tabs.map((tab) => {
                 const isActive = status === tab.value;
                 const Icon = tab.icon;
@@ -63,15 +63,15 @@ export function ServiceStatusTabs({ status, onStatusChange }: ServiceStatusTabsP
                     <button
                         key={tab.value}
                         onClick={() => onStatusChange(tab.value)}
-                        className={`flex flex-col items-start justify-start p-3 sm:p-4 rounded-xl border text-left transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                            isActive ? tab.activeClass + ' shadow-md scale-[1.02] ring-1 ring-ring/50' : tab.inactiveClass + ' shadow-sm'
+                        className={`flex flex-col items-start justify-start p-3 rounded-lg border text-left transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                            isActive ? tab.activeClass + ' shadow-sm ring-1 ring-ring/50' : tab.inactiveClass + ' shadow-sm'
                         }`}
                     >
                         <div className="flex items-center gap-2 text-sm font-bold">
                             <Icon className={`h-4 w-4 ${isActive ? 'currentColor' : tab.iconClass}`} />
                             {tab.label}
                         </div>
-                        <span className={`text-[11px] sm:text-xs mt-1.5 font-medium ${isActive ? 'opacity-90' : 'text-muted-foreground'}`}>
+                        <span className={`text-[11px] leading-tight mt-1 font-medium ${isActive ? 'opacity-90' : 'text-muted-foreground'}`}>
                             {tab.desc}
                         </span>
                     </button>

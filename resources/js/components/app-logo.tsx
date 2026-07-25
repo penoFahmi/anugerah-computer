@@ -7,8 +7,11 @@ export default function AppLogo() {
                 <AppLogoIcon className="size-5 fill-current text-white dark:text-black" />
             </div>
             <div className="ml-1 grid flex-1 text-left text-sm">
-                <span className="mb-0.5 truncate leading-tight font-semibold">
+                <span className="truncate leading-none font-bold tracking-tight">
                     Anugerah Computer
+                </span>
+                <span className="truncate text-[10px] font-medium text-muted-foreground mt-0.5">
+                    ERP Workspace
                 </span>
             </div>
         </>

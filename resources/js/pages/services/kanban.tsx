@@ -1,8 +1,6 @@
 import { router,Head, usePage } from '@inertiajs/react';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
-
-import Heading from '@/components/heading';
 import { KanbanBoard } from '@/components/services/kanban-board';
 import AppLayout from '@/layouts/app-layout';
 
@@ -55,13 +53,13 @@ export default function KanbanPage({ services, available_spare_parts }: KanbanPa
         <>
             <Head title="Papan Teknisi" />
             
-            {/* Mengunci tinggi agar Kanban Board bisa di-scroll secara independen (Horizontal/Vertical) */}
-            <div className="flex h-[calc(100vh-6rem)] flex-col gap-4 overflow-hidden p-4 md:p-6">
-                <div className="shrink-0 flex items-center justify-between">
-                    <Heading 
-                        title="Papan Teknisi (Kanban)" 
-                        description="Geser kartu untuk memindahkan status. Klik kartu untuk melihat detail atau memproses operasional." 
-                    />
+            {/* Penyesuaian tinggi agar scrollbar horizontal tidak menyebabkan vertical-scroll kecil pada layar */}
+            <div className="flex h-[calc(100vh-6.5rem)] min-h-[500px] flex-col gap-4 overflow-hidden pt-4 px-4 md:pt-6 md:px-6 pb-0">
+                <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                    <div>
+                        <h2 className="text-lg font-bold text-foreground">Kanban Operasional</h2>
+                        <p className="text-sm text-muted-foreground mt-0.5">Visualisasi alur kerja teknisi. Pindahkan kartu untuk memperbarui status.</p>
+                    </div>
                 </div>
 
                 {/* Render Papan Kanban */}

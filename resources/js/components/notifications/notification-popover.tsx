@@ -225,8 +225,8 @@ export function NotificationPopover() {
                                                 
                                                 {/* Content */}
                                                 <div className="flex flex-1 flex-col overflow-hidden">
-                                                    <div className="flex items-start justify-between gap-2">
-                                                        <span className={`truncate text-[11px] uppercase tracking-wider ${isUnread ? 'font-bold text-slate-800 dark:text-slate-200' : 'font-semibold text-slate-500 dark:text-slate-400'}`}>
+                                                    <div className="flex items-start justify-between gap-2 pr-8">
+                                                        <span className={`truncate text-[10px] uppercase tracking-wider ${isUnread ? 'font-bold text-slate-800 dark:text-slate-200' : 'font-semibold text-slate-500 dark:text-slate-400'}`}>
                                                             {title}
                                                         </span>
                                                         <span className="shrink-0 text-[9px] font-medium text-slate-400 font-mono mt-0.5">
@@ -234,16 +234,16 @@ export function NotificationPopover() {
                                                         </span>
                                                     </div>
                                                     
-                                                    <div className={`mt-0.5 pr-6 text-xs leading-relaxed ${isUnread ? 'text-slate-700 dark:text-slate-300 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
+                                                    <div className={`mt-0.5 pr-8 text-[11px] leading-relaxed ${isUnread ? 'text-slate-700 dark:text-slate-300 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
                                                         {n.data?.message}
                                                     </div>
                                                 </div>
 
-                                                {/* Delete Button (Hover Only) */}
+                                                {/* Delete Button */}
                                                 <Button 
                                                     variant="ghost" 
                                                     size="icon" 
-                                                    className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-destructive hover:bg-destructive/10 rounded-full" 
+                                                    className="absolute right-2 top-2 h-7 w-7 opacity-20 group-hover:opacity-100 transition-all text-slate-400 hover:text-destructive hover:bg-destructive/10 rounded-full z-10" 
                                                     onClick={(e) => { 
                                                         e.stopPropagation(); 
                                                         deleteNotification(n.id); 

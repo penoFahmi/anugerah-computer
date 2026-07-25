@@ -23,7 +23,8 @@ class ChatbotPipeline
 
         // 1. Panggil NLP Python Lokal (FastText SVM)
         try {
-            $response = Http::timeout(5)->post('http://127.0.0.1:8001/api/predict-intent', [
+            $nlpEndpoint = config('services.nlp.endpoint');
+            $response = Http::timeout(5)->post($nlpEndpoint, [
                 'text' => $originalMessage,
             ]);
 

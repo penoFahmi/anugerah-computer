@@ -28,26 +28,22 @@ export function KanbanCard({ service, index, onClick }: KanbanCardProps) {
                     {...provided.draggableProps}
                     {...provided.dragHandleProps}
                     onClick={onClick}
-                    /* PERBAIKAN: Menggunakan bg-card, border-border, dan text-card-foreground */
-                    className={`group bg-card text-card-foreground p-3.5 rounded-lg border border-border shadow-sm hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-md cursor-pointer transition-all ${
-                        snapshot.isDragging ? 'rotate-2 scale-105 shadow-xl ring-2 ring-blue-500' : ''
+                    className={`group bg-card text-card-foreground p-3 rounded-lg border border-border shadow-sm hover:border-ring hover:ring-1 hover:ring-ring/50 cursor-pointer transition-all ${
+                        snapshot.isDragging ? 'rotate-1 scale-105 shadow-lg ring-2 ring-primary/50 z-50' : ''
                     }`}
                 >
                     <div className="flex justify-between items-start mb-2">
-                        {/* PERBAIKAN: Menggunakan text-muted-foreground untuk teks sekunder */}
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono text-muted-foreground border-border bg-background">
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono text-muted-foreground border-border bg-transparent shadow-none">
                             {service.order_number}
                         </Badge>
-                        <MoreHorizontal className="h-4 w-4 text-muted-foreground group-hover:text-blue-500 transition-colors" />
+                        <MoreHorizontal className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
                     
-                    {/* PERBAIKAN: Menggunakan text-foreground agar warna judul dinamis */}
                     <h4 className="font-bold text-sm text-foreground leading-tight mb-1">
                         {service.device_name}
                     </h4>
                     
-                    {/* PERBAIKAN: Menggunakan text-muted-foreground */}
-                    <p className="text-xs font-medium text-muted-foreground mb-3">
+                    <p className="text-[11px] font-medium text-muted-foreground mb-2.5">
                         A.n: {service.customer_name}
                     </p>
 
@@ -71,9 +67,7 @@ export function KanbanCard({ service, index, onClick }: KanbanCardProps) {
                         </Badge>
                     )}
 
-                    {/* PERBAIKAN: Menggunakan bg-muted/50 agar menyesuaikan tema terang/gelap dengan lembut */}
-                    <div className="bg-muted/50 p-2 rounded text-[11px] text-muted-foreground line-clamp-2 leading-snug border border-border">
-                        {/* Menghilangkan tag [KLAIM GARANSI] dari tampilan deskripsi agar lebih bersih */}
+                    <div className="bg-muted/30 p-2 rounded text-[11px] text-muted-foreground line-clamp-2 leading-snug border border-border/50">
                         {service.complaint.replace(/\[KLAIM GARANSI.*?\]/g, '').trim()}
                     </div>
 

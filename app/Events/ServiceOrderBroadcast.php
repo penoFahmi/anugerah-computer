@@ -7,7 +7,6 @@ use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use App\Models\ServiceOrder;
@@ -17,7 +16,7 @@ use App\Models\ServiceOrder;
  * Event ini akan dikirimkan melalui channel private 'admin.notifications' dan dapat didengarkan oleh admin menggunakan React Echo.
  */
 
-class ServiceOrderBroadcast implements ShouldBroadcastNow
+class ServiceOrderBroadcast implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 

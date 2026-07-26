@@ -37,7 +37,18 @@ const mainNavItems: NavItem[] = [
         roles: ['administrator', 'teknisi', 'pegawai'],
     },
     {
-        title: 'Operasional Servis',
+        title: 'Transaksi',
+        href: '#',
+        icon: ShoppingCart,
+        roles: ['administrator', 'pegawai'],
+        items: [
+            { title: 'Kasir (POS)', href: '/sales/pos' },
+            { title: 'Pembelian Bekas', href: '/sales/trade-in' },
+            { title: 'Pesanan Daring', href: '/sales/online' },
+        ],
+    },
+    {
+        title: 'Layanan Servis',
         href: '/services',
         icon: Wrench,
         roles: ['administrator', 'teknisi', 'pegawai'],
@@ -48,38 +59,27 @@ const mainNavItems: NavItem[] = [
         ],
     },
     {
-        title: 'Penjualan',
-        href: '#',
-        icon: ShoppingCart,
-        roles: ['administrator', 'teknisi', 'pegawai'],
-        items: [
-            { title: 'Kasir (POS)', href: '/sales/pos' },
-            { title: 'Pembelian Bekas', href: '/sales/trade-in' },
-            { title: 'Pesanan Daring', href: '/sales/online' },
-        ],
-    },
-    {
-        title: 'Manajemen Inventaris',
+        title: 'Stok & Inventaris',
         href: '#',
         icon: Package,
         roles: ['administrator', 'teknisi', 'pegawai'],
         items: [
-            { title: 'Katalog Produk', href: '/inventory/products' },
-            { title: 'Data Sparepart', href: '/inventory/spareparts' },
-            { title: 'Pengadaan Barang', href: '/inventory/procurement' },
+            { title: 'Katalog Produk', href: '/inventory/products', roles: ['administrator', 'teknisi', 'pegawai'] },
+            { title: 'Data Sparepart', href: '/inventory/spareparts', roles: ['administrator', 'teknisi', 'pegawai'] },
+            { title: 'Pengadaan Barang', href: '/inventory/procurement', roles: ['administrator'] },
         ],
     },
     {
-        title: 'Data Pelanggan (CRM)',
+        title: 'Pelanggan',
         href: '/customers',
         icon: Users,
-        roles: ['administrator', 'teknisi', 'pegawai'],
+        roles: ['administrator', 'pegawai'],
     },
     {
         title: 'Keuangan',
         href: '#',
         icon: CircleDollarSign,
-        roles: ['administrator', 'teknisi', 'pegawai'],
+        roles: ['administrator'],
         items: [
             { title: 'Arus Kas Harian', href: '/finance/cashflow' },
             { title: 'Laporan Laba Rugi', href: '/finance/profit-loss' },
@@ -87,7 +87,7 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
-const footerNavItems: NavItem[] = [
+const adminNavItems: NavItem[] = [
     {
         title: 'SDM & Pengguna',
         href: '/pegawai',
@@ -116,13 +116,13 @@ const footerNavItems: NavItem[] = [
         title: 'Log Sistem',
         href: '/settings/logs',
         icon: Activity,
-        roles: ['administrator', 'pegawai'],
+        roles: ['administrator'],
     },
     {
         title: 'Arsip Data',
         href: '/sampah',
         icon: Trash2,
-        roles: ['administrator', 'teknisi'],
+        roles: ['administrator'],
     },
 ];
 
@@ -151,9 +151,14 @@ export function AppSidebar() {
                 : undefined,
         }));
 
-    const filteredFooterNav = footerNavItems.filter((item) =>
-        hasRole(item.roles),
-    );
+    const filteredAdminNav = adminNavItems
+        .filter((item) => hasRole(item.roles))
+        .map((item) => ({
+            ...item,
+            items: item.items
+                ? item.items.filter((sub) => hasRole(sub.roles))
+                : undefined,
+        }));
 
     return (
         <Sidebar collapsible="icon" variant="inset">
@@ -174,7 +179,9 @@ export function AppSidebar() {
             </SidebarContent>
 
             <SidebarFooter>
-                <NavFooter items={filteredFooterNav} className="mt-auto" />
+                {filteredAdminNav.length > 0 && (
+                    <NavFooter items={filteredAdminNav} className="mt-auto" />
+                )}
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

@@ -11,22 +11,14 @@ class DatabaseSeeder extends Seeder
     /**
      * Seed the application's database.
      */
-    // public function run(): void
-    // {
-    //     // User::factory(10)->create();
-
-    //     User::factory()->create([
-    //         'name' => 'Test User',
-    //         'email' => 'test@example.com',
-    //     ]);
-    // }
-
     public function run(): void
     {
-        // Panggil RoleSeeder di sini
         $this->call([
             RoleSeeder::class,
+            UserSeeder::class,
             BotAutoReplySeeder::class,
+            StoreSettingSeeder::class,
+            TestimonialSeeder::class,
         ]);
     }
 }

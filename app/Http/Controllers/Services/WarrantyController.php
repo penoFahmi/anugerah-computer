@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Services;
 
+use App\Http\Controllers\Controller;
 use App\Models\Warranty;
 use App\Models\ServiceOrder;
 use App\Enums\ServiceStatus;
@@ -171,3 +172,4 @@ class WarrantyController extends Controller
         }
     }
 }
+

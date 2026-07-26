@@ -6,7 +6,7 @@ import { useDebouncedCallback } from 'use-debounce';
 
 import { WarrantyActionModal } from '@/components/garansi/warranty-action-modal';
 import { WarrantyTable } from '@/components/garansi/warranty-table';
-import Heading from '@/components/heading';
+import Heading from '@/components/ui/heading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';

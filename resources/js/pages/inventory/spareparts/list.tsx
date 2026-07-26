@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { useDebouncedCallback } from 'use-debounce';
 
 import AppLayout from '@/layouts/app-layout';
-import Heading from '@/components/heading';
+import Heading from '@/components/ui/heading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';

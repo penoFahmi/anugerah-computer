@@ -9,7 +9,9 @@ import {
     Users,
     UserRoundCog,
     Wrench,
+    Store,
     Trash2,
+    MessageSquare,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/dashboard/nav-footer';
@@ -96,6 +98,18 @@ const footerNavItems: NavItem[] = [
         title: 'Integrasi WhatsApp',
         href: '/config/wa',
         icon: MessageCircle,
+        roles: ['administrator'],
+    },
+    {
+        title: 'Pengaturan Toko',
+        href: '/settings/store',
+        icon: Store,
+        roles: ['administrator'],
+    },
+    {
+        title: 'Testimoni',
+        href: '/testimonials',
+        icon: MessageSquare,
         roles: ['administrator'],
     },
     {

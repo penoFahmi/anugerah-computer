@@ -8,4 +8,5 @@ export interface LandingProduct {
 
 export interface LandingProps {
     products?: LandingProduct[];
+    store?: any;
 }

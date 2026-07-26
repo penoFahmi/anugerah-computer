@@ -11,7 +11,7 @@ import {
     MoreHorizontal,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import Pagination from '@/components/pagination';
+import Pagination from '@/components/ui/pagination';
 import {
     DropdownMenu,
     DropdownMenuContent,

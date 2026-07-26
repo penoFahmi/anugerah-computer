@@ -1,7 +1,7 @@
 import { Form, Head } from '@inertiajs/react';
-import InputError from '@/components/input-error';
-import PasswordInput from '@/components/password-input';
-import TextLink from '@/components/text-link';
+import InputError from '@/components/ui/input-error';
+import PasswordInput from '@/components/ui/password-input';
+import TextLink from '@/components/ui/text-link';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -90,7 +90,7 @@ export default function Login({
 
                             <Button
                                 type="submit"
-                                className="mt-4 w-full h-11 text-base font-semibold shadow-md bg-blue-600 hover:bg-blue-700 text-white"
+                                className="mt-6 w-full h-14 rounded-full text-base font-bold shadow-[0_0_20px_-5px_rgba(var(--primary),0.5)] bg-primary hover:bg-primary/90 text-primary-foreground transition-all hover:scale-105"
                                 tabIndex={4}
                                 disabled={processing}
                                 data-test="login-button"

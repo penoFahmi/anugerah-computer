@@ -37,7 +37,7 @@ class HandleInertiaRequests extends Middleware
     {
         return [
             ...parent::share($request),
-            'name' => config('app.name'),
+            'name' => \Illuminate\Support\Facades\Cache::remember('store_name', 86400, fn() => \App\Models\StoreSetting::first()?->store_name ?? config('app.name')),
             'auth' => [
                 // 'user' => $request->user(),
                 'user' => $request->user() ? array_merge($request->user()->toArray(), [

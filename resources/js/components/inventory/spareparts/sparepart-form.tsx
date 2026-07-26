@@ -1,7 +1,7 @@
 import { useForm } from '@inertiajs/react';
 import { Loader2, ShieldAlert } from 'lucide-react';
 import type { FormEventHandler } from 'react';
-import InputError from '@/components/input-error';
+import InputError from '@/components/ui/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

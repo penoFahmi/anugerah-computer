@@ -1,129 +1,75 @@
-import * as React from "react"
+import { router } from '@inertiajs/react';
+import { Button } from '@/components/ui/button';
+import type { PaginatedData } from '@/types/global';
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { ChevronLeftIcon, ChevronRightIcon, MoreHorizontalIcon } from "lucide-react"
+// Mengambil tipe properti yang dibutuhkan langsung dari PaginatedData
+type PaginationProps = Pick<
+    PaginatedData<any>,
+    'links' | 'from' | 'to' | 'total'
+>;
 
-function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
-  return (
-    <nav
-      role="navigation"
-      aria-label="pagination"
-      data-slot="pagination"
-      className={cn("mx-auto flex w-full justify-center", className)}
-      {...props}
-    />
-  )
-}
+export default function Pagination({
+    links,
+    from,
+    to,
+    total,
+}: PaginationProps) {
+    // Sembunyikan pagination jika tidak ada data atau hanya ada 1 halaman (Prev, 1, Next)
+    if (!links || links.length <= 3) return null;
 
-function PaginationContent({
-  className,
-  ...props
-}: React.ComponentProps<"ul">) {
-  return (
-    <ul
-      data-slot="pagination-content"
-      className={cn("flex items-center gap-0.5", className)}
-      {...props}
-    />
-  )
-}
+    const getRelativeUrl = (absoluteUrl: string | null) => {
+        if (!absoluteUrl) return null;
+        try {
+            const url = new URL(absoluteUrl);
+            return url.pathname + url.search;
+        } catch {
+            return absoluteUrl;
+        }
+    };
 
-function PaginationItem({ ...props }: React.ComponentProps<"li">) {
-  return <li data-slot="pagination-item" {...props} />
-}
+    const parseLabel = (label: string) => {
+        const lowerLabel = label.toLowerCase();
+        if (lowerLabel.includes('prev')) return '‹ Sebelumnya';
+        if (lowerLabel.includes('next')) return 'Selanjutnya ›';
+        return label;
+    };
 
-type PaginationLinkProps = {
-  isActive?: boolean
-} & Pick<React.ComponentProps<typeof Button>, "size"> &
-  React.ComponentProps<"a">
+    return (
+        <div className="flex flex-col items-center justify-between gap-4 border-t px-4 py-3 text-sm text-muted-foreground sm:flex-row">
+            <div>
+                Menampilkan {from || 0} - {to || 0} dari {total} data
+            </div>
+            <div className="flex flex-wrap gap-1">
+                {links.map((link, idx) => {
+                    const relativeUrl = getRelativeUrl(link.url);
+                    const labelHtml = parseLabel(link.label);
 
-function PaginationLink({
-  className,
-  isActive,
-  size = "icon",
-  ...props
-}: PaginationLinkProps) {
-  return (
-    <Button
-      asChild
-      variant={isActive ? "outline" : "ghost"}
-      size={size}
-      className={cn(className)}
-    >
-      <a
-        aria-current={isActive ? "page" : undefined}
-        data-slot="pagination-link"
-        data-active={isActive}
-        {...props}
-      />
-    </Button>
-  )
-}
-
-function PaginationPrevious({
-  className,
-  text = "Previous",
-  ...props
-}: React.ComponentProps<typeof PaginationLink> & { text?: string }) {
-  return (
-    <PaginationLink
-      aria-label="Go to previous page"
-      size="default"
-      className={cn("pl-1.5!", className)}
-      {...props}
-    >
-      <ChevronLeftIcon data-icon="inline-start" />
-      <span className="hidden sm:block">{text}</span>
-    </PaginationLink>
-  )
-}
-
-function PaginationNext({
-  className,
-  text = "Next",
-  ...props
-}: React.ComponentProps<typeof PaginationLink> & { text?: string }) {
-  return (
-    <PaginationLink
-      aria-label="Go to next page"
-      size="default"
-      className={cn("pr-1.5!", className)}
-      {...props}
-    >
-      <span className="hidden sm:block">{text}</span>
-      <ChevronRightIcon data-icon="inline-end" />
-    </PaginationLink>
-  )
-}
-
-function PaginationEllipsis({
-  className,
-  ...props
-}: React.ComponentProps<"span">) {
-  return (
-    <span
-      aria-hidden
-      data-slot="pagination-ellipsis"
-      className={cn(
-        "flex size-8 items-center justify-center [&_svg:not([class*='size-'])]:size-4",
-        className
-      )}
-      {...props}
-    >
-      <MoreHorizontalIcon
-      />
-      <span className="sr-only">More pages</span>
-    </span>
-  )
-}
-
-export {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
+                    return (
+                        <Button
+                            key={idx}
+                            variant={link.active ? 'default' : 'outline'}
+                            size="sm"
+                            disabled={!relativeUrl}
+                            onClick={() =>
+                                relativeUrl &&
+                                router.get(
+                                    relativeUrl,
+                                    {},
+                                    {
+                                        preserveState: true,
+                                        preserveScroll: true,
+                                    },
+                                )
+                            }
+                            className={`h-8 px-3 ${link.active ? 'pointer-events-none' : ''}`}
+                        >
+                            <span
+                                dangerouslySetInnerHTML={{ __html: labelHtml }}
+                            />
+                        </Button>
+                    );
+                })}
+            </div>
+        </div>
+    );
 }

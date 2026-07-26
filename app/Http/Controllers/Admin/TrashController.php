@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Customer;
 use App\Models\ServiceOrder;
@@ -224,3 +225,4 @@ class TrashController extends Controller
         return back();
     }
 }
+

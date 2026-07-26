@@ -1,7 +1,7 @@
 import { Head, router, usePoll } from '@inertiajs/react';
 import { RefreshCcw } from 'lucide-react';
 
-import Heading from '@/components/heading';
+import Heading from '@/components/ui/heading';
 import { Button } from '@/components/ui/button';
 import { WaQrCard } from '@/components/wa/wa-qr-card';
 import { WaStatusCard } from '@/components/wa/wa-status-card';

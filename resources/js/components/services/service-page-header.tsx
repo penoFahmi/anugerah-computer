@@ -1,5 +1,5 @@
 import { Plus } from 'lucide-react';
-import Heading from '@/components/heading';
+import Heading from '@/components/ui/heading';
 import { Button } from '@/components/ui/button';
 
 interface ServicePageHeaderProps {

@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Services;
 
+use App\Http\Controllers\Controller;
 use App\Enums\ServiceStatus;
 use App\Enums\TransactionCategory;
 use App\Enums\TransactionType;
@@ -253,12 +254,6 @@ class ServiceOrderController extends Controller
                     if (in_array($newStatus, [ServiceStatus::WAITING_APPROVAL->value, ServiceStatus::CANCELLED->value])) {
                         $estimatedCost = $validated['estimated_cost'] ?? $serviceOrder->estimated_cost;
                         $isWarranty = str_starts_with($serviceOrder->complaint ?? '', 'KLAIM GARANSI');
-                        // Validasi dihapus sesuai permintaan user agar bisa tes kirim penawaran dengan harga Rp 0
-                        // if ($newStatus === ServiceStatus::WAITING_APPROVAL->value && $estimatedCost <= 0 && !$isWarranty) {
-                        //     Inertia::flash('toast', ['type' => 'error', 'message' => 'Estimasi biaya harus diisi untuk lanjut ke Menunggu Konfirmasi. (Kecuali klaim garansi)']);
-                        //
-                        //     return back();
-                        // }
                         $isValidTransition = true;
                     }
                     break;
@@ -347,7 +342,7 @@ class ServiceOrderController extends Controller
 
             $serviceOrder->update($updateData);
 
-            // [BARU] Catat Pemasukan ke Buku Besar jika ada pembayaran saat diambil
+            // Pemasukan ke Buku Besar jika ada pembayaran saat diambil
             if ($oldStatus !== ServiceStatus::TAKEN->value && $newStatus === ServiceStatus::TAKEN->value) {
                 // Biaya yang dibayar saat penyerahan = Final Cost - Down Payment (jika sudah bayar DP sebelumnya)
                 // Atau jika kasir input total bayar di DP, kita anggap total payment.
@@ -624,3 +619,4 @@ class ServiceOrderController extends Controller
         return back();
     }
 }
+

@@ -2,7 +2,7 @@ import { Head, usePage } from '@inertiajs/react';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 
-import Heading from '@/components/heading';
+import Heading from '@/components/ui/heading';
 import AppLayout from '@/layouts/app-layout';
 import type { CustomersPageProps } from '@/types/customer';
 import { CustomerFilters } from '@/components/customers/customer-filters';

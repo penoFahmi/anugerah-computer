@@ -17,6 +17,9 @@ class ProcessInboundWaMessage implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public $timeout = 120;
+    public $tries = 1;
+
     public function __construct(
         public ChatLog $chatLog,
         public ?ServiceOrder $serviceOrder,
@@ -110,5 +113,25 @@ class ProcessInboundWaMessage implements ShouldQueue
             $history, 
             $result['source']
         );
+    }
+
+    /**
+     * Handle a job failure.
+     */
+    public function failed(\Throwable $exception): void
+    {
+        Log::error("Job ProcessInboundWaMessage Gagal/Timeout: " . $exception->getMessage());
+        
+        // Jangan biarkan status menggantung di 'analyzing'
+        $this->chatLog->update([
+            'resolved_by' => 'human',
+            'final_intent' => 'needs_manual_override',
+            'llm_raw_response' => ['error' => 'Sistem AI (Groq) kehabisan waktu atau gagal memproses.'],
+        ]);
+
+        // Beritahu Admin
+        $admins = \App\Models\User::all();
+        \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\RequiresHumanAttention($this->chatLog));
+        event(new \App\Events\ChatRequiresHuman($this->chatLog));
     }
 }

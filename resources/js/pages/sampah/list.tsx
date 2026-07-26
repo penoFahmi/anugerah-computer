@@ -2,7 +2,7 @@ import { Head, usePage } from '@inertiajs/react';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 
-import Heading from '@/components/heading';
+import Heading from '@/components/ui/heading';
 import { TrashFilters } from '@/components/sampah/sampah-filters';
 import { TrashTable } from '@/components/sampah/sampah-table';
 import AppLayout from '@/layouts/app-layout';

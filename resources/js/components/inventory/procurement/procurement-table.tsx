@@ -1,5 +1,5 @@
 import { ReceiptText } from 'lucide-react';
-import Pagination from '@/components/pagination';
+import Pagination from '@/components/ui/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {

@@ -1,6 +1,6 @@
 import { Pencil, Trash2, Eye, EyeOff } from 'lucide-react';
 import { useState } from 'react';
-import Pagination from '@/components/pagination';
+import Pagination from '@/components/ui/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';

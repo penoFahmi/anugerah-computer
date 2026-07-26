@@ -45,8 +45,13 @@ class LandingController extends Controller
             ];
         });
 
+        $store = \App\Models\StoreSetting::first();
+        $testimonials = \App\Models\Testimonial::where('status', 'approved')->latest()->get();
+
         return Inertia::render('welcome', [
             'products' => $formattedProducts,
+            'store' => $store,
+            'testimonials' => $testimonials,
         ]);
     }
 }

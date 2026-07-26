@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Communication;
 
+use App\Http\Controllers\Controller;
 use App\Services\WaGateway;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -94,3 +95,4 @@ class ChatController extends Controller
         return response()->json($contacts);
     }
 }
+

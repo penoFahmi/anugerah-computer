@@ -1,8 +1,8 @@
 <?php
 
-use App\Http\Controllers\ChatController;
-use App\Http\Controllers\ConfigWaController;
-use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\Communication\ChatController;
+use App\Http\Controllers\Communication\ConfigWaController;
+use App\Http\Controllers\CRM\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Finance\CashflowController;
 use App\Http\Controllers\Finance\ProfitLossController;
@@ -11,14 +11,14 @@ use App\Http\Controllers\Inventory\ProductController;
 use App\Http\Controllers\Inventory\SparePartController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\PegawaiController;
+use App\Http\Controllers\Admin\PegawaiController;
 use App\Http\Controllers\Sales\OnlineBookingController;
 use App\Http\Controllers\Sales\PosController;
 use App\Http\Controllers\Sales\TradeInController;
-use App\Http\Controllers\ServiceOrderController;
+use App\Http\Controllers\Services\ServiceOrderController;
 use App\Http\Controllers\Settings\LogController;
-use App\Http\Controllers\TrashController;
-use App\Http\Controllers\WarrantyController;
+use App\Http\Controllers\Admin\TrashController;
+use App\Http\Controllers\Services\WarrantyController;
 /*
 |--------------------------------------------------------------------------
 | Public Routes
@@ -117,6 +117,17 @@ Route::middleware(['auth', 'verified', 'is_active', 'role:administrator'])->grou
     Route::get('config/wa', [ConfigWaController::class, 'index'])->name('config.wa');
     Route::post('config/wa/logout', [ConfigWaController::class, 'logout'])->name('config.wa.logout');
     Route::get('settings/logs', [LogController::class, 'index'])->name('settings.logs.index');
+    
+    // Konfigurasi Landing Page (Store Settings)
+    Route::get('settings/store', [\App\Http\Controllers\Settings\StoreSettingController::class, 'index'])->name('settings.store.index');
+    Route::post('settings/store', [\App\Http\Controllers\Settings\StoreSettingController::class, 'update'])->name('settings.store.update');
+
+    // Manajemen Testimoni
+    Route::get('testimonials', [\App\Http\Controllers\Admin\TestimonialController::class, 'index'])->name('admin.testimonials.index');
+    Route::patch('testimonials/{testimonial}/status', [\App\Http\Controllers\Admin\TestimonialController::class, 'updateStatus'])->name('admin.testimonials.status');
+    Route::delete('testimonials/{testimonial}', [\App\Http\Controllers\Admin\TestimonialController::class, 'destroy'])->name('admin.testimonials.destroy');
 });
+
+Route::post('/testimonials', [\App\Http\Controllers\PublicTestimonialController::class, 'store'])->name('public.testimonials.store');
 
 require __DIR__.'/settings.php';

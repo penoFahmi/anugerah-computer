@@ -1,7 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { Trash2, History } from 'lucide-react';
 import { useState } from 'react';
-import Pagination from '@/components/pagination';
+import Pagination from '@/components/ui/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {

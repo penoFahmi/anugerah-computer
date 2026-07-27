@@ -1,7 +1,11 @@
 import { motion } from 'framer-motion';
 import { Laptop } from 'lucide-react';
+import { Link, usePage } from '@inertiajs/react';
 
 export function Navbar({ store }: { store: any }) {
+    const { url } = usePage();
+    const basePath = url === '/' ? '' : '/';
+
     return (
         <motion.nav 
             initial={{ y: -100, opacity: 0 }}
@@ -18,13 +22,13 @@ export function Navbar({ store }: { store: any }) {
                             <Laptop className="h-5 w-5" />
                         </div>
                     )}
-                    <span className="bg-gradient-to-r from-foreground via-foreground/90 to-muted-foreground bg-clip-text text-transparent">{store.store_name}</span>
+                    <Link href="/" className="bg-gradient-to-r from-foreground via-foreground/90 to-muted-foreground bg-clip-text text-transparent">{store.store_name}</Link>
                 </div>
                 <div className="hidden items-center gap-8 text-sm font-medium text-muted-foreground md:flex">
-                    <a href="#keunggulan" className="transition-colors hover:text-foreground">Keunggulan</a>
-                    <a href="#layanan" className="transition-colors hover:text-foreground">Layanan</a>
-                    <a href="#katalog" className="transition-colors hover:text-foreground">Katalog</a>
-                    <a href="#lokasi" className="transition-colors hover:text-foreground">Lokasi</a>
+                    <a href={`${basePath}#keunggulan`} className="transition-colors hover:text-foreground">Keunggulan</a>
+                    <a href={`${basePath}#layanan`} className="transition-colors hover:text-foreground">Layanan</a>
+                    <Link href="/katalog" className="transition-colors hover:text-foreground">Katalog</Link>
+                    <a href={`${basePath}#lokasi`} className="transition-colors hover:text-foreground">Lokasi</a>
                 </div>
             </div>
         </motion.nav>

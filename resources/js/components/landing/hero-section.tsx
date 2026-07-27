@@ -23,7 +23,6 @@ export function HeroSection({ store, sliderImages, currentSlide }: { store: any;
                     transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                     className="mx-auto flex max-w-fit items-center justify-center space-x-2 overflow-hidden rounded-full border border-primary/20 bg-primary/10 px-6 py-2 backdrop-blur-md mb-8 shadow-[0_0_20px_-5px_rgba(var(--primary),0.3)]"
                 >
-                    <Sparkles className="h-4 w-4 text-primary" />
                     <span className="text-sm font-medium text-primary">{store.hero_badge}</span>
                 </motion.div>
 

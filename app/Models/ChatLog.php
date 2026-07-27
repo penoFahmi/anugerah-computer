@@ -27,6 +27,12 @@ use Illuminate\Database\Eloquent\Model;
     'final_intent',
     'resolved_by'
 ])]
+/**
+ * [THESIS: AUDIT TRAIL & CONFUSION MATRIX DATASET]
+ * Tabel historis yang merekam jejak interaksi (Inbound/Outbound).
+ * Digunakan sebagai dataset pengujian historis (300 data uji) untuk mengukur performa 
+ * Support Vector Machine (SVM) dan kalkulasi rasio F1-Score.
+ */
 class ChatLog extends Model
 {
     use HasFactory;

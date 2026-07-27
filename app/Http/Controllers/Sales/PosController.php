@@ -17,6 +17,11 @@ use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * Point of Sale (POS) Controller
+ * Handles retail transactions for both spare parts and products (laptops/PCs).
+ * Ensures atomicity of transactions using database transactions.
+ */
 class PosController extends Controller
 {
     /**

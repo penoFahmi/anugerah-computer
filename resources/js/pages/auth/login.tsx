@@ -100,14 +100,12 @@ export default function Login({
                             </Button>
                         </div>
 
-                        {/* {canRegister && (
-                            <div className="text-center text-sm text-muted-foreground">
-                                Don't have an account?{' '}
-                                <TextLink href={register()} tabIndex={5}>
-                                    Sign up
-                                </TextLink>
-                            </div>
-                        )} */}
+                        <div className="text-center text-sm text-muted-foreground mt-2">
+                            Batal masuk?{' '}
+                            <TextLink href="/" tabIndex={6}>
+                                Kembali ke Beranda
+                            </TextLink>
+                        </div>
                     </>
                 )}
             </Form>

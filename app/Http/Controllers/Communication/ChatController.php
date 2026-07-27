@@ -10,7 +10,9 @@ use Illuminate\Http\Request;
 class ChatController extends Controller
 {
     /**
-     * Mengambil histori chat untuk ditampilkan saat kotak chat dibuka (Berdasarkan Nomor HP).
+     * [THESIS: HYBRID INTENT RECOGNITION - ORCHESTRATOR COMPONENT]
+     * Mengambil histori chat untuk ditampilkan pada panel Admin (Web UI).
+     * Fungsi ini mendukung intervensi manual (Human-in-the-loop) dalam arsitektur FSM (Finite State Machine).
      */
     public function getHistoryByPhone(string $phone): JsonResponse
     {
@@ -31,7 +33,9 @@ class ChatController extends Controller
     }
 
     /**
-     * Mengirim pesan ketikan manual Admin/Kasir ke Pelanggan (Berdasarkan Nomor HP).
+     * [THESIS: FINITE STATE MACHINE - STATE OVERRIDE]
+     * Mengirim pesan ketikan manual dari Admin ke Pelanggan.
+     * Tindakan ini secara otonom akan mengubah state mesin (FSM) untuk me-mute AI (Fallback ke Human).
      */
     public function sendManualByPhone(Request $request, string $phone): JsonResponse
     {
@@ -60,7 +64,9 @@ class ChatController extends Controller
         );
 
         if ($isSent) {
-            // Tandai pesan pelanggan sebelumnya bahwa "sudah dibalas manusia"
+            // [THESIS: FSM STATE UPDATE]
+            // Transisi status: Tandai bahwa kueri pelanggan telah ditangani secara manual oleh manusia,
+            // sehingga metrik keterlambatan tanggapan (forgotten replies) teresolusi.
             \App\Models\ChatLog::where(function ($q) use ($searchPhone, $searchPhone62) {
                     $q->where('phone', $searchPhone)->orWhere('phone', $searchPhone62);
                 })
@@ -75,7 +81,9 @@ class ChatController extends Controller
     }
 
     /**
-     * Mengambil daftar kontak (pelanggan) yang baru-baru ini melakukan chat.
+     * [THESIS: ORCHESTRATOR - REALTIME MONITORING]
+     * Mengambil daftar antrean kontak untuk pemantauan latensi operasional.
+     * Menggunakan query teroptimasi untuk menghitung 'unread_count' dari kueri yang belum teresolusi AI.
      */
     public function getContacts(): JsonResponse
     {

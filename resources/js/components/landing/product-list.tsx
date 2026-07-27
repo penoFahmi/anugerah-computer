@@ -3,6 +3,7 @@ import { LandingProduct } from '@/types/landing';
 import { ProductCard } from './product-card';
 import { ArrowRight, Laptop } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Link } from '@inertiajs/react';
 
 interface ProductListProps {
     products: LandingProduct[];
@@ -23,9 +24,11 @@ export function ProductList({ products }: ProductListProps) {
                     <p className="mt-4 text-lg text-muted-foreground">Stok laptop terbaik, siap pakai untuk kerja, kuliah, atau sekolah dengan harga bersahabat.</p>
                 </div>
                 {products.length > 0 && (
-                    <Button variant="outline" className="group h-12 rounded-full border-white/10 bg-white/5 px-8 font-semibold text-white backdrop-blur-md transition-all hover:bg-white/10 hover:border-primary/50 hover:text-white shadow-lg shadow-black/20">
-                        Lihat Semua Stok 
-                        <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    <Button asChild variant="outline" className="group h-12 rounded-full border-white/10 bg-white/5 px-8 font-semibold text-white backdrop-blur-md transition-all hover:bg-white/10 hover:border-primary/50 hover:text-white shadow-lg shadow-black/20">
+                        <Link href="/katalog">
+                            Lihat Semua Stok 
+                            <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                        </Link>
                     </Button>
                 )}
             </motion.div>

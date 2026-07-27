@@ -26,6 +26,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'technician_id',
     'handed_over_by'
 ])]
+/**
+ * [THESIS: CORE ENTITY - SERVICE MANAGEMENT]
+ * Entitas sentral yang menyimpan status perbaikan (*Finite State Machine*) 
+ * dan memicu event notifikasi otomatis menuju Pelanggan (via WA Gateway).
+ */
 class ServiceOrder extends Model
 {
     use HasFactory, SoftDeletes;

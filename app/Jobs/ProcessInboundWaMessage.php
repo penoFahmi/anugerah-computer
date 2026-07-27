@@ -49,7 +49,8 @@ class ProcessInboundWaMessage implements ShouldQueue
     public function handle(ChatbotPipeline $pipeline, IntentHandler $handler): void
     {
         // ==========================================
-        // CEK JEDA AI (MUTE) JIKA ADMIN SEDANG AKTIF
+        // [THESIS: HYBRID INTENT RECOGNITION - FSM MUTE STATE]
+        // CEK JEDA AI (MUTE) JIKA ADMIN SEDANG AKTIF INTERVENSI
         // ==========================================
         
         // 1. Cek apakah ada permintaan Handoff yang belum dibalas Admin
@@ -96,12 +97,16 @@ class ProcessInboundWaMessage implements ShouldQueue
         }
 
         // ==========================================
-        // TAHAP 1: JALANKAN PIPELINE AI (FASTTEXT + LLM)
+        // [THESIS: TAHAP 1 - JALANKAN PIPELINE AI HIBRIDA]
+        // Menerapkan NLP engine (FastAPI/FastText/SVM) sebagai lapis pertama.
+        // Jika alpha < 0.75, memicu mekanisme Fallback ke LLM (Groq API).
         // ==========================================
         $result = $pipeline->process($this->chatLog);
         
         // ==========================================
-        // TAHAP 2: DELEGASIKAN TINDAKAN KE HANDLER
+        // [THESIS: TAHAP 2 - DELEGASIKAN TINDAKAN KE HANDLER]
+        // FSM mengeksekusi transisi status servis (Update Deterministik)
+        // berdasarkan parameter niat operasional yang terklasifikasi.
         // ==========================================
         $history = $this->getChatHistory();
         

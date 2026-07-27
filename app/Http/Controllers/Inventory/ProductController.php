@@ -11,6 +11,11 @@ use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * Inventory Product Controller
+ * Manages the CRUD operations for laptops/PCs stock.
+ * Handles image uploads and automated slug generation.
+ */
 class ProductController extends Controller
 {
     public function index(Request $request): Response

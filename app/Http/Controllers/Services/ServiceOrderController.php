@@ -29,6 +29,13 @@ use Illuminate\Support\Facades\Notification;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * [THESIS: SERVICE MANAGEMENT INFORMATION SYSTEM]
+ * Controller utama untuk mengelola transisi status perbaikan perangkat lunak dan keras.
+ * Modul ini mendigitalisasi beban administratif dan mengeliminasi redudansi data.
+ * Memiliki integrasi langsung dengan Event Broadcasting dan WhatsApp Gateway
+ * untuk mentransmisikan notifikasi tanda terima secara otomatis.
+ */
 class ServiceOrderController extends Controller
 {
     /**

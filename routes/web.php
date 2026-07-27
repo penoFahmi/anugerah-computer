@@ -27,6 +27,7 @@ use App\Http\Controllers\Services\WarrantyController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LandingController::class, 'index'])->name('home');
+Route::get('/katalog', [LandingController::class, 'catalog'])->name('katalog');
 
 /*
 |--------------------------------------------------------------------------

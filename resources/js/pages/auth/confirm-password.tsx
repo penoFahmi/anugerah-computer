@@ -27,7 +27,7 @@ export default function ConfirmPassword() {
                             <InputError message={errors.password} />
                         </div>
 
-                        <div className="flex items-center">
+                        <div className="flex flex-col gap-3">
                             <Button
                                 className="w-full"
                                 disabled={processing}
@@ -35,6 +35,15 @@ export default function ConfirmPassword() {
                             >
                                 {processing && <Spinner />}
                                 Confirm password
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full"
+                                onClick={() => window.history.back()}
+                                disabled={processing}
+                            >
+                                Batal
                             </Button>
                         </div>
                     </div>

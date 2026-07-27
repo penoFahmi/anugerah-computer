@@ -12,6 +12,11 @@ use Illuminate\Support\Facades\Log;
 
 class WhatsappWebhookController extends Controller
 {
+    /**
+     * [THESIS: WHATSAPP GATEWAY INTEGRATION & MICROSERVICES]
+     * Webhook utama yang bertindak sebagai Listener/Penangkap Kueri dari peladen Node.js (Baileys).
+     * Entry point untuk arsitektur Microservices.
+     */
     public function handle(Request $request): JsonResponse 
     {
         try {
@@ -26,7 +31,9 @@ class WhatsappWebhookController extends Controller
             $waMessageId = $request->id; // [FIX] Tangkap ID asli
             
             // ==========================================
-            // [FIX] PEREDAM EFEK PANTULAN (ECHO LOOP)
+            // [THESIS: ECHO CANCELLATION MECHANISM]
+            // Memitigasi anomali sistem berupa pantulan pesan (Echo Loop)
+            // saat sistem membaca pesan outbound-nya sendiri sebagai inbound.
             // ==========================================
             if ($isFromMe) {
                 $isEcho = ChatLog::where('phone', $rawPhone)
@@ -60,8 +67,9 @@ class WhatsappWebhookController extends Controller
             ]);
 
             if (!$isFromMe) {
-                // Jangan gunakan Notifikasi Database untuk chat biasa agar tidak sesak!
-                // Gunakan Broadcast Event agar hanya Real-time UI yang bereaksi.
+                // [THESIS: ORCHESTRATOR EVENT DRIVEN]
+                // Memancarkan Event agar UI bereaksi secara Real-Time tanpa membebani Notifikasi Database.
+                // Diserahkan ke Queue (Background Job) agar webhook merespons instan ke Gateway.
                 broadcast(new \App\Events\NewChatMessage($chatLog));
                 ProcessInboundWaMessage::dispatch($chatLog, $serviceOrder, $rawPhone);
             }

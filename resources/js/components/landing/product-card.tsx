@@ -4,7 +4,22 @@ import { LandingProduct } from '@/types/landing';
 export function ProductCard({ laptop }: { laptop: LandingProduct }) {
     return (
         <div className="group flex h-full flex-col justify-between overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 backdrop-blur-3xl shadow-[0_4px_30px_rgba(0,0,0,0.5)] transition-all duration-500 hover:-translate-y-2 hover:bg-white/10 hover:shadow-[0_0_40px_-10px_rgba(var(--primary),0.4)] hover:border-primary/40">
-            <div className="p-8 pb-6">
+            {laptop.image ? (
+                <div className="relative h-48 w-full overflow-hidden bg-black/50">
+                    <img 
+                        src={laptop.image} 
+                        alt={laptop.name} 
+                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                </div>
+            ) : (
+                <div className="relative h-48 w-full overflow-hidden bg-black/50 flex items-center justify-center">
+                    <span className="text-zinc-600">Tidak ada gambar</span>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                </div>
+            )}
+            <div className="p-8 pb-6 flex-grow">
                 <div className="flex items-start justify-between gap-4">
                     <h3 className="text-2xl font-bold leading-tight text-white transition-colors group-hover:text-primary">{laptop.name}</h3>
                     {laptop.status === 'ready' ? (

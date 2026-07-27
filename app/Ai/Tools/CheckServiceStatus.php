@@ -9,6 +9,13 @@ use App\Models\ServiceOrder;
 use Carbon\Carbon;
 use Stringable;
 
+/**
+ * [THESIS: HYBRID INTENT RECOGNITION - LLM FALLBACK TOOL]
+ * Modul ini dipicu secara otonom oleh Groq API (LLM) ketika klasifikasi FastText (NLP Lokal)
+ * berada di bawah batas ambang keyakinan (alpha < 0.75). Alat ini memberdayakan LLM
+ * untuk mengambil dan mengekstraksi status basis data secara terstruktur, memecahkan
+ * anomali pertanyaan tingkat tinggi dari pelanggan.
+ */
 class CheckServiceStatus implements Tool
 {
     /**

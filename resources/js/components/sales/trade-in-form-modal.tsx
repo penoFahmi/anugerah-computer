@@ -2,6 +2,8 @@ import { useForm } from '@inertiajs/react';
 import { AlertCircle, Loader2, Search } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { formatNumberWithDots, getCleanNumber } from '@/utils/currency';
+import { formatIndonesianPhone } from '@/lib/utils';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -65,11 +67,14 @@ export function TradeInFormModal({ isOpen, onClose }: Props) {
     // ----------------------------
 
     const handlePhoneChange = (val: string) => {
-        let numericVal = val.replace(/\D/g, '');
+        // Otomatis format nomor HP jadi +62 8XX-XXXX-XXXX
+        const displayVal = formatIndonesianPhone(val);
+        setData('phone', displayVal);
+
+        // Bersihkan hanya untuk API pencarian
+        let numericVal = displayVal.replace(/\D/g, '');
         if (numericVal.startsWith('0')) numericVal = '62' + numericVal.substring(1);
         else if (numericVal.startsWith('8') && numericVal.length >= 1) numericVal = '62' + numericVal;
-
-        setData('phone', numericVal);
 
         if (selectedCustomer) {
             setSelectedCustomer(null);
@@ -104,9 +109,15 @@ export function TradeInFormModal({ isOpen, onClose }: Props) {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
+        // Bersihkan format nomor WA sebelum dikirim ke backend
+        let finalPhone = data.phone.replace(/\D/g, '');
+        if (finalPhone.startsWith('0')) finalPhone = '62' + finalPhone.substring(1);
+        else if (finalPhone.startsWith('8') && finalPhone.length >= 1) finalPhone = '62' + finalPhone;
+
         // Menggunakan transform untuk memastikan purchase_price adalah angka sebelum dikirim
         transform((currentData) => ({
             ...currentData,
+            phone: finalPhone,
             purchase_price: currentData.purchase_price ? Number(currentData.purchase_price) : 0,
         }));
 
@@ -119,7 +130,6 @@ export function TradeInFormModal({ isOpen, onClose }: Props) {
                 setSuggestions([]);
                 onClose();
             },
-            onError: () => toast.error('Registrasi gagal. Silakan periksa kembali kolom yang wajib diisi.'),
         });
     };
 

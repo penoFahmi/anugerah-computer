@@ -20,17 +20,9 @@ class IntentAnalyzer implements Agent, Conversational, HasStructuredOutput
     {
         return 'Anda adalah mesin pemroses NLP otomatis. DILARANG MERESPON DENGAN TEKS BIASA. '.
                'Tugas Anda HANYA mengklasifikasikan intent pelanggan ke opsi berikut: '.
-               '1. info_toko: Menanyakan alamat, lokasi, atau jam operasional. '.
-               '2. tanya_status: Menanyakan status pengerjaan atau unit servisan. '.
-               '3. garansi_servis: Menanyakan garansi servis atau klaim garansi. '.
-               '4. tanya_estimasi_waktu: Menanyakan berapa lama servis dikerjakan. '.
-               '5. salam_pembuka: Sapaan awal seperti "halo", "p", "siang min". '.
-               '6. penutup_terimakasih: Ucapan terima kasih atau mengakhiri percakapan. '.
-               '7. tanya_harga_servis: Menanyakan estimasi biaya servis. '.
-               '8. konsultasi_kerusakan: Curhat masalah laptop/komputer, tanya bisa diservis/tidak. '.
-               '9. nego_harga: Meminta diskon atau potongan harga. '.
-               '10. setuju: Kata-kata persetujuan lanjut servis seperti "oke", "lanjut", "setuju". '.
-               '11. batal: Kata-kata penolakan servis seperti "batal", "tidak", "cancel", "kemahalan". '.
+               '1. setuju: Kata-kata persetujuan lanjut servis seperti "oke", "lanjut", "setuju". '.
+               '2. batal: Kata-kata penolakan servis seperti "batal", "tidak", "cancel", "kemahalan". '.
+               '3. lainnya: SEMUA jenis percakapan selain persetujuan atau pembatalan servis (tanya harga, marah, sapaan, dll). '.
                'WAJIB KEMBALIKAN OUTPUT HANYA DALAM BENTUK JSON MURNI SESUAI SKEMA.';
     }
 
@@ -43,7 +35,7 @@ class IntentAnalyzer implements Agent, Conversational, HasStructuredOutput
     {
         return [
             'intent' => $schema->string()
-                ->enum(['info_toko', 'tanya_status', 'garansi_servis', 'tanya_estimasi_waktu', 'salam_pembuka', 'penutup_terimakasih', 'tanya_harga_servis', 'konsultasi_kerusakan', 'nego_harga', 'setuju', 'batal'])
+                ->enum(['setuju', 'batal', 'lainnya'])
                 ->description('Kesimpulan akhir niat pelanggan.')
                 ->required(),
 

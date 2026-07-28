@@ -71,6 +71,7 @@ class StoreSettingController extends Controller
         $store->update($validated);
         \Illuminate\Support\Facades\Cache::forget('store_name');
 
-        return redirect()->back()->with('success', 'Pengaturan toko berhasil diperbarui.');
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Pengaturan toko berhasil diperbarui.']);
+        return redirect()->back();
     }
 }

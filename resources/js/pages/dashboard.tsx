@@ -20,6 +20,7 @@ import { LowStockWidget } from '@/components/dashboard/low-stock-widget';
 import { RecentServicesWidget } from '@/components/dashboard/recent-services-widget';
 import { ServiceStatusChart } from '@/components/dashboard/service-status-chart';
 import { FinanceTrendChart } from '@/components/dashboard/finance-trend-chart';
+import { AiBusinessInsightWidget } from '@/components/dashboard/ai-business-insight-widget';
 
 interface DashboardProps {
     stats: {
@@ -68,6 +69,8 @@ export default function Dashboard({ stats, low_stock_spareparts, recent_services
         <>
             <Head title="Dashboard" />
             <div className="flex flex-1 flex-col gap-6 p-6">
+                {/* AI Insight Banner */}
+                <AiBusinessInsightWidget />
 
                 {/* Bagian Atas: Kartu Statistik Utama */}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

@@ -39,7 +39,6 @@ export default function StoreSettings({ store }: { store: any }) {
         post('/settings/store', {
             preserveScroll: true,
             forceFormData: true, // Required for file uploads
-            onSuccess: () => toast.success('Pengaturan toko berhasil diperbarui!'),
         });
     };
 

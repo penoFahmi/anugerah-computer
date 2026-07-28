@@ -1,7 +1,8 @@
 import { useForm, router } from '@inertiajs/react';
-import { Loader2, Clock, Wrench, FileText, Send, Check, Play, CheckCircle2, XCircle, HandCoins, ShieldCheck, Save, Plus, Banknote, CreditCard, QrCode } from 'lucide-react';
+import { Loader2, Clock, Wrench, FileText, Send, Check, Play, CheckCircle2, XCircle, HandCoins, ShieldCheck, Save, Plus, Banknote, CreditCard, QrCode, Sparkles, Wand2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import axios from 'axios';
 
 import { Alert as UIAlert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -90,23 +91,22 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
         };
 
         if (isTriggerWa) {
-            toast.loading('Menyimpan data dan memicu gateway WhatsApp...');
+            const toastId = toast.loading('Menyimpan data dan memicu gateway WhatsApp...');
             router.put(`/services/${service.id}`, payload, {
                 preserveScroll: true,
                 onSuccess: () => {
                     router.post(`/services/${service.id}/trigger-wa`, {}, {
                         preserveScroll: true,
-                        onSuccess: () => { toast.dismiss(); toast.success('Penawaran WA berhasil dikirim.'); onClose(); },
-                        onError: () => { toast.dismiss(); toast.error('Gagal mengirim WhatsApp.'); }
+                        onSuccess: () => { toast.dismiss(toastId); onClose(); },
+                        onError: () => { toast.dismiss(toastId); }
                     });
                 },
-                onError: () => { toast.dismiss(); toast.error('Gagal menyimpan biaya.'); }
+                onError: () => { toast.dismiss(toastId); }
             });
         } else {
             router.put(`/services/${service.id}`, payload, {
                 preserveScroll: true,
-                onSuccess: () => { toast.success(`Nota ${service.order_number} berhasil diperbarui.`); onClose(); },
-                onError: () => { toast.error('Gagal memperbarui operasional.'); }
+                onSuccess: () => { onClose(); },
             });
         }
     };
@@ -150,9 +150,12 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                     </div>
                     
                     <div className="space-y-1.5 flex-1 flex flex-col min-h-0">
-                        <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                            <FileText className="h-3.5 w-3.5 text-muted-foreground" /> Catatan Pengecekan
-                        </Label>
+                        <div className="flex items-center justify-between">
+                            <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                                <FileText className="h-3.5 w-3.5 text-muted-foreground" /> Catatan Pengecekan
+                            </Label>
+
+                        </div>
                         <Textarea className="flex-1 text-sm resize-none bg-background p-3 custom-scrollbar min-h-[80px]" placeholder="Misal: Sparepart kosong, IC Power mati..." value={data.technician_notes} onChange={(e) => setData('technician_notes', e.target.value)} />
                     </div>
                 </div>
@@ -174,9 +177,12 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                     </div>
                     
                     <div className="space-y-1.5 flex-1 flex flex-col min-h-0">
-                        <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                            <FileText className="h-3.5 w-3.5 text-muted-foreground" /> Catatan Teknisi
-                        </Label>
+                        <div className="flex items-center justify-between">
+                            <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                                <FileText className="h-3.5 w-3.5 text-muted-foreground" /> Catatan Teknisi
+                            </Label>
+
+                        </div>
                         <Textarea className="flex-1 text-sm resize-none bg-background p-3 custom-scrollbar min-h-[80px]" value={data.technician_notes} onChange={(e) => setData('technician_notes', e.target.value)} />
                     </div>
                 </div>
@@ -268,9 +274,12 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                     </div>
                     
                     <div className="space-y-1.5 flex-1 flex flex-col min-h-0">
-                        <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                            <FileText className="h-3.5 w-3.5 text-muted-foreground" /> Tindakan yang Dilakukan
-                        </Label>
+                        <div className="flex items-center justify-between">
+                            <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                                <FileText className="h-3.5 w-3.5 text-muted-foreground" /> Tindakan yang Dilakukan
+                            </Label>
+
+                        </div>
                         <Textarea placeholder="Sparepart yang diganti..." className="flex-1 text-sm resize-none bg-background p-3 custom-scrollbar min-h-[80px]" value={data.technician_notes} onChange={(e) => setData('technician_notes', e.target.value)} />
                     </div>
                 </div>
@@ -462,9 +471,9 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                         <XCircle className="h-4 w-4 mr-1.5" /> Batal
                     </Button>
                     <div className="flex gap-2">
-                        <Button type="button" size="sm" variant="outline" onClick={() => processAction('in_progress')} disabled={processing}>Simpan Progress</Button>
-                        <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm" onClick={() => processAction('completed')} disabled={processing}>
-                            <CheckCircle2 className="h-4 w-4 mr-1.5" /> Tandai Selesai
+                        <Button type="button" size="sm" variant="outline" onClick={() => processAction('in_progress')} disabled={processing}>Simpan Progres</Button>
+                        <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm" onClick={() => processAction('completed', true)} disabled={processing}>
+                            <CheckCircle2 className="h-4 w-4 mr-1.5 fill-current" /> Selesai & Infokan WA
                         </Button>
                     </div>
                 </div>

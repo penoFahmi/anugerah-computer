@@ -20,6 +20,7 @@ class PublicTestimonialController extends Controller
 
         Testimonial::create($validated);
 
-        return redirect()->back()->with('success', 'Terima kasih! Ulasan Anda telah dikirim dan menunggu moderasi admin.');
+        \Inertia\Inertia::flash('toast', ['type' => 'success', 'message' => 'Terima kasih! Ulasan Anda telah dikirim dan menunggu moderasi admin.']);
+        return redirect()->back();
     }
 }

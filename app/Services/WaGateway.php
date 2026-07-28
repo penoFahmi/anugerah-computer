@@ -35,6 +35,14 @@ class WaGateway
 
             if ($response->successful()) {
                 $data = $response->json();
+                
+                // [BUGFIX]: API Baileys mungkin mereturn HTTP 200 meskipun WA belum Scan QR.
+                // Kita harus mengecek field 'status' di dalam JSON-nya.
+                if (isset($data['status']) && $data['status'] === false) {
+                    Log::warning("Baileys API - Terhubung tapi WA belum Scan QR (Kirim Dokumen).", $data);
+                    return false;
+                }
+
                 ChatLog::create([
                     'service_order_id' => $serviceOrderId,
                     'phone' => $phone,
@@ -90,6 +98,14 @@ class WaGateway
 
             if ($response->successful()) {
                 $data = $response->json();
+
+                // [BUGFIX]: API Baileys mungkin mereturn HTTP 200 meskipun WA belum Scan QR.
+                // Kita harus mengecek field 'status' di dalam JSON-nya.
+                if (isset($data['status']) && $data['status'] === false) {
+                    Log::warning("Baileys API - Terhubung tapi WA belum Scan QR (Kirim Pesan).", $data);
+                    return false;
+                }
+
                 ChatLog::create([
                     'service_order_id' => $serviceOrderId,
                     'phone' => $phone,

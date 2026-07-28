@@ -19,6 +19,7 @@ use App\Http\Controllers\Services\ServiceOrderController;
 use App\Http\Controllers\Settings\LogController;
 use App\Http\Controllers\Admin\TrashController;
 use App\Http\Controllers\Services\WarrantyController;
+use App\Http\Controllers\Api\AiCopilotController;
 /*
 |--------------------------------------------------------------------------
 | Public Routes
@@ -48,6 +49,9 @@ Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
 
     // API & Resource Service Orders
     Route::get('/api/search-customer', [ServiceOrderController::class, 'searchCustomer'])->name('api.search-customer');
+    
+    // AI Copilot Endpoints
+    Route::get('/api/ai/business-insight', [AiCopilotController::class, 'businessInsight'])->name('api.ai.business-insight');
     Route::post('/services/{serviceOrder}/spareparts', [ServiceOrderController::class, 'attachSparepart'])
         ->name('services.spareparts.attach');
     Route::resource('services', ServiceOrderController::class)

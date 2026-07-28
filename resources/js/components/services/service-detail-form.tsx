@@ -1,6 +1,7 @@
 import { useForm } from '@inertiajs/react';
 import { Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatIndonesianPhone } from '@/lib/utils';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,8 +52,13 @@ export function ServiceDetailForm({ service }: { service: ExtendedService }) {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         
+        let finalPhone = data.phone.replace(/\D/g, '');
+        if (finalPhone.startsWith('0')) finalPhone = '62' + finalPhone.substring(1);
+        else if (finalPhone.startsWith('8') && finalPhone.length >= 1) finalPhone = '62' + finalPhone;
+
         transform((currentData) => ({
             ...currentData,
+            phone: finalPhone,
             estimated_cost: currentData.estimated_cost ? Number(currentData.estimated_cost) : null,
             final_cost: currentData.final_cost ? Number(currentData.final_cost) : null,
             down_payment: currentData.down_payment ? Number(currentData.down_payment) : null,
@@ -61,8 +67,6 @@ export function ServiceDetailForm({ service }: { service: ExtendedService }) {
 
         put(`/services/${service.id}`, {
             preserveScroll: true,
-            onSuccess: () => toast.success('Data detail servisan berhasil diperbarui.'),
-            onError: () => toast.error('Gagal menyimpan. Periksa kembali form isian.'),
         });
     };
 
@@ -84,7 +88,7 @@ export function ServiceDetailForm({ service }: { service: ExtendedService }) {
                                 </div>
                                 <div className="space-y-1.5">
                                     <Label className="text-xs text-muted-foreground">Nomor WA</Label>
-                                    <Input className="h-8 text-xs bg-background" value={data.phone} onChange={e => setData('phone', e.target.value)} />
+                                    <Input className="h-8 text-xs bg-background" value={data.phone} onChange={e => setData('phone', formatIndonesianPhone(e.target.value))} />
                                     {errors.phone && <p className="text-[10px] text-destructive">{errors.phone}</p>}
                                 </div>
                             </div>

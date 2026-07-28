@@ -1,6 +1,8 @@
 import { useForm } from '@inertiajs/react';
 import { AlertCircle, Loader2, Search, Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { formatNumberWithDots, getCleanNumber } from '@/utils/currency';
+import { formatIndonesianPhone } from '@/lib/utils';
 import { toast } from 'sonner';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -82,11 +84,14 @@ export function ServiceFormModal({ isOpen, onClose }: Props) {
     // ----------------------------
 
     const handlePhoneChange = (val: string) => {
-        let numericVal = val.replace(/\D/g, '');
+        // Otomatis format nomor HP jadi +62 8XX-XXXX-XXXX
+        const displayVal = formatIndonesianPhone(val);
+        setData('phone', displayVal);
+
+        // Bersihkan hanya untuk API pencarian
+        let numericVal = displayVal.replace(/\D/g, '');
         if (numericVal.startsWith('0')) numericVal = '62' + numericVal.substring(1);
         else if (numericVal.startsWith('8') && numericVal.length >= 1) numericVal = '62' + numericVal;
-
-        setData('phone', numericVal);
 
         if (selectedCustomer) {
             setSelectedCustomer(null);
@@ -138,9 +143,15 @@ export function ServiceFormModal({ isOpen, onClose }: Props) {
             }
         }
 
+        // Bersihkan format nomor WA sebelum dikirim ke backend
+        let finalPhone = data.phone.replace(/\D/g, '');
+        if (finalPhone.startsWith('0')) finalPhone = '62' + finalPhone.substring(1);
+        else if (finalPhone.startsWith('8') && finalPhone.length >= 1) finalPhone = '62' + finalPhone;
+
         // Menggunakan transform untuk mengubah data tepat sebelum dikirim ke backend
         transform((currentData) => ({
             ...currentData,
+            phone: finalPhone,
             estimated_cost: currentData.is_technician_on_site ? (currentData.estimated_cost || 0) : 0,
             down_payment: currentData.is_technician_on_site ? (currentData.down_payment || 0) : 0,
             is_unit_left_at_store: (currentData.is_technician_on_site && isIndentCase) ? currentData.is_unit_left_at_store : true,
@@ -156,10 +167,8 @@ export function ServiceFormModal({ isOpen, onClose }: Props) {
                 setIsIndentCase(false);
                 setSelectedCustomer(null);
                 setSuggestions([]);
-                toast.success('Penerimaan servis berhasil didaftarkan.');
                 onClose();
             },
-            onError: () => toast.error('Registrasi gagal. Silakan periksa kembali kolom yang wajib diisi.'),
         });
     };
 

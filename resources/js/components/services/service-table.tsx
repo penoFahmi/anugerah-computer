@@ -68,20 +68,13 @@ export function ServiceTable({
     };
 
     const handlePrintWaManual = (item: ServiceListItem) => {
-        toast.loading('Memicu sistem WA...');
+        const toastId = toast.loading('Memicu sistem WA...');
         router.post(
             `/services/${item.id}/trigger-wa`,
             {},
             {
                 preserveScroll: true,
-                onSuccess: () => {
-                    toast.dismiss();
-                    toast.success('Pemberitahuan berhasil dipicu ke WhatsApp.');
-                },
-                onError: () => {
-                    toast.dismiss();
-                    toast.error('Gagal memicu WA.');
-                },
+                onFinish: () => toast.dismiss(toastId),
             },
         );
     };

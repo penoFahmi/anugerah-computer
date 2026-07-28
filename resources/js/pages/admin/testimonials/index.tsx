@@ -10,7 +10,6 @@ export default function TestimonialIndex({ testimonials }: { testimonials: any[]
     const updateStatus = (id: number, status: string) => {
         router.patch(`/testimonials/${id}/status`, { status }, {
             preserveScroll: true,
-            onSuccess: () => toast.success(`Testimoni berhasil diubah menjadi ${status}`)
         });
     };
 
@@ -18,7 +17,6 @@ export default function TestimonialIndex({ testimonials }: { testimonials: any[]
         if (confirm('Yakin ingin menghapus testimoni ini?')) {
             router.delete(`/testimonials/${id}`, {
                 preserveScroll: true,
-                onSuccess: () => toast.success('Testimoni berhasil dihapus')
             });
         }
     };

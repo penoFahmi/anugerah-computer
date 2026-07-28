@@ -25,12 +25,14 @@ class TestimonialController extends Controller
 
         $testimonial->update($validated);
 
-        return redirect()->back()->with('success', 'Status testimoni berhasil diperbarui.');
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Status testimoni berhasil diperbarui.']);
+        return redirect()->back();
     }
 
     public function destroy(Testimonial $testimonial)
     {
         $testimonial->delete();
-        return redirect()->back()->with('success', 'Testimoni berhasil dihapus.');
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Testimoni berhasil dihapus.']);
+        return redirect()->back();
     }
 }

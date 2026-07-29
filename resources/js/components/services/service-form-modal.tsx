@@ -1,5 +1,5 @@
 import { useForm } from '@inertiajs/react';
-import { AlertCircle, Loader2, Search, Plus } from 'lucide-react';
+import { AlertCircle, Loader2, Search, Laptop } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { formatNumberWithDots, getCleanNumber } from '@/utils/currency';
 import { formatIndonesianPhone } from '@/lib/utils';
@@ -179,7 +179,7 @@ export function ServiceFormModal({ isOpen, onClose }: Props) {
                     {/* Header Formal */}
                     <div className="shrink-0 flex items-center gap-3 border-b border-border bg-muted/20 p-4">
                         <div className="rounded-lg bg-primary/10 p-2">
-                            <Plus className="h-5 w-5 text-primary" />
+                            <Laptop className="h-5 w-5 text-primary" />
                         </div>
                         <DialogHeader className="text-left space-y-0 text-left sm:text-left">
                             <DialogTitle className="text-sm font-bold text-foreground">

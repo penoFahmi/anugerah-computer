@@ -17,7 +17,13 @@ export function KanbanCard({ service, index, onClick }: KanbanCardProps) {
         return new Intl.NumberFormat('id-ID').format(Number(angka));
     };
 
-    const cost = formatRupiah(service.estimated_cost);
+    const finalCost = service.financials?.final || service.final_cost;
+    const estimatedCost = service.financials?.estimated || service.estimated_cost;
+    const dp = service.financials?.dp || service.down_payment;
+    
+    const displayCostRaw = finalCost || estimatedCost;
+    const costText = formatRupiah(displayCostRaw);
+    const costLabel = finalCost ? 'Tagihan:' : (estimatedCost ? 'Est:' : '');
     const isWarrantyClaim = service.complaint.includes('[KLAIM GARANSI');
 
     return (
@@ -71,15 +77,30 @@ export function KanbanCard({ service, index, onClick }: KanbanCardProps) {
                         {service.complaint.replace(/\[KLAIM GARANSI.*?\]/g, '').trim()}
                     </div>
 
-                    <div className="flex justify-between items-center mt-3 pt-3 border-t border-border">
-                        <span className="text-[10px] font-medium text-muted-foreground">
+                    {service.technician_notes && (
+                        <div className="mt-2 bg-blue-50/50 dark:bg-blue-900/10 p-2 rounded text-[10px] text-blue-800/80 dark:text-blue-300/80 line-clamp-2 leading-snug border border-blue-100 dark:border-blue-800/50 flex items-start gap-1.5">
+                            <span className="shrink-0 font-bold mt-0.5 text-[9px] uppercase tracking-wider opacity-60">Note:</span>
+                            <span className="flex-1 italic">{service.technician_notes}</span>
+                        </div>
+                    )}
+
+                    <div className="flex justify-between items-end mt-3 pt-3 border-t border-border">
+                        <span className="text-[10px] font-medium text-muted-foreground pb-0.5">
                             {service.created_at}
                         </span>
-                        {cost && (
-                            <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-500">
-                                Rp {cost}
-                            </span>
-                        )}
+                        <div className="flex flex-col items-end gap-1">
+                            {costText && (
+                                <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-500">
+                                    <span className="text-[9px] text-muted-foreground font-normal mr-1">{costLabel}</span>
+                                    Rp {costText}
+                                </span>
+                            )}
+                            {Number(dp) > 0 && (
+                                <span className="text-[9px] font-bold text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-1 rounded">
+                                    DP: Rp {formatRupiah(dp)}
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

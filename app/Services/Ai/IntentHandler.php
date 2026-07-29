@@ -69,7 +69,7 @@ class IntentHandler
                 'resolved_by' => 'emergency_db_fallback',
                 'final_intent' => $intent,
             ]);
-            WaGateway::sendMessage($rawPhone, $autoReply->response_text . "\n\n-System", $serviceOrder?->id, 'db_fallback_reply');
+            WaGateway::sendMessage($rawPhone, $autoReply->response_text . "\n\n-System", $serviceOrder?->id, 'db_fallback_reply', 'Sistem (DB Fallback)');
         } else {
             // Jika bot mati dan tidak ada template baku di DB, panggil Manusia!
             $this->triggerHumanHandoff($chatLog, $rawPhone, $serviceOrder, "Sistem AI (LLM) Error/Mati, dan tidak ada DB Fallback untuk intent: {$intent}");
@@ -98,9 +98,9 @@ class IntentHandler
                 $balasan = "Halo Kak, kami tidak menemukan data servis aktif untuk nomor ini. Boleh minta nomor nota servisnya (contoh: SRV-XXX-XXX)?";
             }
         } else {
-            // Ambil dari database auto replies
-            $autoReply = BotAutoReply::where('intent_name', $intent)->first();
-            $balasan = $autoReply ? $autoReply->response_text : "Terkait hal tersebut, mohon hubungi admin kami ya Kak.";
+        // Ambil dari database auto replies
+        $autoReply = BotAutoReply::where('intent_name', $intent)->first();
+        $balasan = $autoReply ? $autoReply->response_text : "Terkait hal tersebut, mohon hubungi admin kami ya Kak.";
         }
 
         $chatLog->update([
@@ -109,7 +109,8 @@ class IntentHandler
         ]);
         
         $msgType = $source === 'agent_nlp_fasttext' ? 'nlp_direct_reply' : 'llm_intent_fallback_reply';
-        WaGateway::sendMessage($rawPhone, $balasan . "\n\n-System", $serviceOrder?->id, $msgType);
+        $senderName = $source === 'agent_nlp_fasttext' ? 'Sistem (Auto NLP)' : 'Sistem (Auto LLM)';
+        WaGateway::sendMessage($rawPhone, $balasan . "\n\n-System", $serviceOrder?->id, $msgType, $senderName);
     }
 
     protected function handleGenerative(ChatLog $chatLog, ?ServiceOrder $serviceOrder, string $rawPhone, array $history, string $source, string $intent = 'lainnya'): void
@@ -175,13 +176,13 @@ class IntentHandler
             'llm_completion_tokens' => $existingCompletion + $csCompletionTokens,
         ]);
 
-        WaGateway::sendMessage($rawPhone, $aiResponse . "\n\n-CS", $serviceOrder?->id, 'llm_cs_reply');
+        WaGateway::sendMessage($rawPhone, $aiResponse . "\n\n-CS", $serviceOrder?->id, 'llm_cs_reply', 'LLM (Generative AI)');
     }
 
     public function triggerHumanHandoff(ChatLog $chatLog, string $rawPhone, ?ServiceOrder $serviceOrder, string $alasan): void
     {
         $balasan = 'Maaf Kak, pesan Anda akan segera ditangani langsung oleh Admin toko kami. Mohon tunggu sebentar ya. 🙏';
-        WaGateway::sendMessage($rawPhone, $balasan . "\n\n-System", $serviceOrder?->id, 'human_handoff_trigger');
+        WaGateway::sendMessage($rawPhone, $balasan . "\n\n-System", $serviceOrder?->id, 'human_handoff_trigger', 'Sistem (Handoff)');
 
         $chatLog->update([
             'resolved_by' => 'human',

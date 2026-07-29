@@ -44,12 +44,15 @@ class LogController extends Controller
         $intentStats = (clone $aggregateQuery)
             ->selectRaw('final_intent as name, count(*) as value')
             ->whereNotNull('final_intent')
+            ->where('direction', 'inbound')
+            ->where('final_intent', '!=', 'analyzing')
             ->groupBy('final_intent')
             ->get();
 
         $sourceStats = (clone $aggregateQuery)
             ->selectRaw('resolved_by as name, count(*) as value')
             ->whereNotNull('resolved_by')
+            ->where('direction', 'inbound')
             ->groupBy('resolved_by')
             ->get();
 

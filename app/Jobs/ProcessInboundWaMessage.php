@@ -37,9 +37,11 @@ class ProcessInboundWaMessage implements ShouldQueue
 
         $history = [];
         foreach ($logs as $log) {
+            // Bersihkan signature dari history agar LLM tidak menirunya
+            $cleanMsg = str_replace(["\n\n-CS", "\n\n-System"], "", $log->message);
             $history[] = [
                 'role' => $log->direction === 'inbound' ? 'user' : 'assistant',
-                'content' => $log->message,
+                'content' => trim($cleanMsg),
             ];
         }
 

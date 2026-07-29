@@ -3,6 +3,7 @@ import { Loader2, Clock, Wrench, FileText, Send, Check, Play, CheckCircle2, XCir
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import axios from 'axios';
+import Select from 'react-select';
 
 import { Alert as UIAlert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -35,7 +36,7 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
     const { data, setData, processing, clearErrors } = useForm({
         estimated_cost: '',
         final_cost: '',
-        down_payment: '', 
+        down_payment: '',
         technician_notes: '',
         warranty_days: '30',
         is_full_update: false,
@@ -52,19 +53,26 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
 
     useEffect(() => {
         if (isOpen && service) {
+            // Karena final_cost/estimated_cost sudah mencakup harga sparepart (borongan), 
+            // kita tidak perlu lagi menambahkan sum sparepart ke dalamnya.
+            const initialFinalCost = service.final_cost !== null
+                ? Number(service.final_cost)
+                : (service.estimated_cost ? Number(service.estimated_cost) : 0);
+
             setData({
                 estimated_cost: service.estimated_cost ? Math.round(Number(service.estimated_cost)).toString() : '',
-                final_cost: service.final_cost ? Math.round(Number(service.final_cost)).toString() : (service.estimated_cost ? Math.round(Number(service.estimated_cost)).toString() : ''),
+                final_cost: initialFinalCost ? Math.round(initialFinalCost).toString() : '',
                 down_payment: service.down_payment ? Math.round(Number(service.down_payment)).toString() : '',
-                technician_notes: service.technician_notes || '', 
-                warranty_days: '30', 
+                technician_notes: service.technician_notes || '',
+                warranty_days: '30',
                 is_full_update: false,
+                payment_method: 'cash',
             });
             clearErrors();
             setSelectedSparepart('');
             setSparepartQty(1);
         }
-    }, [isOpen, service]);
+    }, [isOpen, service?.id]);
 
     if (!service) return null;
 
@@ -74,19 +82,14 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
         setSparepartQty(1);
 
         const isWarranty = service?.complaint?.startsWith('KLAIM GARANSI');
-        // Validasi dihapus sesuai permintaan user agar bisa tes kirim penawaran dengan harga Rp 0
-        // if (isTriggerWa && (!data.estimated_cost || Number(data.estimated_cost) <= 0) && !isWarranty) {
-        //     toast.error('Gagal: Estimasi biaya harus diisi di atas Rp 0 untuk mengirim penawaran (Kecuali Klaim Garansi).');
-        //     return;
-        // }
 
         const payload = {
             status: targetStatus,
             estimated_cost: data.estimated_cost ? Number(data.estimated_cost) : null,
             final_cost: data.final_cost ? Number(data.final_cost) : null,
-            down_payment: data.down_payment ? Number(data.down_payment) : 0, 
+            down_payment: data.down_payment ? Number(data.down_payment) : 0,
             technician_notes: data.technician_notes,
-            warranty_days: data.warranty_days ? Number(data.warranty_days) : 0, 
+            warranty_days: data.warranty_days ? Number(data.warranty_days) : 0,
             is_full_update: false,
         };
 
@@ -132,23 +135,23 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                             Lakukan pengecekan awal pada perangkat. Masukkan estimasi biaya di bawah, lalu klik "Kirim Penawaran WA". Jika unit tidak dapat diperbaiki, Anda bisa membatalkannya.
                         </AlertDescription>
                     </UIAlert>
-                    
+
                     <div className="space-y-1.5">
                         <Label className="text-xs font-semibold text-foreground">Estimasi Biaya Pengecekan (Rp)</Label>
                         <div className="relative">
                             <span className="absolute left-3 top-2.5 text-xs font-bold text-muted-foreground">Rp</span>
-                            <Input 
-                                type="text" 
-                                className="pl-9 bg-background font-mono" 
-                                value={data.estimated_cost ? formatRupiah(data.estimated_cost) : ''} 
+                            <Input
+                                type="text"
+                                className="pl-9 bg-background font-mono"
+                                value={data.estimated_cost ? formatRupiah(data.estimated_cost) : ''}
                                 onChange={(e) => {
                                     const clean = e.target.value.replace(/\D/g, '');
                                     setData('estimated_cost', clean);
-                                }} 
+                                }}
                             />
                         </div>
                     </div>
-                    
+
                     <div className="space-y-1.5 flex-1 flex flex-col min-h-0">
                         <div className="flex items-center justify-between">
                             <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
@@ -170,12 +173,12 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                             {status === 'approved' ? '✓ Pelanggan telah MENYETUJUI biaya. Silakan "Mulai Kerjakan".' : '⏳ Menunggu konfirmasi. Anda dapat memulainya jika pelanggan sudah setuju secara lisan.'}
                         </AlertDescription>
                     </UIAlert>
-                    
+
                     <div className="space-y-1.5">
                         <Label className="text-xs font-semibold text-muted-foreground">Estimasi Biaya Kesepakatan</Label>
                         <Input disabled className="bg-muted font-bold font-mono text-foreground" value={`Rp ${formatRupiah(data.estimated_cost)}`} />
                     </div>
-                    
+
                     <div className="space-y-1.5 flex-1 flex flex-col min-h-0">
                         <div className="flex items-center justify-between">
                             <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
@@ -207,27 +210,52 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
 
             return (
                 <div className="flex flex-col h-full space-y-4">
-                    <div className="p-4 border border-border rounded-xl bg-muted/40 space-y-4 shrink-0">
+                    <div className="p-4 border border-border rounded-xl bg-muted/40 space-y-4 shrink-0 overflow-visible">
                         <Label className="text-sm font-bold text-foreground flex items-center gap-2">
                             <Wrench className="h-4 w-4 text-blue-600 dark:text-blue-500" />
                             Gunakan Sparepart / Jasa Tambahan
                         </Label>
-                        <div className="flex gap-2">
-                            <select 
-                                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring font-medium"
-                                value={selectedSparepart}
-                                onChange={(e) => setSelectedSparepart(e.target.value)}
-                            >
-                                <option value="">-- Cari atau Pilih Sparepart --</option>
-                                {available_spare_parts?.map(sp => (
-                                    <option key={sp.id} value={sp.id} disabled={!sp.is_always_indent && sp.stock <= 0}>
-                                        {sp.name} - Rp {formatRupiah(sp.selling_price)} {(!sp.is_always_indent && sp.stock <= 0) ? '(Stok Habis)' : `(Tersedia: ${sp.stock})`}
-                                    </option>
-                                ))}
-                            </select>
-                            <Input 
-                                type="number" min="1" 
-                                className="w-16 h-9 px-2 text-center font-bold" 
+                        <div className="flex gap-2 relative z-50">
+                            <div className="flex-1">
+                                <Select
+                                    className="text-sm font-medium react-select-container"
+                                    classNamePrefix="react-select"
+                                    placeholder="Ketik sparepart..."
+                                    options={available_spare_parts?.map(sp => ({
+                                        value: String(sp.id),
+                                        label: `${sp.name} - Rp ${formatRupiah(sp.selling_price)} ${(!sp.is_always_indent && sp.stock <= 0) ? '(Stok Habis)' : `(Stok: ${sp.stock})`}`,
+                                        isDisabled: !sp.is_always_indent && sp.stock <= 0
+                                    })) || []}
+                                    value={
+                                        selectedSparepart
+                                            ? {
+                                                value: selectedSparepart,
+                                                label: available_spare_parts?.find(s => String(s.id) === selectedSparepart)?.name + ' - Rp ' + formatRupiah(available_spare_parts?.find(s => String(s.id) === selectedSparepart)?.selling_price || 0)
+                                            }
+                                            : null
+                                    }
+                                    onChange={(option: any) => setSelectedSparepart(option ? option.value : '')}
+                                    isClearable
+                                    isSearchable
+                                    unstyled
+                                    classNames={{
+                                        control: (state) => `flex min-h-9 w-full rounded-md border bg-background px-3 py-0.5 text-sm shadow-sm transition-colors ${state.isFocused ? 'border-ring ring-1 ring-ring outline-none' : 'border-input'}`,
+                                        menu: () => "mt-1.5 bg-popover text-popover-foreground border border-border rounded-md shadow-md z-50 overflow-hidden",
+                                        menuList: () => "max-h-[200px] overflow-y-auto custom-scrollbar p-1",
+                                        option: (state) => `cursor-pointer rounded-sm py-1.5 px-3 text-sm transition-colors ${state.isFocused ? 'bg-accent text-accent-foreground' : ''} ${state.isSelected ? 'bg-blue-600 text-white' : ''} ${state.isDisabled ? 'opacity-50 cursor-not-allowed hover:bg-transparent' : 'hover:bg-accent hover:text-accent-foreground'}`,
+                                        singleValue: () => "text-foreground",
+                                        input: () => "text-foreground",
+                                        placeholder: () => "text-muted-foreground",
+                                        indicatorSeparator: () => "bg-border mx-2",
+                                        dropdownIndicator: () => "text-muted-foreground hover:text-foreground",
+                                        clearIndicator: () => "text-muted-foreground hover:text-foreground",
+                                        noOptionsMessage: () => "text-muted-foreground py-3 text-center",
+                                    }}
+                                />
+                            </div>
+                            <Input
+                                type="number" min="1"
+                                className="w-16 h-9 px-2 text-center font-bold"
                                 value={sparepartQty}
                                 onChange={(e) => setSparepartQty(Number(e.target.value))}
                                 title="Kuantitas"
@@ -260,19 +288,19 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                             <Label className="text-xs font-bold text-blue-700 dark:text-blue-400">Biaya Akhir (Final Cost)</Label>
                             <div className="relative">
                                 <span className="absolute left-3 top-2.5 text-xs font-bold text-blue-700/50 dark:text-blue-400/50">Rp</span>
-                                <Input 
-                                    type="text" 
-                                    className="pl-9 border-blue-300 focus-visible:ring-blue-500 font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 font-mono" 
-                                    value={data.final_cost ? formatRupiah(Number(data.final_cost)) : ''} 
+                                <Input
+                                    type="text"
+                                    className="pl-9 border-blue-300 focus-visible:ring-blue-500 font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 font-mono"
+                                    value={data.final_cost ? formatRupiah(Number(data.final_cost)) : ''}
                                     onChange={(e) => {
                                         const clean = e.target.value.replace(/\D/g, '');
                                         setData('final_cost', clean);
-                                    }} 
+                                    }}
                                 />
                             </div>
                         </div>
                     </div>
-                    
+
                     <div className="space-y-1.5 flex-1 flex flex-col min-h-0">
                         <div className="flex items-center justify-between">
                             <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
@@ -296,7 +324,7 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                 <div className="flex flex-col h-full space-y-4">
                     <div className="bg-slate-900 dark:bg-slate-950 rounded-xl p-5 text-slate-100 shadow-xl border border-slate-800 shrink-0 relative overflow-hidden">
                         <div className="absolute left-0 right-0 top-0 h-1 bg-gradient-to-r from-emerald-500/50 via-teal-500/50 to-emerald-500/50" />
-                        
+
                         <div className="flex justify-between items-center mb-4 border-b border-slate-700/80 pb-4">
                             <span className="text-xs text-slate-400 font-medium tracking-wide uppercase flex items-center gap-2">
                                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
@@ -304,19 +332,19 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                             </span>
                             <span className="text-base font-mono font-bold text-white">Rp {formatRupiah(finalCost)}</span>
                         </div>
-                        
+
                         <div className="flex justify-between items-center mb-4 border-b border-slate-700/80 pb-4">
                             <span className="text-xs text-slate-400 font-medium tracking-wide uppercase">Uang Muka / Dibayar</span>
                             <div className="relative w-36">
                                 <span className="absolute left-3 top-2.5 text-[11px] font-bold text-slate-500">Rp</span>
-                                <Input 
-                                    type="text" 
-                                    className="pl-8 h-9 text-sm bg-slate-950 border-slate-700 focus-visible:ring-emerald-500 focus-visible:border-emerald-500 text-emerald-400 font-mono font-bold text-right shadow-inner" 
-                                    value={data.down_payment ? formatRupiah(Number(data.down_payment)) : ''} 
+                                <Input
+                                    type="text"
+                                    className="pl-8 h-9 text-sm bg-slate-950 border-slate-700 focus-visible:ring-emerald-500 focus-visible:border-emerald-500 text-emerald-400 font-mono font-bold text-right shadow-inner"
+                                    value={data.down_payment ? formatRupiah(Number(data.down_payment)) : ''}
                                     onChange={(e) => {
                                         const clean = e.target.value.replace(/\D/g, '');
                                         setData('down_payment', clean);
-                                    }} 
+                                    }}
                                 />
                             </div>
                         </div>
@@ -345,11 +373,10 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                                             key={method.id}
                                             type="button"
                                             onClick={() => setData('payment_method', method.id)}
-                                            className={`flex flex-col items-center justify-center gap-1.5 p-2 rounded-lg border transition-all ${
-                                                isSelected 
-                                                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.1)]' 
-                                                : 'bg-slate-800/50 text-slate-400 border-slate-700 hover:bg-slate-800 hover:text-slate-300'
-                                            }`}
+                                            className={`flex flex-col items-center justify-center gap-1.5 p-2 rounded-lg border transition-all ${isSelected
+                                                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.1)]'
+                                                    : 'bg-slate-800/50 text-slate-400 border-slate-700 hover:bg-slate-800 hover:text-slate-300'
+                                                }`}
                                         >
                                             <Icon className="h-5 w-5" />
                                             <span className="text-[10px] font-bold uppercase tracking-wider">{method.label}</span>
@@ -359,24 +386,24 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                             </div>
                         </div>
                     </div>
-                    
+
                     <div className="bg-emerald-500/10 border border-emerald-500/20 p-3.5 rounded-xl flex flex-col gap-2 mb-4">
                         <Label className="text-xs font-bold text-emerald-800 dark:text-emerald-400 flex items-center gap-1.5">
                             <ShieldCheck className="h-4 w-4" /> Masa Berlaku Garansi (Hari)
                         </Label>
                         <div className="flex items-center gap-3">
-                            <Input 
+                            <Input
                                 type="number" min="0" max="365"
-                                className="w-16 h-8 text-sm bg-background border-emerald-500/30 text-center font-bold text-foreground px-1" 
-                                value={data.warranty_days} 
-                                onChange={(e) => setData('warranty_days', e.target.value)} 
+                                className="w-16 h-8 text-sm bg-background border-emerald-500/30 text-center font-bold text-foreground px-1"
+                                value={data.warranty_days}
+                                onChange={(e) => setData('warranty_days', e.target.value)}
                             />
                             <div className="flex flex-wrap gap-2 flex-1">
                                 {['0', '7', '14', '30', '90'].map((days) => (
-                                    <Badge 
+                                    <Badge
                                         key={days}
-                                        variant="outline" 
-                                        className="cursor-pointer hover:bg-emerald-500/20 bg-background text-xs font-medium px-2.5 py-1 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 transition-colors" 
+                                        variant="outline"
+                                        className="cursor-pointer hover:bg-emerald-500/20 bg-background text-xs font-medium px-2.5 py-1 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 transition-colors"
                                         onClick={() => setData('warranty_days', days)}
                                     >
                                         {days === '30' ? '1 Bln' : days === '90' ? '3 Bln' : days}
@@ -429,7 +456,7 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
 
     const renderFormActions = () => {
         const status = service.status;
-        
+
         if (status === 'waiting_checking') {
             return (
                 <div className="flex justify-between items-center w-full">
@@ -447,7 +474,7 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                 </div>
             );
         }
-        
+
         if (status === 'waiting_approval' || status === 'approved') {
             return (
                 <div className="flex justify-between items-center w-full">
@@ -463,7 +490,7 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                 </div>
             );
         }
-        
+
         if (status === 'in_progress') {
             return (
                 <div className="flex justify-between items-center w-full">
@@ -472,14 +499,14 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                     </Button>
                     <div className="flex gap-2">
                         <Button type="button" size="sm" variant="outline" onClick={() => processAction('in_progress')} disabled={processing}>Simpan Progres</Button>
-                        <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm" onClick={() => processAction('completed', true)} disabled={processing}>
-                            <CheckCircle2 className="h-4 w-4 mr-1.5 fill-current" /> Selesai & Infokan WA
+                        <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm" onClick={() => processAction('completed')} disabled={processing}>
+                            <CheckCircle2 className="h-4 w-4 mr-1.5 fill-current" /> Tandai Selesai
                         </Button>
                     </div>
                 </div>
             );
         }
-        
+
         if (status === 'completed') {
             return (
                 <div className="flex justify-between items-center w-full">
@@ -495,7 +522,7 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                 </div>
             );
         }
-        
+
         if (status === 'cancelled') {
             return (
                 <div className="flex justify-between items-center w-full">
@@ -506,7 +533,7 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                 </div>
             );
         }
-        
+
         if (status === 'taken') {
             return (
                 <Button type="button" size="sm" variant="outline" className="w-full" onClick={onClose}>Tutup Panel</Button>
@@ -518,7 +545,7 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
         <>
             <Dialog open={isOpen} onOpenChange={onClose}>
                 <DialogContent className="max-h-[90vh] flex flex-col sm:max-w-[500px] p-0 rounded-xl shadow-2xl border-border overflow-hidden bg-card">
-                    
+
                     <div className="shrink-0 flex items-center justify-between border-b border-border bg-muted/20 p-4">
                         <div className="flex items-center gap-3">
                             <div className="rounded-lg bg-primary/10 p-2">
@@ -565,7 +592,7 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Batal</AlertDialogCancel>
-                        <AlertDialogAction 
+                        <AlertDialogAction
                             onClick={handleConfirmAlert}
                             className={alertConfig.action === 'cancelled' ? 'bg-destructive hover:bg-destructive/90 text-white' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'}
                         >

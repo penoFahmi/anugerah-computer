@@ -20,6 +20,38 @@ export default function LogList({ logs, filters, intentStats = [], sourceStats =
         intent: filters.intent ?? 'all'
     });
 
+    // Label Maps untuk Chart
+    const intentLabelMap: Record<string, string> = {
+        'setuju': 'Setuju',
+        'batal': 'Batal',
+        'lainnya': 'Lainnya',
+        'llm_cs_reply': 'Balasan LLM',
+        'tanya_status': 'Tanya Status',
+    };
+
+    const sourceLabelMap: Record<string, string> = {
+        'agent_nlp_fasttext': 'NLP (Intent Recognition)',
+        'agent_intent_analyzer_fallback': 'LLM (Intent Fallback)',
+        'agent_llm_customer_service': 'LLM (Generative Reply)',
+        'human': 'Human Handoff (Admin)',
+        'human_replied': 'Human Handoff (Admin)',
+        'system': 'Sistem (Auto)',
+        'emergency_db_fallback': 'Sistem (DB Fallback)',
+    };
+
+    const mappedIntentStats = intentStats.map(item => ({
+        ...item,
+        originalName: item.name,
+        name: intentLabelMap[item.name] || item.name.replace(/_/g, ' ')
+    }));
+
+    const mappedSourceStats = sourceStats.map(item => ({
+        ...item,
+        originalName: item.name,
+        name: sourceLabelMap[item.name] || item.name.replace(/_/g, ' ')
+    }));
+
+
     const applyFilters = (newFilters: typeof filterState) => {
         const query: Record<string, string> = {};
         if (newFilters.search) query.search = newFilters.search;
@@ -55,40 +87,6 @@ export default function LogList({ logs, filters, intentStats = [], sourceStats =
                     <p className="text-muted-foreground">Pantau interaksi AI, percakapan pelanggan, dan status webhook WhatsApp.</p>
                 </div>
                 
-                <div className="flex items-center gap-3">
-                    <div className="relative w-full max-w-sm">
-                        <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Cari pesan/nama/intent..."
-                            className="pl-8"
-                            value={filterState.search}
-                            onChange={(e) => {
-                                setFilterState(prev => ({ ...prev, search: e.target.value }));
-                                handleSearchDebounce(e.target.value);
-                            }}
-                        />
-                    </div>
-
-                    <Select value={filterState.intent} onValueChange={(val) => handleFilterChange('intent', val)}>
-                        <SelectTrigger className="w-full sm:w-[180px]">
-                            <SelectValue placeholder="Semua Intent" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Semua Intent</SelectItem>
-                            <SelectItem value="setuju">Setuju</SelectItem>
-                            <SelectItem value="batal">Batal</SelectItem>
-                            <SelectItem value="lainnya">Lainnya</SelectItem>
-                        </SelectContent>
-                    </Select>
-
-                    {isFiltered && (
-                        <Button variant="ghost" size="icon" onClick={resetFilters} title="Reset Filter">
-                            <FilterX className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                    )}
-                </div>
-
-                {/* Dashboard Visuals */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <Card>
                         <CardHeader>
@@ -100,7 +98,7 @@ export default function LogList({ logs, filters, intentStats = [], sourceStats =
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie
-                                            data={intentStats}
+                                            data={mappedIntentStats}
                                             cx="50%"
                                             cy="50%"
                                             innerRadius={60}
@@ -109,13 +107,23 @@ export default function LogList({ logs, filters, intentStats = [], sourceStats =
                                             dataKey="value"
                                             nameKey="name"
                                             label
+                                            onClick={(data) => {
+                                                if (data && data.originalName) {
+                                                    handleFilterChange('intent', data.originalName);
+                                                }
+                                            }}
+                                            className="cursor-pointer"
                                         >
-                                            {intentStats.map((entry, index) => (
-                                                <Cell key={`cell-intent-${index}`} fill={COLORS[index % COLORS.length]} />
+                                            {mappedIntentStats.map((entry, index) => (
+                                                <Cell key={`cell-intent-${index}`} fill={COLORS[index % COLORS.length]} className="hover:opacity-80 transition-opacity" />
                                             ))}
                                         </Pie>
                                         <RechartsTooltip />
-                                        <Legend />
+                                        <Legend wrapperStyle={{ cursor: 'pointer' }} onClick={(data) => {
+                                            if (data && data.payload && data.payload.originalName) {
+                                                handleFilterChange('intent', data.payload.originalName);
+                                            }
+                                        }} />
                                     </PieChart>
                                 </ResponsiveContainer>
                             ) : (
@@ -134,7 +142,7 @@ export default function LogList({ logs, filters, intentStats = [], sourceStats =
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie
-                                            data={sourceStats}
+                                            data={mappedSourceStats}
                                             cx="50%"
                                             cy="50%"
                                             innerRadius={60}
@@ -143,13 +151,24 @@ export default function LogList({ logs, filters, intentStats = [], sourceStats =
                                             dataKey="value"
                                             nameKey="name"
                                             label
+                                            onClick={(data) => {
+                                                if (data && data.originalName) {
+                                                    // Search by resolver via search input since there's no specific filter for source yet
+                                                    handleFilterChange('search', data.originalName);
+                                                }
+                                            }}
+                                            className="cursor-pointer"
                                         >
-                                            {sourceStats.map((entry, index) => (
-                                                <Cell key={`cell-source-${index}`} fill={COLORS[(index + 3) % COLORS.length]} />
+                                            {mappedSourceStats.map((entry, index) => (
+                                                <Cell key={`cell-source-${index}`} fill={COLORS[(index + 3) % COLORS.length]} className="hover:opacity-80 transition-opacity" />
                                             ))}
                                         </Pie>
                                         <RechartsTooltip />
-                                        <Legend />
+                                        <Legend wrapperStyle={{ cursor: 'pointer' }} onClick={(data) => {
+                                            if (data && data.payload && data.payload.originalName) {
+                                                handleFilterChange('search', data.payload.originalName);
+                                            }
+                                        }} />
                                     </PieChart>
                                 </ResponsiveContainer>
                             ) : (
@@ -160,11 +179,45 @@ export default function LogList({ logs, filters, intentStats = [], sourceStats =
                 </div>
 
                 <Card>
-                    <CardHeader>
-                        <CardTitle>Riwayat Chat AI (Chat Log)</CardTitle>
-                        <CardDescription>Rekaman percakapan bot AI (SVM & LLM) dengan pelanggan.</CardDescription>
+                    <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-6">
+                        <div>
+                            <CardTitle>Riwayat Chat AI (Chat Log)</CardTitle>
+                            <CardDescription>Rekaman percakapan bot AI (SVM & LLM) dengan pelanggan.</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="relative w-full sm:w-64">
+                                <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Cari chat atau label..."
+                                    className="pl-8 bg-slate-50 border-slate-200 focus-visible:ring-slate-300"
+                                    value={filterState.search}
+                                    onChange={(e) => {
+                                        setFilterState(prev => ({ ...prev, search: e.target.value }));
+                                        handleSearchDebounce(e.target.value);
+                                    }}
+                                />
+                            </div>
+
+                            <Select value={filterState.intent} onValueChange={(val) => handleFilterChange('intent', val)}>
+                                <SelectTrigger className="w-[140px] bg-slate-50 border-slate-200 focus:ring-slate-300">
+                                    <SelectValue placeholder="Semua Intent" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Semua Niat</SelectItem>
+                                    <SelectItem value="setuju">Setuju</SelectItem>
+                                    <SelectItem value="batal">Batal</SelectItem>
+                                    <SelectItem value="lainnya">Lainnya</SelectItem>
+                                </SelectContent>
+                            </Select>
+
+                            {isFiltered && (
+                                <Button variant="ghost" size="icon" onClick={resetFilters} title="Reset Filter" className="text-muted-foreground hover:bg-slate-100">
+                                    <FilterX className="h-4 w-4" />
+                                </Button>
+                            )}
+                        </div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-0">
                         <LogTable logs={logs} />
                     </CardContent>
                 </Card>

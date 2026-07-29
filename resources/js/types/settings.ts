@@ -9,7 +9,10 @@ export interface ChatLog {
     final_intent: string | null;
     svm_confidence_score: number | null;
     is_svm_successful: boolean;
+    direction: 'inbound' | 'outbound';
     resolved_by: 'ai' | 'human' | null;
+    llm_prompt_tokens?: number | null;
+    llm_completion_tokens?: number | null;
     created_at: string;
     updated_at: string;
     customer?: Customer;

@@ -72,17 +72,12 @@ PENTING UNTUK AI: Gunakan data di atas untuk menjawab pelanggan. TETAPI Ingat At
 RESULT;
     }
 
-    public function parameters(): JsonSchema|array
+    public function schema(JsonSchema $schema): array
     {
         return [
-            'type' => 'object',
-            'properties' => [
-                'keyword' => [
-                    'type' => 'string',
-                    'description' => 'Katakunci kerusakan atau jenis servis (contoh: "Ganti LCD", "Mati Total", "Instal Ulang"). Ekstrak dari pertanyaan pengguna.',
-                ],
-            ],
-            'required' => ['keyword'],
+            'keyword' => $schema->string()
+                ->description('Katakunci kerusakan atau jenis servis (contoh: "Ganti LCD", "Mati Total", "Instal Ulang"). Ekstrak dari pertanyaan pengguna.')
+                ->required(),
         ];
     }
 }

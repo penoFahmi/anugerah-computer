@@ -8,6 +8,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Facades\URL;
+use Inertia\Inertia;
+use App\Models\ServiceOrder;
+use App\Observers\ServiceOrderObserver;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Auth\Events\Login;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -29,7 +34,14 @@ class AppServiceProvider extends ServiceProvider
             URL::forceScheme('https');
         }
         
-        \App\Models\ServiceOrder::observe(\App\Observers\ServiceOrderObserver::class);
+        ServiceOrder::observe(ServiceOrderObserver::class);
+
+        Event::listen(function (Login $event) {
+            Inertia::flash('toast', [
+                'type' => 'success',
+                'message' => 'Selamat datang kembali, ' . $event->user->name . '!',
+            ]);
+        });
     }
 
     /**

@@ -66,7 +66,7 @@ class ProcessInboundWaMessage implements ShouldQueue
         if ($latestHandoffRequest) {
             $adminRepliedSinceHandoff = ChatLog::where('phone', $this->rawPhone)
                 ->where('direction', 'outbound')
-                ->whereNotIn('sender_name', ['AI Assistant', 'System'])
+                ->whereNotIn('sender_name', ['AI Assistant', 'System', 'LLM (Generative AI)', 'Sistem (Auto NLP)', 'Sistem (Auto LLM)', 'Sistem (Handoff)', 'Sistem (DB Fallback)'])
                 ->where('created_at', '>=', $latestHandoffRequest->created_at)
                 ->exists();
                 
@@ -84,7 +84,7 @@ class ProcessInboundWaMessage implements ShouldQueue
         // 2. Cari pesan outbound terakhir yang dikirim oleh Admin dalam 15 menit terakhir
         $recentAdminReply = ChatLog::where('phone', $this->rawPhone)
             ->where('direction', 'outbound')
-            ->whereNotIn('sender_name', ['AI Assistant', 'System'])
+            ->whereNotIn('sender_name', ['AI Assistant', 'System', 'LLM (Generative AI)', 'Sistem (Auto NLP)', 'Sistem (Auto LLM)', 'Sistem (Handoff)', 'Sistem (DB Fallback)'])
             ->where('created_at', '>=', now()->subMinutes(15))
             ->exists();
 

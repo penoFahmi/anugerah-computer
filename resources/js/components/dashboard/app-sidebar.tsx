@@ -89,7 +89,7 @@ const mainNavItems: NavItem[] = [
 
 const adminNavItems: NavItem[] = [
     {
-        title: 'SDM & Pengguna',
+        title: 'Pegawai',
         href: '/pegawai',
         icon: UserRoundCog,
         roles: ['administrator'],

@@ -17,7 +17,8 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'
 export default function LogList({ logs, filters, intentStats = [], sourceStats = [] }: LogsPageProps) {
     const [filterState, setFilterState] = useState({
         search: filters.search ?? '',
-        intent: filters.intent ?? 'all'
+        intent: filters.intent ?? 'all',
+        status: filters.status ?? 'all'
     });
 
     // Label Maps untuk Chart
@@ -25,18 +26,14 @@ export default function LogList({ logs, filters, intentStats = [], sourceStats =
         'setuju': 'Setuju',
         'batal': 'Batal',
         'lainnya': 'Lainnya',
-        'llm_cs_reply': 'Balasan LLM',
-        'tanya_status': 'Tanya Status',
     };
 
     const sourceLabelMap: Record<string, string> = {
-        'agent_nlp_fasttext': 'NLP (Intent Recognition)',
-        'agent_intent_analyzer_fallback': 'LLM (Intent Fallback)',
-        'agent_llm_customer_service': 'LLM (Generative Reply)',
-        'human': 'Human Handoff (Admin)',
-        'human_replied': 'Human Handoff (Admin)',
-        'system': 'Sistem (Auto)',
-        'emergency_db_fallback': 'Sistem (DB Fallback)',
+        'nlp_model': 'NLP Klasifikasi',
+        'llm_model': 'LLM Generatif',
+        'human': 'Manusia Admin',
+        'system': 'System',
+        'pending': 'Menunggu Antrean',
     };
 
     const mappedIntentStats = intentStats.map(item => ({
@@ -56,6 +53,7 @@ export default function LogList({ logs, filters, intentStats = [], sourceStats =
         const query: Record<string, string> = {};
         if (newFilters.search) query.search = newFilters.search;
         if (newFilters.intent && newFilters.intent !== 'all') query.intent = newFilters.intent;
+        if (newFilters.status && newFilters.status !== 'all') query.status = newFilters.status;
         
         router.get('/settings/logs', query, { preserveState: true, replace: true });
     };
@@ -71,12 +69,12 @@ export default function LogList({ logs, filters, intentStats = [], sourceStats =
     };
 
     const resetFilters = () => {
-        const defaultFilters = { search: '', intent: 'all' };
+        const defaultFilters = { search: '', intent: 'all', status: 'all' };
         setFilterState(defaultFilters);
         applyFilters(defaultFilters);
     };
 
-    const isFiltered = filterState.search || filterState.intent !== 'all';
+    const isFiltered = filterState.search || filterState.intent !== 'all' || filterState.status !== 'all';
 
     return (
         <>
@@ -159,9 +157,16 @@ export default function LogList({ logs, filters, intentStats = [], sourceStats =
                                             }}
                                             className="cursor-pointer"
                                         >
-                                            {mappedSourceStats.map((entry, index) => (
-                                                <Cell key={`cell-source-${index}`} fill={COLORS[(index + 3) % COLORS.length]} className="hover:opacity-80 transition-opacity" />
-                                            ))}
+                                            {mappedSourceStats.map((entry, index) => {
+                                                const sourceColors: Record<string, string> = {
+                                                    'NLP Klasifikasi': '#6366f1',
+                                                    'LLM Generatif': '#0ea5e9',
+                                                    'Manusia Admin': '#f59e0b',
+                                                    'System': '#64748b',
+                                                    'Menunggu Antrean': '#e2e8f0',
+                                                };
+                                                return <Cell key={`cell-source-${index}`} fill={sourceColors[entry.name] || COLORS[index % COLORS.length]} className="hover:opacity-80 transition-opacity" />;
+                                            })}
                                         </Pie>
                                         <RechartsTooltip />
                                         <Legend wrapperStyle={{ cursor: 'pointer' }} onClick={(data) => {
@@ -178,49 +183,58 @@ export default function LogList({ logs, filters, intentStats = [], sourceStats =
                     </Card>
                 </div>
 
-                <Card>
-                    <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-6">
-                        <div>
-                            <CardTitle>Riwayat Chat AI (Chat Log)</CardTitle>
-                            <CardDescription>Rekaman percakapan bot AI (SVM & LLM) dengan pelanggan.</CardDescription>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="relative w-full sm:w-64">
-                                <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Cari chat atau label..."
-                                    className="pl-8 bg-slate-50 border-slate-200 focus-visible:ring-slate-300"
-                                    value={filterState.search}
-                                    onChange={(e) => {
-                                        setFilterState(prev => ({ ...prev, search: e.target.value }));
-                                        handleSearchDebounce(e.target.value);
-                                    }}
-                                />
-                            </div>
+                <div className="flex flex-col items-center gap-3 sm:flex-row mt-6">
+                    <div className="relative w-full sm:w-64">
+                        <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Cari chat atau label..."
+                            className="pl-8 bg-background border-input focus-visible:ring-slate-300"
+                            value={filterState.search}
+                            onChange={(e) => {
+                                setFilterState(prev => ({ ...prev, search: e.target.value }));
+                                handleSearchDebounce(e.target.value);
+                            }}
+                        />
+                    </div>
 
-                            <Select value={filterState.intent} onValueChange={(val) => handleFilterChange('intent', val)}>
-                                <SelectTrigger className="w-[140px] bg-slate-50 border-slate-200 focus:ring-slate-300">
-                                    <SelectValue placeholder="Semua Intent" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Semua Niat</SelectItem>
-                                    <SelectItem value="setuju">Setuju</SelectItem>
-                                    <SelectItem value="batal">Batal</SelectItem>
-                                    <SelectItem value="lainnya">Lainnya</SelectItem>
-                                </SelectContent>
-                            </Select>
+                    <Select value={filterState.status} onValueChange={(val) => handleFilterChange('status', val)}>
+                        <SelectTrigger className="w-full sm:w-[200px] bg-background border-input focus:ring-slate-300">
+                            <SelectValue placeholder="Semua Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Semua Siklus (State)</SelectItem>
+                            <SelectItem value="analyzing">Menganalisa</SelectItem>
+                            <SelectItem value="processed">Diproses (OK)</SelectItem>
+                            <SelectItem value="handoff_triggered">Handoff (Butuh Admin)</SelectItem>
+                            <SelectItem value="muted_waiting_for_admin">Mute (Tunggu Admin)</SelectItem>
+                            <SelectItem value="muted_due_to_admin_activity">Mute (Admin Aktif)</SelectItem>
+                            <SelectItem value="manual_reply">Balasan Admin</SelectItem>
+                            <SelectItem value="notification">Notifikasi Sistem</SelectItem>
+                        </SelectContent>
+                    </Select>
 
-                            {isFiltered && (
-                                <Button variant="ghost" size="icon" onClick={resetFilters} title="Reset Filter" className="text-muted-foreground hover:bg-slate-100">
-                                    <FilterX className="h-4 w-4" />
-                                </Button>
-                            )}
-                        </div>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        <LogTable logs={logs} />
-                    </CardContent>
-                </Card>
+                    <Select value={filterState.intent} onValueChange={(val) => handleFilterChange('intent', val)}>
+                        <SelectTrigger className="w-full sm:w-[160px] bg-background border-input focus:ring-slate-300">
+                            <SelectValue placeholder="Semua Intent" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Semua Niat</SelectItem>
+                            <SelectItem value="setuju">Setuju</SelectItem>
+                            <SelectItem value="batal">Batal</SelectItem>
+                            <SelectItem value="lainnya">Lainnya</SelectItem>
+                        </SelectContent>
+                    </Select>
+
+                    {isFiltered && (
+                        <Button variant="ghost" size="icon" onClick={resetFilters} title="Reset Filter" className="text-muted-foreground">
+                            <FilterX className="h-4 w-4" />
+                        </Button>
+                    )}
+                </div>
+
+                <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+                    <LogTable logs={logs} />
+                </div>
             </div>
         </>
     );

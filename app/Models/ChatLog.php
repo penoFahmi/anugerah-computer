@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\Model;
     'llm_prompt_tokens',
     'llm_completion_tokens',
     'final_intent',
+    'handling_status',
     'resolved_by'
 ])]
 /**

@@ -40,6 +40,7 @@ return new class extends Migration
             
             // Intent final setelah divalidasi oleh sistem atau CS manusia
             $table->string('final_intent', 50)->nullable()->index(); 
+            $table->string('handling_status')->nullable(); 
             $table->string('resolved_by', 50)->nullable(); // AI, Bot, atau nama CS Manusia
 
             $table->timestamps();

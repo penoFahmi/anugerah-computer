@@ -12,6 +12,7 @@ use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
+use Laravel\Fortify\Contracts\LoginResponse;
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -31,6 +32,19 @@ class FortifyServiceProvider extends ServiceProvider
         $this->configureActions();
         $this->configureViews();
         $this->configureRateLimiting();
+
+        $this->app->singleton(LoginResponse::class, function () {
+            return new class implements LoginResponse {
+                public function toResponse($request)
+                {
+                    Inertia::flash('toast', [
+                        'type' => 'success',
+                        'message' => 'Selamat datang kembali, ' . auth()->user()->name . '!',
+                    ]);
+                    return redirect()->intended(config('fortify.home'));
+                }
+            };
+        });
     }
 
     /**

@@ -58,25 +58,25 @@ class ProcessInboundWaMessage implements ShouldQueue
         // 1. Cek apakah ada permintaan Handoff yang belum dibalas Admin
         $latestHandoffRequest = ChatLog::where('phone', $this->rawPhone)
             ->where('direction', 'inbound')
-            ->where('resolved_by', 'human')
-            ->where('created_at', '>=', now()->subMinutes(30))
+            ->where('handling_status', 'handoff_triggered')
+            ->where('created_at', '>=', now()->subMinutes(15))
             ->latest()
             ->first();
 
         if ($latestHandoffRequest) {
             $adminRepliedSinceHandoff = ChatLog::where('phone', $this->rawPhone)
                 ->where('direction', 'outbound')
-                ->whereNotIn('sender_name', ['AI Assistant', 'System', 'LLM (Generative AI)', 'Sistem (Auto NLP)', 'Sistem (Auto LLM)', 'Sistem (Handoff)', 'Sistem (DB Fallback)'])
+                ->whereNotIn('sender_name', ['System', 'AI Customer Servis'])
                 ->where('created_at', '>=', $latestHandoffRequest->created_at)
                 ->exists();
                 
             if (!$adminRepliedSinceHandoff) {
                 // Mute AI karena menunggu balasan Admin
                 $this->chatLog->update([
-                    'resolved_by' => 'human',
-                    'final_intent' => 'muted_waiting_for_admin',
+                    'resolved_by' => 'system',
+                    'handling_status' => 'muted_waiting_for_admin',
                 ]);
-                Log::info("AI di-mute untuk nomor {$this->rawPhone} karena sedang menunggu antrean balasan Admin.");
+                Log::info("AI di-mute untuk nomor {$this->rawPhone} karena sedang menunggu balasan Admin dari Handoff sebelumnya.");
                 return;
             }
         }
@@ -84,7 +84,7 @@ class ProcessInboundWaMessage implements ShouldQueue
         // 2. Cari pesan outbound terakhir yang dikirim oleh Admin dalam 15 menit terakhir
         $recentAdminReply = ChatLog::where('phone', $this->rawPhone)
             ->where('direction', 'outbound')
-            ->whereNotIn('sender_name', ['AI Assistant', 'System', 'LLM (Generative AI)', 'Sistem (Auto NLP)', 'Sistem (Auto LLM)', 'Sistem (Handoff)', 'Sistem (DB Fallback)'])
+            ->whereNotIn('sender_name', ['System', 'AI Customer Servis'])
             ->where('created_at', '>=', now()->subMinutes(15))
             ->exists();
 
@@ -92,7 +92,7 @@ class ProcessInboundWaMessage implements ShouldQueue
             // Admin sedang menangani chat ini, AI diam saja
             $this->chatLog->update([
                 'resolved_by' => 'human',
-                'final_intent' => 'muted_due_to_admin_activity',
+                'handling_status' => 'muted_due_to_admin_activity',
             ]);
             Log::info("AI di-mute untuk nomor {$this->rawPhone} karena ada aktivitas Admin dalam 15 menit terakhir.");
             return;
@@ -131,8 +131,9 @@ class ProcessInboundWaMessage implements ShouldQueue
         
         // Jangan biarkan status menggantung di 'analyzing'
         $this->chatLog->update([
-            'resolved_by' => 'human',
-            'final_intent' => 'needs_manual_override',
+            'resolved_by' => 'system',
+            'handling_status' => 'handoff_triggered',
+            'final_intent' => 'lainnya',
             'llm_raw_response' => ['error' => 'Sistem AI (Groq) kehabisan waktu atau gagal memproses.'],
         ]);
 

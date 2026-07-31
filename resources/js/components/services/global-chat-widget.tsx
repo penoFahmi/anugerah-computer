@@ -135,6 +135,10 @@ export function GlobalChatWidget() {
     };
 
     useEffect(() => {
+        fetchContacts();
+    }, []);
+
+    useEffect(() => {
         if (isExpanded && view === 'contacts') {
             fetchContacts();
         }

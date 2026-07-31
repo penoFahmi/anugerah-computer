@@ -7,10 +7,11 @@ export interface ChatLog {
     phone: string;
     message: string;
     final_intent: string | null;
+    handling_status: string | null;
     svm_confidence_score: number | null;
     is_svm_successful: boolean;
     direction: 'inbound' | 'outbound';
-    resolved_by: 'ai' | 'human' | null;
+    resolved_by: 'system' | 'nlp_model' | 'llm_model' | 'human' | string | null;
     llm_prompt_tokens?: number | null;
     llm_completion_tokens?: number | null;
     created_at: string;

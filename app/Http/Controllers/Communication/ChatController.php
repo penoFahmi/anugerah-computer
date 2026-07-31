@@ -60,7 +60,8 @@ class ChatController extends Controller
             $finalMessage,
             $latestService?->id,
             'manual_reply',
-            'Admin (Via Web)'
+            'Admin (Via Web)',
+            'human'
         );
 
         if ($isSent) {
@@ -72,7 +73,7 @@ class ChatController extends Controller
                 })
                 ->where('direction', 'inbound')
                 ->where('resolved_by', 'human')
-                ->update(['resolved_by' => 'human_replied']);
+                ->update(['resolved_by' => 'human']);
 
             return response()->json(['status' => 'success']);
         }
@@ -92,7 +93,7 @@ class ChatController extends Controller
                 phone, 
                 MAX(created_at) as last_activity, 
                 (SELECT message FROM chat_logs as cl2 WHERE cl2.phone = chat_logs.phone ORDER BY created_at DESC LIMIT 1) as last_message,
-                (SELECT sender_name FROM chat_logs as cl3 WHERE cl3.phone = chat_logs.phone AND sender_name NOT IN ("System", "AI Assistant", "Admin (Via Web)", "Admin (Via HP)") ORDER BY created_at DESC LIMIT 1) as customer_name,
+                (SELECT sender_name FROM chat_logs as cl3 WHERE cl3.phone = chat_logs.phone AND direction = "inbound" ORDER BY created_at DESC LIMIT 1) as customer_name,
                 (SELECT COUNT(id) FROM chat_logs as cl4 WHERE cl4.phone = chat_logs.phone AND direction = "inbound" AND resolved_by IN ("pending", "human")) as unread_count
             ')
             ->groupBy('phone')

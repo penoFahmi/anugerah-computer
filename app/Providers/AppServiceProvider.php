@@ -35,13 +35,7 @@ class AppServiceProvider extends ServiceProvider
         }
         
         ServiceOrder::observe(ServiceOrderObserver::class);
-
-        Event::listen(function (Login $event) {
-            Inertia::flash('toast', [
-                'type' => 'success',
-                'message' => 'Selamat datang kembali, ' . $event->user->name . '!',
-            ]);
-        });
+ 
     }
 
     /**

@@ -52,7 +52,8 @@ class WaGateway
                     'direction' => 'outbound',
                     'message' => "[Dokumen PDF] " . $caption,
                     'resolved_by' => 'system',
-                    'final_intent' => $intent
+                    'final_intent' => null,
+                    'handling_status' => $intent
                 ]);
                 return true;
             }
@@ -84,7 +85,7 @@ class WaGateway
         return self::sendMessage($order->customer->phone, $message, $order->id, 'send_offer', 'System');
     }
 
-    public static function sendMessage(string $phone, string $message, ?int $serviceOrderId = null, string $intent = 'notification', string $senderName = 'AI Assistant'): bool
+    public static function sendMessage(string $phone, string $message, ?int $serviceOrderId = null, string $intent = 'notification', string $senderName = 'System', string $resolvedBy = 'system'): bool
     {
         $endpoint = self::getBaseUrl() . '/send-message';
 
@@ -114,8 +115,9 @@ class WaGateway
                     'message_type' => 'text',
                     'direction' => 'outbound',
                     'message' => $message,
-                    'resolved_by' => 'system',
-                    'final_intent' => $intent
+                    'resolved_by' => $resolvedBy,
+                    'final_intent' => null,
+                    'handling_status' => $intent
                 ]);
                 return true;
             }

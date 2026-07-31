@@ -22,7 +22,7 @@ class IntentHandler
         // 1. CEK INTENT SETUJU / BATAL
         if (in_array($intent, ['setuju', 'batal'])) {
             if ($serviceOrder && $serviceOrder->status->value === ServiceStatus::WAITING_APPROVAL->value) {
-                // Sesuai Arahan Baru: Update DB lalu ambil balasan dari bot_auto_replies untuk menghemat Token LLM!
+                // Update DB lalu ambil balasan dari bot_auto_replies untuk menghemat Token LLM!
                 $newStatus = $intent === 'setuju' ? ServiceStatus::APPROVED : ServiceStatus::CANCELLED;
                 $serviceOrder->update(['status' => $newStatus]);
                 event(new ServiceOrderBroadcast($serviceOrder, 'updated'));
@@ -36,11 +36,19 @@ class IntentHandler
             $intent = 'lainnya'; // Paksa menjadi 'lainnya' agar diteruskan ke LLM
         }
 
-        // 2. CEK KATA KUNCI DARURAT (ADMIN/CS) SEBELUM MASUK LLM
+        // 2. CEK KATA KUNCI DARURAT (ADMIN/CS) ATAU PEMBATALAN SEPIHAK
         $lowercaseMessage = strtolower($chatLog->message);
         if (preg_match('/\b(admin|cs|manusia|operator)\b/i', $lowercaseMessage)) {
             $needsHumanHandoff = true;
             $handoffReason = "Pelanggan secara eksplisit meminta Admin/CS via kata kunci.";
+        }
+        
+        // Cek jika status sudah disetujui/dikerjakan, lalu user mencoba batal
+        if (!$needsHumanHandoff && $serviceOrder && in_array($serviceOrder->status->value, ['approved', 'in_progress'])) {
+            if ($intent === 'batal' || preg_match('/\b(batal|cancel|gak jadi|ndak jadi|tdk jadi|tidak jadi|urung|cancel)\b/i', $lowercaseMessage)) {
+                $needsHumanHandoff = true;
+                $handoffReason = "Pelanggan mencoba membatalkan servis yang sudah berstatus " . $serviceOrder->status->label() . ". Membutuhkan intervensi Admin.";
+            }
         }
 
         // 3. EKSEKUSI HANDOFF (JIKA DIPERLUKAN)
@@ -66,10 +74,11 @@ class IntentHandler
         
         if ($autoReply) {
             $chatLog->update([
-                'resolved_by' => 'emergency_db_fallback',
-                'final_intent' => $intent,
+                'resolved_by' => 'system',
+                'handling_status' => 'db_fallback_triggered',
+                'final_intent' => $intent, // Intent still valid
             ]);
-            WaGateway::sendMessage($rawPhone, $autoReply->response_text . "\n\n-System", $serviceOrder?->id, 'db_fallback_reply', 'Sistem (DB Fallback)');
+            WaGateway::sendMessage($rawPhone, $autoReply->response_text . "\n\n-System", $serviceOrder?->id, 'db_fallback_reply', 'System');
         } else {
             // Jika bot mati dan tidak ada template baku di DB, panggil Manusia!
             $this->triggerHumanHandoff($chatLog, $rawPhone, $serviceOrder, "Sistem AI (LLM) Error/Mati, dan tidak ada DB Fallback untuk intent: {$intent}");
@@ -103,14 +112,20 @@ class IntentHandler
         $balasan = $autoReply ? $autoReply->response_text : "Terkait hal tersebut, mohon hubungi admin kami ya Kak.";
         }
 
+        $isLlm = ($source !== 'agent_nlp_fasttext');
+        $resolvedBy = $isLlm ? 'llm_model' : 'system'; // NLP masuk ke system
+        
         $chatLog->update([
-            'resolved_by' => $source,
+            'resolved_by' => $resolvedBy,
+            'handling_status' => 'processed',
             'final_intent' => $intent,
         ]);
         
-        $msgType = $source === 'agent_nlp_fasttext' ? 'nlp_direct_reply' : 'llm_intent_fallback_reply';
-        $senderName = $source === 'agent_nlp_fasttext' ? 'Sistem (Auto NLP)' : 'Sistem (Auto LLM)';
-        WaGateway::sendMessage($rawPhone, $balasan . "\n\n-System", $serviceOrder?->id, $msgType, $senderName);
+        $msgType = $isLlm ? 'llm_intent_fallback_reply' : 'nlp_direct_reply';
+        $senderName = $isLlm ? 'AI Customer Servis' : 'System';
+        $signature = $isLlm ? '-CS' : '-System';
+
+        WaGateway::sendMessage($rawPhone, $balasan . "\n\n" . $signature, $serviceOrder?->id, $msgType, $senderName, $resolvedBy);
     }
 
     protected function handleGenerative(ChatLog $chatLog, ?ServiceOrder $serviceOrder, string $rawPhone, array $history, string $source, string $intent = 'lainnya'): void
@@ -168,25 +183,28 @@ class IntentHandler
         $existingPrompt = $chatLog->llm_prompt_tokens ?? 0;
         $existingCompletion = $chatLog->llm_completion_tokens ?? 0;
 
+        $resolvedBy = 'llm_model';
         $chatLog->update([
-            'resolved_by' => $source, // Gunakan source (agent_nlp_fasttext / agent_intent_analyzer_fallback)
+            'resolved_by' => $resolvedBy,
+            'handling_status' => 'processed',
             'final_intent' => $intent,
             'llm_raw_response' => ['text' => $aiResponse],
             'llm_prompt_tokens' => $existingPrompt + $csPromptTokens,
             'llm_completion_tokens' => $existingCompletion + $csCompletionTokens,
         ]);
 
-        WaGateway::sendMessage($rawPhone, $aiResponse . "\n\n-CS", $serviceOrder?->id, 'llm_cs_reply', 'LLM (Generative AI)');
+        WaGateway::sendMessage($rawPhone, $aiResponse . "\n\n-CS", $serviceOrder?->id, 'llm_cs_reply', 'AI Customer Servis', $resolvedBy);
     }
 
     public function triggerHumanHandoff(ChatLog $chatLog, string $rawPhone, ?ServiceOrder $serviceOrder, string $alasan): void
     {
         $balasan = 'Maaf Kak, pesan Anda akan segera ditangani langsung oleh Admin toko kami. Mohon tunggu sebentar ya. 🙏';
-        WaGateway::sendMessage($rawPhone, $balasan . "\n\n-System", $serviceOrder?->id, 'human_handoff_trigger', 'Sistem (Handoff)');
+        WaGateway::sendMessage($rawPhone, $balasan . "\n\n-System", $serviceOrder?->id, 'human_handoff_trigger', 'System');
 
         $chatLog->update([
-            'resolved_by' => 'human',
-            'final_intent' => $chatLog->final_intent ?? 'needs_manual_override',
+            'resolved_by' => 'system',
+            'handling_status' => 'handoff_triggered',
+            'final_intent' => $chatLog->final_intent ?? 'lainnya',
             'llm_raw_response' => ['error' => $alasan],
         ]);
 

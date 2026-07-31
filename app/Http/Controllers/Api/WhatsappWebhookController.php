@@ -38,7 +38,7 @@ class WhatsappWebhookController extends Controller
             if ($isFromMe) {
                 $isEcho = ChatLog::where('phone', $rawPhone)
                     ->where('direction', 'outbound')
-                    ->whereIn('sender_name', ['System', 'AI Assistant'])
+                    ->whereIn('sender_name', ['System', 'AI Customer Servis'])
                     ->where('message', $originalMessage)
                     ->where('created_at', '>=', now()->subSeconds(15))
                     ->exists();
@@ -63,7 +63,8 @@ class WhatsappWebhookController extends Controller
                 'direction' => $isFromMe ? 'outbound' : 'inbound',
                 'message' => $originalMessage,
                 'resolved_by' => $isFromMe ? 'human' : 'pending', 
-                'final_intent' => $isFromMe ? 'manual_reply' : 'analyzing',
+                'final_intent' => null, // Intent murni belum dianalisis
+                'handling_status' => $isFromMe ? 'manual_reply' : 'analyzing',
             ]);
 
             if (!$isFromMe) {

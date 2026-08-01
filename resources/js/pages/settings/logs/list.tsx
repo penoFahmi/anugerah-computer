@@ -10,15 +10,17 @@ import { useDebouncedCallback } from 'use-debounce';
 import { LogTable } from '@/components/settings/logs-table';
 import type { LogsPageProps } from '@/types/settings';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
+import { BrainCircuit, Zap, ShieldCheck } from 'lucide-react';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#d0ed57', '#a4de6c', '#ff99e6', '#c984ff', '#ff6666'];
 
-
-export default function LogList({ logs, filters, intentStats = [], sourceStats = [] }: LogsPageProps) {
+export default function LogList({ logs, filters, intentStats = [], sourceStats = [], academicMetrics }: LogsPageProps) {
     const [filterState, setFilterState] = useState({
         search: filters.search ?? '',
         intent: filters.intent ?? 'all',
-        status: filters.status ?? 'all'
+        status: filters.status ?? 'all',
+        direction: filters.direction ?? 'all',
+        per_page: filters.per_page ?? '15'
     });
 
     // Label Maps untuk Chart
@@ -54,6 +56,8 @@ export default function LogList({ logs, filters, intentStats = [], sourceStats =
         if (newFilters.search) query.search = newFilters.search;
         if (newFilters.intent && newFilters.intent !== 'all') query.intent = newFilters.intent;
         if (newFilters.status && newFilters.status !== 'all') query.status = newFilters.status;
+        if (newFilters.direction && newFilters.direction !== 'all') query.direction = newFilters.direction;
+        if (newFilters.per_page && newFilters.per_page !== '15') query.per_page = newFilters.per_page;
         
         router.get('/settings/logs', query, { preserveState: true, replace: true });
     };
@@ -69,12 +73,12 @@ export default function LogList({ logs, filters, intentStats = [], sourceStats =
     };
 
     const resetFilters = () => {
-        const defaultFilters = { search: '', intent: 'all', status: 'all' };
+        const defaultFilters = { search: '', intent: 'all', status: 'all', direction: 'all', per_page: '15' };
         setFilterState(defaultFilters);
         applyFilters(defaultFilters);
     };
 
-    const isFiltered = filterState.search || filterState.intent !== 'all' || filterState.status !== 'all';
+    const isFiltered = filterState.search || filterState.intent !== 'all' || filterState.status !== 'all' || filterState.direction !== 'all' || filterState.per_page !== '15';
 
     return (
         <>
@@ -84,6 +88,46 @@ export default function LogList({ logs, filters, intentStats = [], sourceStats =
                     <h2 className="text-2xl font-bold tracking-tight">Log & Webhook Sistem</h2>
                     <p className="text-muted-foreground">Pantau interaksi AI, percakapan pelanggan, dan status webhook WhatsApp.</p>
                 </div>
+
+                {/* Academic Metrics Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                            <CardTitle className="text-sm font-medium">Akurasi NLP (FastText+SVM)</CardTitle>
+                            <BrainCircuit className="w-4 h-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{academicMetrics.avgConfidence}%</div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Rata-rata Confidence Score
+                            </p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                            <CardTitle className="text-sm font-medium">Otonomi Sistem AI</CardTitle>
+                            <ShieldCheck className="w-4 h-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{academicMetrics.autonomyRate}%</div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Pesan selesai tanpa Human Handoff
+                            </p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                            <CardTitle className="text-sm font-medium">Efisiensi Token LLM</CardTitle>
+                            <Zap className="w-4 h-4 text-amber-500" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-amber-600">~{academicMetrics.savedTokens.toLocaleString('id-ID')}</div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Est. token API dihemat oleh NLP
+                            </p>
+                        </CardContent>
+                    </Card>
+                </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <Card>
@@ -91,9 +135,9 @@ export default function LogList({ logs, filters, intentStats = [], sourceStats =
                             <CardTitle>Distribusi Intent (Niat)</CardTitle>
                             <CardDescription>Persentase kategori pesan dari pelanggan secara keseluruhan.</CardDescription>
                         </CardHeader>
-                        <CardContent className="h-[300px]">
+                        <CardContent className="h-[300px] min-h-[300px]">
                             {intentStats.length > 0 ? (
-                                <ResponsiveContainer width="100%" height="100%">
+                                <ResponsiveContainer width="100%" height={300}>
                                     <PieChart>
                                         <Pie
                                             data={mappedIntentStats}
@@ -135,9 +179,9 @@ export default function LogList({ logs, filters, intentStats = [], sourceStats =
                             <CardTitle>Resolusi AI (Beban Kerja)</CardTitle>
                             <CardDescription>Proporsi pesan yang diselesaikan oleh NLP, LLM, atau Manusia.</CardDescription>
                         </CardHeader>
-                        <CardContent className="h-[300px]">
+                        <CardContent className="h-[300px] min-h-[300px]">
                             {sourceStats.length > 0 ? (
-                                <ResponsiveContainer width="100%" height="100%">
+                                <ResponsiveContainer width="100%" height={300}>
                                     <PieChart>
                                         <Pie
                                             data={mappedSourceStats}
@@ -213,15 +257,39 @@ export default function LogList({ logs, filters, intentStats = [], sourceStats =
                         </SelectContent>
                     </Select>
 
+                    <Select value={filterState.direction} onValueChange={(val) => handleFilterChange('direction', val)}>
+                        <SelectTrigger className="w-full sm:w-[150px] bg-background border-input focus:ring-slate-300">
+                            <SelectValue placeholder="Arah Pesan" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Semua Arah</SelectItem>
+                            <SelectItem value="inbound">Masuk (Pelanggan)</SelectItem>
+                            <SelectItem value="outbound">Keluar (Sistem/Bot)</SelectItem>
+                        </SelectContent>
+                    </Select>
+
                     <Select value={filterState.intent} onValueChange={(val) => handleFilterChange('intent', val)}>
                         <SelectTrigger className="w-full sm:w-[160px] bg-background border-input focus:ring-slate-300">
                             <SelectValue placeholder="Semua Intent" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Semua Niat</SelectItem>
-                            <SelectItem value="setuju">Setuju</SelectItem>
-                            <SelectItem value="batal">Batal</SelectItem>
+                            <SelectItem value="all">Semua Intent</SelectItem>
+                            <SelectItem value="tanya_status">Tanya Status</SelectItem>
+                            <SelectItem value="batal">Batal Servis</SelectItem>
+                            <SelectItem value="setuju">Setuju Servis</SelectItem>
                             <SelectItem value="lainnya">Lainnya</SelectItem>
+                        </SelectContent>
+                    </Select>
+
+                    <Select value={filterState.per_page} onValueChange={(val) => handleFilterChange('per_page', val)}>
+                        <SelectTrigger className="w-full sm:w-[120px] bg-background border-input focus:ring-slate-300">
+                            <SelectValue placeholder="Per Baris" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="15">15 Baris</SelectItem>
+                            <SelectItem value="50">50 Baris</SelectItem>
+                            <SelectItem value="100">100 Baris</SelectItem>
+                            <SelectItem value="all">Semua Data</SelectItem>
                         </SelectContent>
                     </Select>
 

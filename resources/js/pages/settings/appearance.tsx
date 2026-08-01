@@ -10,7 +10,7 @@ export default function Appearance() {
 
             <h1 className="sr-only">Pengaturan Tampilan</h1>
 
-            <div className="space-y-6">
+            <div className="space-y-6 max-w-xl">
                 <Heading
                     variant="small"
                     title="Pengaturan Tampilan"

@@ -55,7 +55,7 @@ export default function Security({
 
             <h1 className="sr-only">Pengaturan Keamanan</h1>
 
-            <div className="space-y-6">
+            <div className="space-y-6 max-w-xl">
                 <Heading
                     variant="small"
                     title="Update password"

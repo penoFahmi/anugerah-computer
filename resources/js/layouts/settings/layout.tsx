@@ -17,6 +17,11 @@ const sidebarNavItems: NavItem[] = [
         icon: null,
     },
     {
+        title: 'Pengaturan Toko',
+        href: '/settings/store',
+        icon: null,
+    },
+    {
         title: 'Keamanan',
         href: editSecurity(),
         icon: null,
@@ -67,8 +72,8 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
 
                 <Separator className="my-6 lg:hidden" />
 
-                <div className="flex-1 md:max-w-2xl">
-                    <section className="max-w-xl space-y-12">
+                <div className="flex-1 lg:max-w-full">
+                    <section className="space-y-12">
                         {children}
                     </section>
                 </div>

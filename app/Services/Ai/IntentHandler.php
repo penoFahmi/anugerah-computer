@@ -125,7 +125,7 @@ class IntentHandler
         }
 
         $isLlm = ($source !== 'agent_nlp_fasttext');
-        $resolvedBy = $isLlm ? 'llm_model' : 'system'; // NLP masuk ke system
+        $resolvedBy = $isLlm ? 'llm_model' : 'nlp_model';
         
         $chatLog->update([
             'resolved_by' => $resolvedBy,
@@ -136,8 +136,12 @@ class IntentHandler
         $msgType = $isLlm ? 'llm_intent_fallback_reply' : 'nlp_direct_reply';
         $senderName = $isLlm ? 'AI Customer Servis' : 'System';
         $signature = $isLlm ? '-CS' : '-System';
+        
+        // Pesan keluarnya (outbound) dicatat sebagai 'system' jika dari NLP (karena teksnya baku), 
+        // tapi 'llm_model' jika dari LLM (karena teksnya dikarang oleh AI).
+        $outboundResolver = $isLlm ? 'llm_model' : 'system';
 
-        WaGateway::sendMessage($rawPhone, $balasan . "\n\n" . $signature, $serviceOrder?->id, $msgType, $senderName, $resolvedBy);
+        WaGateway::sendMessage($rawPhone, $balasan . "\n\n" . $signature, $serviceOrder?->id, $msgType, $senderName, $outboundResolver);
     }
 
     protected function handleGenerative(ChatLog $chatLog, ?ServiceOrder $serviceOrder, string $rawPhone, array $history, string $source, string $intent = 'lainnya'): void

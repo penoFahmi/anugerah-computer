@@ -405,8 +405,11 @@ export default function StoreSettings({ store }: { store: any }) {
     );
 }
 
-StoreSettings.layout = (page: React.ReactNode) => (
-    <AppLayout breadcrumbs={[{ title: 'Pengaturan Toko', href: '/settings/store' }]}>
-        {page}
-    </AppLayout>
-);
+StoreSettings.layout = {
+    breadcrumbs: [
+        {
+            title: 'Pengaturan Toko',
+            href: '/settings/store',
+        },
+    ],
+};

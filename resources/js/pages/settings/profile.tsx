@@ -23,7 +23,7 @@ export default function Profile({
 
             <h1 className="sr-only">Pengaturan Profile</h1>
 
-            <div className="space-y-6">
+            <div className="space-y-6 max-w-xl">
                 <Heading
                     variant="small"
                     title="Informasi Profile"

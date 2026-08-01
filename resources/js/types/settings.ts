@@ -19,12 +19,21 @@ export interface ChatLog {
     customer?: Customer;
 }
 
-export interface LogsPageProps extends GlobalPageProps {
+export interface LogsPageProps {
     logs: PaginatedData<ChatLog>;
     filters: {
-        search: string | null;
-        intent: string | null;
+        search?: string;
+        intent?: string;
+        status?: string;
+        direction?: string;
+        per_page?: string;
     };
-    intentStats?: { name: string; value: number }[];
-    sourceStats?: { name: string; value: number }[];
+    intentStats: Array<{name: string, value: number}>;
+    sourceStats: Array<{name: string, value: number}>;
+    academicMetrics: {
+        avgConfidence: number;
+        savedTokens: number;
+        autonomyRate: number;
+        totalInbound: number;
+    };
 }

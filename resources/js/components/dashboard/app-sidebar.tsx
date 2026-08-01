@@ -109,7 +109,7 @@ const adminNavItems: NavItem[] = [
     },
     {
         title: 'Log Sistem',
-        href: '/settings/logs',
+        href: '/logs',
         icon: Activity,
         roles: ['administrator'],
     },

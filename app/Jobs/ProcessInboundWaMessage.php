@@ -111,6 +111,14 @@ class ProcessInboundWaMessage implements ShouldQueue
         // berdasarkan parameter niat operasional yang terklasifikasi.
         // ==========================================
         $history = $this->getChatHistory();
+
+        // Simpan token LLM jika ada (misal dari Fallback LLM)
+        if (isset($result['tokens']) && !empty($result['tokens'])) {
+            $this->chatLog->update([
+                'llm_prompt_tokens' => $result['tokens']['prompt'] ?? 0,
+                'llm_completion_tokens' => $result['tokens']['completion'] ?? 0,
+            ]);
+        }
         
         $handler->handle(
             $result['intent'], 

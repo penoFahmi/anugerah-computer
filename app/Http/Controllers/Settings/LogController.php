@@ -105,7 +105,7 @@ class LogController extends Controller
         $aiInbound = $totalInbound - $humanInbound;
         $autonomyRate = $totalInbound > 0 ? ($aiInbound / $totalInbound) * 100 : 0;
 
-        return Inertia::render('settings/logs/list', [
+        return Inertia::render('logs/list', [
             'logs' => $logs,
             'filters' => $request->only(['search', 'intent', 'status', 'direction', 'per_page']),
             'intentStats' => $intentStats,

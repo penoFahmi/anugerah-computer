@@ -123,7 +123,7 @@ Route::middleware(['auth', 'verified', 'is_active', 'role:administrator'])->grou
     // Konfigurasi WhatsApp API & Logs
     Route::get('config/wa', [ConfigWaController::class, 'index'])->name('config.wa');
     Route::post('config/wa/logout', [ConfigWaController::class, 'logout'])->name('config.wa.logout');
-    Route::get('settings/logs', [LogController::class, 'index'])->name('settings.logs.index');
+    Route::get('logs', [LogController::class, 'index'])->name('logs.index');
     
     // Konfigurasi Landing Page (Store Settings)
     Route::get('settings/store', [\App\Http\Controllers\Settings\StoreSettingController::class, 'index'])->name('settings.store.index');

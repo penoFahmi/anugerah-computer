@@ -58,8 +58,8 @@ export default function LogList({ logs, filters, intentStats = [], sourceStats =
         if (newFilters.status && newFilters.status !== 'all') query.status = newFilters.status;
         if (newFilters.direction && newFilters.direction !== 'all') query.direction = newFilters.direction;
         if (newFilters.per_page && newFilters.per_page !== '15') query.per_page = newFilters.per_page;
-        
-        router.get('/settings/logs', query, { preserveState: true, replace: true });
+
+        router.get('/logs', query, { preserveState: true, replace: true });
     };
 
     const handleSearchDebounce = useDebouncedCallback((value: string) => {
@@ -105,7 +105,7 @@ export default function LogList({ logs, filters, intentStats = [], sourceStats =
                     </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                            <CardTitle className="text-sm font-medium">Otonomi Sistem AI</CardTitle>
+                            <CardTitle className="text-sm font-medium">Otonomi Sistem</CardTitle>
                             <ShieldCheck className="w-4 h-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
@@ -128,11 +128,11 @@ export default function LogList({ logs, filters, intentStats = [], sourceStats =
                         </CardContent>
                     </Card>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Distribusi Intent (Niat)</CardTitle>
+                            <CardTitle>Distribusi Niat</CardTitle>
                             <CardDescription>Persentase kategori pesan dari pelanggan secara keseluruhan.</CardDescription>
                         </CardHeader>
                         <CardContent className="h-[300px] min-h-[300px]">
@@ -176,7 +176,7 @@ export default function LogList({ logs, filters, intentStats = [], sourceStats =
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>Resolusi AI (Beban Kerja)</CardTitle>
+                            <CardTitle>Resolusi Beban Kerja</CardTitle>
                             <CardDescription>Proporsi pesan yang diselesaikan oleh NLP, LLM, atau Manusia.</CardDescription>
                         </CardHeader>
                         <CardContent className="h-[300px] min-h-[300px]">
@@ -309,7 +309,7 @@ export default function LogList({ logs, filters, intentStats = [], sourceStats =
 }
 
 LogList.layout = (page: React.ReactNode) => (
-    <AppLayout breadcrumbs={[{ title: 'Pengaturan' }, { title: 'Log & Webhook', href: '/settings/logs' }]}>
+    <AppLayout breadcrumbs={[{ title: 'Log & Webhook', href: '/logs' }]}>
         {page}
     </AppLayout>
 );

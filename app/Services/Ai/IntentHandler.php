@@ -134,12 +134,14 @@ class IntentHandler
         ]);
         
         $msgType = $isLlm ? 'llm_intent_fallback_reply' : 'nlp_direct_reply';
-        $senderName = $isLlm ? 'AI Customer Servis' : 'System';
-        $signature = $isLlm ? '-CS' : '-System';
         
-        // Pesan keluarnya (outbound) dicatat sebagai 'system' jika dari NLP (karena teksnya baku), 
-        // tapi 'llm_model' jika dari LLM (karena teksnya dikarang oleh AI).
-        $outboundResolver = $isLlm ? 'llm_model' : 'system';
+        // PENTING: Karena teks balasan Kategori 1 (Setuju, Batal, Status) SELALU 
+        // mengambil dari Database atau template statis (BUKAN dikarang oleh LLM), 
+        // maka pesan keluarnya murni dari 'system', tanpa memandang apakah 
+        // pesan masuknya ditebak oleh NLP Lokal atau Fallback LLM.
+        $senderName = 'System';
+        $signature = '-System';
+        $outboundResolver = 'system';
 
         WaGateway::sendMessage($rawPhone, $balasan . "\n\n" . $signature, $serviceOrder?->id, $msgType, $senderName, $outboundResolver);
     }

@@ -88,80 +88,78 @@ export function ServiceTable({
         }).format(Number(value));
     };
 
-    const renderStatusBadge = (status: string, label: string) => {
+    const renderStatusBadge = (item: ServiceListItem) => {
+        const { status, status_label } = item;
+
+        const renderBadge = (classes: string) => (
+            <Badge className={`${classes} shadow-none flex items-center justify-center whitespace-nowrap`}>
+                {status_label}
+            </Badge>
+        );
+
         switch (status) {
             case 'waiting_checking':
-                return (
-                    <Badge className="border-pink-300 bg-pink-100 text-pink-700 shadow-none">
-                        {label}
-                    </Badge>
-                );
+                return renderBadge("border-pink-300 bg-pink-100 text-pink-700");
             case 'waiting_approval':
-                return (
-                    <Badge className="border-orange-300 bg-orange-100 text-orange-700 shadow-none">
-                        {label}
-                    </Badge>
-                );
+                return renderBadge("border-orange-300 bg-orange-100 text-orange-700");
             case 'approved':
-                return (
-                    <Badge className="border-indigo-300 bg-indigo-100 text-indigo-700 shadow-none">
-                        {label}
-                    </Badge>
-                );
+                return renderBadge("border-indigo-300 bg-indigo-100 text-indigo-700");
             case 'in_progress':
-                return (
-                    <Badge className="border-blue-300 bg-blue-100 text-blue-700 shadow-none">
-                        {label}
-                    </Badge>
-                );
+                return renderBadge("border-blue-300 bg-blue-100 text-blue-700");
             case 'completed':
+                return renderBadge("border-emerald-300 bg-emerald-100 text-emerald-700");
             case 'taken':
-                return (
-                    <Badge className="border-emerald-300 bg-emerald-100 text-emerald-700 shadow-none">
-                        {label}
-                    </Badge>
-                );
+                return renderBadge("border-teal-300 bg-teal-100 text-teal-700");
+            case 'returned':
+                return renderBadge("border-rose-300 bg-rose-100 text-rose-700");
+            case 'cancelled':
+                return renderBadge("border-red-300 bg-red-100 text-red-700");
             default:
-                return (
-                    <Badge variant="outline" className="shadow-none">
-                        {label}
-                    </Badge>
-                );
+                return renderBadge("border-slate-300 bg-slate-100 text-slate-700");
         }
     };
 
-    // Fungsi pembantu untuk memunculkan badge lokasi barang HANYA di saat krusial
     const renderLocationBadge = (item: ServiceListItem) => {
-        // Pastikan nilai undefined dianggap true (Di Toko) untuk mencegah data lama error
-        const isAtStore = item.is_unit_left_at_store !== false; 
+        const isAtStore = item.is_unit_left_at_store === undefined ? true : Boolean(Number(item.is_unit_left_at_store));
+        const { status } = item;
 
-        // 1. KASUS BATAL: Sangat penting tahu apakah barang masih numpuk di toko atau sudah diambil
-        if (item.status === 'cancelled') {
+        // Jangan tampilkan lokasi jika sudah Selesai (Diambil), Batal/Return (Sudah dibawa pulang) 
+        if (status === 'taken' || status === 'returned') return null;
+
+        if (status === 'cancelled') {
             if (isAtStore) {
                 return (
-                    <div className="flex items-center justify-center gap-1 mt-1.5 text-[10px] font-bold text-red-600 bg-red-50 dark:bg-red-950/30 px-1.5 py-0.5 rounded border border-red-200 dark:border-red-800">
-                        <MapPin className="h-3 w-3" /> Masih di Rak Toko
-                    </div>
-                );
-            } else {
-                return (
-                    <div className="flex items-center justify-center gap-1 mt-1.5 text-[10px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-800/50 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
-                        <Home className="h-3 w-3" /> Sudah Dikembalikan
-                    </div>
+                    <Badge variant="outline" className="px-1.5 py-0 text-[9px] w-full justify-center border-dashed border-amber-400 text-amber-600 dark:text-amber-400">
+                        DI TOKO
+                    </Badge>
                 );
             }
-        }
-
-        // 2. KASUS INDEN / PENDING: Jika laptop dibawa pulang sementara oleh pelanggan
-        if (!['completed', 'taken', 'cancelled'].includes(item.status) && !isAtStore) {
             return (
-                <div className="flex items-center justify-center gap-1 mt-1.5 text-[10px] font-bold text-orange-600 bg-orange-50 dark:bg-orange-950/30 px-1.5 py-0.5 rounded border border-orange-200 dark:border-orange-800">
-                    <Home className="h-3 w-3" /> Dibawa Pulang Sementara
-                </div>
+                <Badge variant="outline" className="px-1.5 py-0 text-[9px] w-full justify-center border-dashed border-rose-400 text-rose-600 dark:text-rose-400">
+                    DIKEMBALIKAN
+                </Badge>
             );
         }
 
-        // Untuk status standar (Pasti di toko) atau Taken (Pasti sudah diambil), sembunyikan badge!
+        if (!['completed', 'taken', 'cancelled', 'returned'].includes(status) && !isAtStore) {
+            return (
+                <Badge variant="outline" className="px-1.5 py-0 text-[9px] w-full justify-center border-orange-400 text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20">
+                    DIBAWA PULANG
+                </Badge>
+            );
+        }
+
+        // Tampilkan "DI TOKO" secara eksplisit untuk unit yang ada di toko dan belum selesai (opsional)
+        // Biar tabel rapi, lebih baik yang di toko tidak usah pakai badge (Default),
+        // atau kita pakai badge hijau lembut. Mari pakai hijau lembut.
+        if (!['completed', 'taken', 'cancelled', 'returned'].includes(status) && isAtStore) {
+             return (
+                <Badge variant="outline" className="px-1.5 py-0 text-[9px] w-full justify-center border-emerald-200 text-emerald-600 dark:border-emerald-900 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/10">
+                    ADA DI TOKO
+                </Badge>
+            );
+        }
+
         return null;
     };
 
@@ -331,11 +329,8 @@ export function ServiceTable({
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-center align-middle">
-                                        <div className="flex flex-col items-center justify-center">
-                                            {renderStatusBadge(
-                                                item.status,
-                                                item.status_label,
-                                            )}
+                                        <div className="flex flex-col items-center justify-center gap-1.5 w-[140px] mx-auto">
+                                            {renderStatusBadge(item)}
                                             {renderLocationBadge(item)}
                                         </div>
                                     </TableCell>

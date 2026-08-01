@@ -11,6 +11,7 @@ enum ServiceStatus: string
     case IN_PROGRESS = 'in_progress';
     case COMPLETED = 'completed';
     case TAKEN = 'taken';
+    case RETURNED = 'returned';
 
     /**
      * Mengembalikan label yang ramah pengguna (User-Friendly Label).
@@ -24,7 +25,8 @@ enum ServiceStatus: string
             self::CANCELLED => 'Dibatalkan',
             self::IN_PROGRESS => 'Sedang Diperbaiki',
             self::COMPLETED => 'Selesai',
-            self::TAKEN => 'Sudah Diambil',
+            self::TAKEN => 'Sudah Diambil (Sukses)',
+            self::RETURNED => 'Dikembalikan (Batal)',
         };
     }
 }

@@ -21,15 +21,27 @@ class IntentHandler
 
         // 1. CEK INTENT SETUJU / BATAL
         if (in_array($intent, ['setuju', 'batal'])) {
-            if ($serviceOrder && $serviceOrder->status->value === ServiceStatus::WAITING_APPROVAL->value) {
-                // Update DB lalu ambil balasan dari bot_auto_replies untuk menghemat Token LLM!
-                $newStatus = $intent === 'setuju' ? ServiceStatus::APPROVED : ServiceStatus::CANCELLED;
-                $serviceOrder->update(['status' => $newStatus]);
-                event(new ServiceOrderBroadcast($serviceOrder, 'updated'));
+            if ($serviceOrder) {
+                // [BUG FIXED]: Mencegah Race Condition dengan DB::transaction & Pessimistic Locking
+                $isProcessed = \Illuminate\Support\Facades\DB::transaction(function () use ($serviceOrder, $intent, $chatLog, $rawPhone, $source) {
+                    // Kunci baris data servis ini secara spesifik sampai operasi update selesai
+                    $lockedOrder = ServiceOrder::where('id', $serviceOrder->id)->lockForUpdate()->first();
+                    
+                    if ($lockedOrder && $lockedOrder->status->value === ServiceStatus::WAITING_APPROVAL->value) {
+                        $newStatus = $intent === 'setuju' ? ServiceStatus::APPROVED : ServiceStatus::CANCELLED;
+                        $lockedOrder->update(['status' => $newStatus]);
+                        
+                        event(new ServiceOrderBroadcast($lockedOrder, 'updated'));
+                        $this->handleKategori1($intent, $chatLog, $lockedOrder, $rawPhone, $source);
+                        
+                        return true;
+                    }
+                    return false;
+                });
 
-                // Langsung balas pakai teks statis dari DB (Kategori 1), lewati LLM!
-                $this->handleKategori1($intent, $chatLog, $serviceOrder, $rawPhone, $source);
-                return; // Stop AI di sini, menghemat resource!
+                if ($isProcessed) {
+                    return; // Transaksi berhasi dieksekusi, hentikan AI di sini.
+                }
             }
             // Jika bukan status WAITING_APPROVAL (misal pelanggan baru/tamu bilang "oke"),
             // kita biarkan saja LLM yang menjawab secara natural (tidak perlu Human Handoff).
@@ -93,7 +105,7 @@ class IntentHandler
             $searchPhone = str_starts_with($rawPhone, '62') ? '0' . substr($rawPhone, 2) : $rawPhone;
             $activeOrders = ServiceOrder::whereHas('customer', function($q) use ($rawPhone, $searchPhone) {
                 $q->where('phone', $rawPhone)->orWhere('phone', $searchPhone);
-            })->whereNotIn('status', ['completed', 'cancelled', 'returned'])->get();
+            })->whereNotIn('status', ['completed', 'cancelled', 'returned', 'taken'])->get();
 
             if ($activeOrders->count() === 1) {
                 $order = $activeOrders->first();
@@ -136,7 +148,7 @@ class IntentHandler
         if ($serviceOrder) {
             $serviceOrder->load('warranty');
             $warrantyStatus = 'Belum terbit (karena unit belum selesai diservis atau dikembalikan)';
-            if ($serviceOrder->status->value === 'completed' || $serviceOrder->status->value === 'returned') {
+            if (in_array($serviceOrder->status->value, ['completed', 'returned', 'taken'])) {
                 if ($serviceOrder->warranty) {
                     $wStatus = strtoupper($serviceOrder->warranty->status);
                     $wEndDate = Carbon::parse($serviceOrder->warranty->end_date)->format('d M Y');

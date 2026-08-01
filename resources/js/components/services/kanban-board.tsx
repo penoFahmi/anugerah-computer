@@ -80,6 +80,13 @@ export function KanbanBoard({ services, available_spare_parts }: KanbanBoardProp
 
         if (!draggedService) return;
 
+        // Blokir geser otomatis jika ke status krusial/terminal, arahkan user untuk mengisi form (menghindari bypass validasi)
+        if (['completed', 'taken', 'cancelled'].includes(newStatus)) {
+            toast.info('Silakan klik kartu dan isi form operasional secara manual untuk mengubah ke status ini.');
+            setSelectedService(draggedService);
+            return;
+        }
+
         // Optimistic UI Update
         const updatedBoard = boardData.map(s => s.id === draggedService.id ? { ...s, status: newStatus } : s);
         setBoardData(updatedBoard);
@@ -88,6 +95,7 @@ export function KanbanBoard({ services, available_spare_parts }: KanbanBoardProp
         router.put(`/services/${draggedService.id}`, { 
             status: newStatus,
             is_full_update: false,
+            send_wa: false, // JANGAN SPAM WA SAAT GESER KANBAN
         }, {
             preserveScroll: true,
             onError: () => {

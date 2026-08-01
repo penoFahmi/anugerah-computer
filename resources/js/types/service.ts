@@ -1,5 +1,7 @@
 import type { PaginatedData, GlobalPageProps } from './global';
 
+export type ServiceStatus = 'waiting_checking' | 'waiting_approval' | 'approved' | 'cancelled' | 'in_progress' | 'completed' | 'taken' | 'returned';
+
 export interface Device {
     id: number;
     device_type: string;
@@ -22,7 +24,8 @@ export interface ServiceListItem {
     customer_phone: string;
     device_name: string;
     complaint: string;
-    status: string;
+    send_wa: boolean;
+    status: ServiceStatus | string;
     status_label: string;
     estimated_cost: string | number | null;
     final_cost?: string | number | null;

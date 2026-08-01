@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 
 import type { ServiceListItem } from '@/types/service';
 
@@ -32,7 +33,9 @@ export function ServiceDetailForm({ service }: { service: ExtendedService }) {
         payment_method: service.payment_method || 'cash',
         warranty_days: service.warranty_days?.toString() || '0',
         technician_notes: service.technician_notes || '',
+        is_unit_left_at_store: service.is_unit_left_at_store === undefined ? true : Boolean(Number(service.is_unit_left_at_store)),
         is_full_update: true, 
+        send_wa: false,
     });
 
     const COMMON_EQUIPMENTS = ['Charger', 'Tas', 'Mouse', 'Keyboard', 'Box'];
@@ -146,6 +149,23 @@ export function ServiceDetailForm({ service }: { service: ExtendedService }) {
                                     ))}
                                 </div>
                             </div>
+                            
+                            <div className="pt-2 border-t border-border/60">
+                                <div className="flex items-start space-x-3 p-3 rounded-md bg-orange-50/50 dark:bg-orange-950/20 border border-orange-200/50 dark:border-orange-900/30">
+                                    <Checkbox
+                                        id="take_home"
+                                        checked={!data.is_unit_left_at_store}
+                                        onCheckedChange={(checked) => setData('is_unit_left_at_store', !checked)}
+                                        className="mt-0.5 rounded data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600 h-4 w-4"
+                                    />
+                                    <div className="space-y-1 cursor-pointer" onClick={() => setData('is_unit_left_at_store', !data.is_unit_left_at_store)}>
+                                        <label className="text-xs font-semibold text-orange-800 dark:text-orange-400 cursor-pointer">Unit Fisik Dibawa Pulang Pelanggan (Inden)</label>
+                                        <p className="text-[10px] text-orange-700/70 dark:text-orange-300/70 leading-relaxed cursor-pointer">
+                                            Centang opsi ini jika pelanggan memilih untuk membawa pulang perangkatnya sementara suku cadang sedang dipesan atau perbaikan tertunda.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -167,8 +187,9 @@ export function ServiceDetailForm({ service }: { service: ExtendedService }) {
                                             <SelectItem value="approved">Disetujui</SelectItem>
                                             <SelectItem value="in_progress">Sedang Diperbaiki</SelectItem>
                                             <SelectItem value="completed">Selesai (Siap Diambil)</SelectItem>
-                                            <SelectItem value="taken">Sudah Diambil</SelectItem>
+                                            <SelectItem value="taken">Sudah Diambil (Sukses)</SelectItem>
                                             <SelectItem value="cancelled">Dibatalkan</SelectItem>
+                                            <SelectItem value="returned">Dikembalikan (Batal)</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>

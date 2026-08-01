@@ -16,5 +16,6 @@ class ServiceOrderCreated
      */
     public function __construct(
         public ServiceOrder $serviceOrder,
+        public bool $sendWa = true,
     ) {}
 }

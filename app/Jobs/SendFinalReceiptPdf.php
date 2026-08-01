@@ -19,7 +19,8 @@ class SendFinalReceiptPdf implements ShouldQueue
 
     public function __construct(
         public ServiceOrder $serviceOrder,
-        public string $waMessage
+        public string $waMessage,
+        public bool $sendWa = true
     ) {}
 
     public function handle(): void
@@ -36,17 +37,21 @@ class SendFinalReceiptPdf implements ShouldQueue
             Storage::disk('public')->put($folderPath . $fileName, $pdf->output());
             Log::info("Nota Lunas PDF untuk {$this->serviceOrder->order_number} berhasil dibuat di disk public.");
 
-            // 3. KIRIM WA (Panggil Gateway)
-            $publicPdfUrl = asset(Storage::url($folderPath . $fileName));
-            
-            WaGateway::sendDocument(
-                $this->serviceOrder->customer->phone,
-                $this->waMessage,
-                $publicPdfUrl,
-                $fileName,
-                $this->serviceOrder->id,
-                'send_warranty'
-            );
+            // 3. KIRIM WA (JIKA DIIZINKAN)
+            if ($this->sendWa) {
+                $publicPdfUrl = asset(Storage::url($folderPath . $fileName));
+                
+                WaGateway::sendDocument(
+                    $this->serviceOrder->customer->phone,
+                    $this->waMessage,
+                    $publicPdfUrl,
+                    $fileName,
+                    $this->serviceOrder->id,
+                    'send_warranty'
+                );
+            } else {
+                Log::info("Kirim WA Lunas untuk {$this->serviceOrder->order_number} di-skip karena instruksi Simpan Saja.");
+            }
 
         } catch (\Exception $e) {
             Log::error("Gagal membuat/mengirim Nota Lunas PDF untuk {$this->serviceOrder->order_number}: " . $e->getMessage());

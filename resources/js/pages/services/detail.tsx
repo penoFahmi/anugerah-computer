@@ -24,8 +24,9 @@ const STATUS_LABELS: Record<string, string> = {
     'approved': 'Disetujui',
     'in_progress': 'Sedang Diperbaiki',
     'completed': 'Selesai (Siap Diambil)',
-    'taken': 'Sudah Diambil',
+    'taken': 'Sudah Diambil (Sukses)',
     'cancelled': 'Dibatalkan',
+    'returned': 'Dikembalikan (Batal)',
 };
 
 export default function ServicesDetail({ serviceOrder }: ServiceDetailProps) {
@@ -48,7 +49,14 @@ export default function ServicesDetail({ serviceOrder }: ServiceDetailProps) {
     const uangMuka = Number(serviceOrder.down_payment || 0);
     const sisaTagihan = totalTagihan - uangMuka;
 
-    const statusLabel = STATUS_LABELS[serviceOrder.status] || serviceOrder.status_label || serviceOrder.status;
+    let statusLabel = STATUS_LABELS[serviceOrder.status] || serviceOrder.status_label || serviceOrder.status;
+    const isAtStore = serviceOrder.is_unit_left_at_store === undefined ? true : Boolean(Number(serviceOrder.is_unit_left_at_store));
+
+    if (serviceOrder.status === 'cancelled') {
+        if (isAtStore) statusLabel = 'Batal (Di Toko)';
+    } else if (!['completed', 'taken', 'cancelled', 'returned'].includes(serviceOrder.status) && !isAtStore) {
+        statusLabel = `${statusLabel} (Inden/Dibawa Pulang)`;
+    }
 
     return (
         <>

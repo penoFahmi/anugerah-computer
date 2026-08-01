@@ -25,6 +25,7 @@ export function KanbanCard({ service, index, onClick }: KanbanCardProps) {
     const costText = formatRupiah(displayCostRaw);
     const costLabel = finalCost ? 'Tagihan:' : (estimatedCost ? 'Est:' : '');
     const isWarrantyClaim = service.complaint.includes('[KLAIM GARANSI');
+    const isAtStore = service.is_unit_left_at_store === undefined ? true : Boolean(Number(service.is_unit_left_at_store));
 
     return (
         <Draggable draggableId={service.id.toString()} index={index}>
@@ -62,12 +63,12 @@ export function KanbanCard({ service, index, onClick }: KanbanCardProps) {
 
                     {/* Indikator Lokasi Unit (Hanya untuk Batal atau Inden/In Progress yg dibawa pulang) */}
                     {service.status === 'cancelled' && (
-                        <Badge variant="outline" className={`px-1.5 py-0 text-[9px] mb-2 w-full justify-center border-dashed ${service.is_unit_left_at_store ? 'border-amber-400 text-amber-600 dark:text-amber-400' : 'border-rose-400 text-rose-600 dark:text-rose-400'}`}>
-                            {service.is_unit_left_at_store ? 'UNIT MASIH DI TOKO' : 'UNIT SUDAH DIKEMBALIKAN'}
+                        <Badge variant="outline" className={`px-1.5 py-0 text-[9px] mb-2 w-full justify-center border-dashed ${isAtStore ? 'border-amber-400 text-amber-600 dark:text-amber-400' : 'border-rose-400 text-rose-600 dark:text-rose-400'}`}>
+                            {isAtStore ? 'UNIT MASIH DI TOKO' : 'UNIT SUDAH DIKEMBALIKAN'}
                         </Badge>
                     )}
                     
-                    {service.status === 'in_progress' && !service.is_unit_left_at_store && (
+                    {!['completed', 'taken', 'cancelled', 'returned'].includes(service.status) && !isAtStore && (
                         <Badge variant="outline" className="px-1.5 py-0 text-[9px] mb-2 w-full justify-center border-orange-400 text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20">
                             UNIT DIBAWA PELANGGAN (INDEN)
                         </Badge>

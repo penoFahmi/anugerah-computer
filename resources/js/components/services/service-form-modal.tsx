@@ -1,5 +1,5 @@
 import { useForm } from '@inertiajs/react';
-import { AlertCircle, Loader2, Search, Laptop } from 'lucide-react';
+import { AlertCircle, Loader2, Search, Laptop, Send } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { formatNumberWithDots, getCleanNumber } from '@/utils/currency';
 import { formatIndonesianPhone } from '@/lib/utils';
@@ -16,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import type { Customer } from '@/types/service';
 
 const COMMON_BRANDS = ['Asus', 'Acer', 'Lenovo', 'HP', 'Dell', 'Apple', 'MSI', 'Axioo', 'Zyrex'];
-const COMMON_DEVICE_TYPES = ['Laptop', 'PC Desktop', 'Printer', 'Proyektor', 'All-in-One PC'];
+const COMMON_DEVICE_TYPES = ['Laptop', 'PC Desktop', 'Printer', 'Proyektor', 'All-in-One PC', 'Handphone', 'Lainnya'];
 const COMMON_EQUIPMENTS = ['Charger', 'Tas', 'Mouse', 'Keyboard', 'Box'];
 
 interface Props {
@@ -49,6 +49,7 @@ export function ServiceFormModal({ isOpen, onClose }: Props) {
         is_unit_left_at_store: true, 
         estimated_cost: '',
         down_payment: '',
+        send_wa: true,
     });
 
     useEffect(() => {
@@ -160,7 +161,6 @@ export function ServiceFormModal({ isOpen, onClose }: Props) {
         post('/services', {
             preserveScroll: true,
             onSuccess: () => {
-                // RESET FORM AGAR TIDAK NYANGKUT SAAT DIBUKA LAGI
                 reset();
                 setDisplayEstimatedCost('');
                 setDisplayDownPayment('');
@@ -264,8 +264,16 @@ export function ServiceFormModal({ isOpen, onClose }: Props) {
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div className="space-y-2">
                                                     <Label htmlFor="device_type" className="text-slate-600 dark:text-slate-400 font-semibold">Kategori</Label>
-                                                    <Input id="device_type" list="device-types" placeholder="Laptop / PC" className="bg-background border-slate-300 dark:border-slate-700" value={data.device_type} onChange={(e) => setData('device_type', e.target.value)} />
-                                                    <datalist id="device-types">{COMMON_DEVICE_TYPES.map((type) => <option key={type} value={type} />)}</datalist>
+                                                    <Select value={data.device_type} onValueChange={(val) => setData('device_type', val)}>
+                                                        <SelectTrigger className="bg-background border-slate-300 dark:border-slate-700">
+                                                            <SelectValue placeholder="Pilih Kategori" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {COMMON_DEVICE_TYPES.map((type) => (
+                                                                <SelectItem key={type} value={type}>{type}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label htmlFor="brand" className="text-slate-600 dark:text-slate-400 font-semibold">Merek</Label>
@@ -406,8 +414,22 @@ export function ServiceFormModal({ isOpen, onClose }: Props) {
                         <Button type="button" variant="outline" onClick={onClose} disabled={processing} className="min-w-[100px] h-9 text-xs border-slate-300">
                             Batal
                         </Button>
-                        <Button type="submit" disabled={processing} className="min-w-[160px] h-9 text-xs font-semibold tracking-wide shadow-sm">
-                            {processing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memproses...</> : 'Simpan Transaksi'}
+                        <Button 
+                            type="submit" 
+                            disabled={processing} 
+                            onClick={() => setData('send_wa', false)} 
+                            variant="secondary" 
+                            className="min-w-[120px] h-9 text-xs font-semibold shadow-sm"
+                        >
+                            {processing && !data.send_wa ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> ...</> : 'Simpan'}
+                        </Button>
+                        <Button 
+                            type="submit" 
+                            disabled={processing} 
+                            onClick={() => setData('send_wa', true)} 
+                            className="min-w-[160px] h-9 text-xs font-semibold tracking-wide shadow-sm bg-emerald-600 hover:bg-emerald-700 text-white"
+                        >
+                            {processing && data.send_wa ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> ...</> : <><Send className="mr-1.5 h-3.5 w-3.5" /> Simpan & Kirim WA</>}
                         </Button>
                     </div>
                 </form>

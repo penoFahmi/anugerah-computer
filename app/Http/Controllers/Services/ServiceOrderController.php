@@ -96,6 +96,7 @@ class ServiceOrderController extends Controller
                 'final_cost' => $service->final_cost,
                 'down_payment' => $service->down_payment,
                 'technician_notes' => $service->technician_notes,
+                'is_unit_left_at_store' => $service->is_unit_left_at_store,
                 'created_at' => $service->created_at->format('d M Y, H:i'),
                 'spare_parts' => $service->spareParts->map(fn ($sp) => [
                     'id' => $sp->id,
@@ -184,8 +185,9 @@ class ServiceOrderController extends Controller
                 ]);
             });
 
+            $sendWa = $request->has('send_wa') ? $request->boolean('send_wa') : true;
             // Trigger Event untuk generate PDF dan Kirim WA secara antrean (Queued)
-            ServiceOrderCreated::dispatch($serviceOrder);
+            ServiceOrderCreated::dispatch($serviceOrder, $sendWa);
 
             event(new ServiceOrderBroadcast($serviceOrder, 'created'));
 
@@ -280,8 +282,12 @@ class ServiceOrderController extends Controller
                     }
                     break;
                 case ServiceStatus::COMPLETED->value:
-                case ServiceStatus::CANCELLED->value:
                     if ($newStatus === ServiceStatus::TAKEN->value) {
+                        $isValidTransition = true;
+                    }
+                    break;
+                case ServiceStatus::CANCELLED->value:
+                    if ($newStatus === ServiceStatus::RETURNED->value) {
                         $isValidTransition = true;
                     }
                     break;
@@ -319,6 +325,10 @@ class ServiceOrderController extends Controller
                     'complaint' => $validated['complaint'],
                     'equipments' => $validated['equipments'] ?? [],
                 ];
+
+                if (array_key_exists('is_unit_left_at_store', $validated)) {
+                    $updateData['is_unit_left_at_store'] = $validated['is_unit_left_at_store'];
+                }
             } else {
                 $updateData = [];
             }
@@ -328,8 +338,12 @@ class ServiceOrderController extends Controller
                 $updateData['technician_id'] = $user->id;
             }
 
-            if ($newStatus === ServiceStatus::TAKEN->value && is_null($serviceOrder->handed_over_by)) {
-                $updateData['handed_over_by'] = $user->id;
+            if (in_array($newStatus, [ServiceStatus::TAKEN->value, ServiceStatus::RETURNED->value])) {
+                if (is_null($serviceOrder->handed_over_by)) {
+                    $updateData['handed_over_by'] = $user->id;
+                }
+                // Otomatis tandai unit sudah tidak ada di toko jika sudah diserahkan/kembali
+                $updateData['is_unit_left_at_store'] = false;
             }
 
             $updateData['status'] = $newStatus;
@@ -349,7 +363,7 @@ class ServiceOrderController extends Controller
 
             $serviceOrder->update($updateData);
 
-            // Pemasukan ke Buku Besar jika ada pembayaran saat diambil
+            // Pemasukan ke Buku Besar jika ada pembayaran saat diambil (Khusus sukses/Taken)
             if ($oldStatus !== ServiceStatus::TAKEN->value && $newStatus === ServiceStatus::TAKEN->value) {
                 // Biaya yang dibayar saat penyerahan = Final Cost - Down Payment (jika sudah bayar DP sebelumnya)
                 // Atau jika kasir input total bayar di DP, kita anggap total payment.
@@ -370,10 +384,12 @@ class ServiceOrderController extends Controller
 
             event(new ServiceOrderBroadcast($serviceOrder, 'updated'));
 
-            // C. OTOMATISASI GARANSI (Hanya Dibuat Saat Unit Diambil Pertama Kali)
-            if ($oldStatus !== ServiceStatus::TAKEN->value && $newStatus === ServiceStatus::TAKEN->value) {
+            $sendWa = $request->has('send_wa') ? $request->boolean('send_wa') : true;
 
-                if ($oldStatus === ServiceStatus::CANCELLED->value) {
+            // C. OTOMATISASI GARANSI (Hanya Dibuat Saat Unit Diambil/Dikembalikan Pertama Kali)
+            if (!in_array($oldStatus, [ServiceStatus::TAKEN->value, ServiceStatus::RETURNED->value]) && in_array($newStatus, [ServiceStatus::TAKEN->value, ServiceStatus::RETURNED->value])) {
+
+                if ($newStatus === ServiceStatus::RETURNED->value) {
                     $waMessage = "Halo Kak *{$serviceOrder->customer->name}*,\n\nUnit *{$serviceOrder->device->brand}* telah Anda ambil kembali (Status: Batal Servis).\n\nTerima kasih telah berkunjung ke Anugerah Computer. Jika butuh bantuan di lain waktu, jangan ragu untuk menghubungi kami. 🙏";
                 } else {
                     $warrantyDays = (int) $request->input('warranty_days', 0);
@@ -406,7 +422,15 @@ class ServiceOrderController extends Controller
                 }
 
                 // Panggil WhatsApp API Gateway (melalui Job agar UI tidak lambat)
-                SendFinalReceiptPdf::dispatch($serviceOrder, $waMessage);
+                SendFinalReceiptPdf::dispatch($serviceOrder, $waMessage, $sendWa);
+            } else if ($sendWa && $newStatus !== $oldStatus) {
+                // D. JIKA BUKAN SERAH TERIMA TAPI ADA PERUBAHAN STATUS, DAN TOMBOL "SIMPAN & KIRIM WA" DITEKAN
+                // Jika statusnya bukan "in_progress" (karena user tidak ingin spam di status ini), kirimkan notifikasinya.
+                if ($newStatus === ServiceStatus::WAITING_APPROVAL->value) {
+                    WaGateway::sendOffer($serviceOrder);
+                } else if ($newStatus === ServiceStatus::COMPLETED->value) {
+                    WaGateway::sendStatusUpdate($serviceOrder);
+                }
             }
         });
 
@@ -434,6 +458,7 @@ class ServiceOrderController extends Controller
             ServiceStatus::IN_PROGRESS->value,
             ServiceStatus::COMPLETED->value,
             ServiceStatus::TAKEN->value,
+            ServiceStatus::RETURNED->value,
         ];
 
         if (in_array($serviceOrder->status->value, $blockedStatuses)) {
@@ -542,7 +567,7 @@ class ServiceOrderController extends Controller
     public function kanban(): Response
     {
         $services = ServiceOrder::with(['customer', 'device', 'spareParts'])
-            ->whereNotIn('status', [ServiceStatus::TAKEN->value])
+            ->whereNotIn('status', [ServiceStatus::TAKEN->value, ServiceStatus::RETURNED->value])
             ->orderBy('updated_at', 'desc')
             ->get()
             ->map(fn ($service) => [
@@ -622,6 +647,32 @@ class ServiceOrderController extends Controller
                 'message' => "Berhasil menambahkan {$sparePart->name} ke dalam nota servis.",
             ]);
         }
+
+        return back();
+    }
+
+    /**
+     * Menghapus sparepart dari nota servis (Pivot) dan mengembalikan stok.
+     */
+    public function detachSparepart(Request $request, ServiceOrder $serviceOrder, $pivotId): RedirectResponse
+    {
+        $sparePart = $serviceOrder->spareParts()->wherePivot('id', $pivotId)->firstOrFail();
+        $quantity = $sparePart->pivot->quantity;
+
+        DB::transaction(function () use ($serviceOrder, $sparePart, $pivotId, $quantity) {
+            // Hapus dari nota servis (khusus baris pivot ini saja jika ada duplikat sparepart)
+            $serviceOrder->spareParts()->wherePivot('id', $pivotId)->detach($sparePart->id);
+
+            // Kembalikan fisik stok di katalog jika bukan inden
+            if (! $sparePart->is_always_indent) {
+                $sparePart->increment('stock', $quantity);
+            }
+        });
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => "Berhasil menghapus {$sparePart->name} dari nota servis.",
+        ]);
 
         return back();
     }

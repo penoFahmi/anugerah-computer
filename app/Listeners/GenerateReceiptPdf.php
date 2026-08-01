@@ -26,13 +26,17 @@ class GenerateReceiptPdf implements ShouldQueue
             $fileName = "nota-{$serviceOrder->order_number}.pdf";
             $folderPath = "documents/receipts/";
 
-            // 2. SIMPAN PDF SECARA TEGAS KE DISK 'PUBLIC'
+            // 2. SIMPAN PDF KE DISK 'PUBLIC'
             Storage::disk('public')->put($folderPath . $fileName, $pdf->output());
             Log::info("Nota PDF untuk {$serviceOrder->order_number} berhasil dibuat di disk public.");
 
-            // 3. KIRIM WA
-            $publicPdfUrl = asset(Storage::url($folderPath . $fileName));
-            WaGateway::sendReceiptWithPdf($serviceOrder, $publicPdfUrl);
+            // 3. KIRIM WA (JIKA DIIZINKAN)
+            if ($event->sendWa) {
+                $publicPdfUrl = asset(Storage::url($folderPath . $fileName));
+                WaGateway::sendReceiptWithPdf($serviceOrder, $publicPdfUrl);
+            } else {
+                Log::info("Kirim WA untuk {$serviceOrder->order_number} di-skip karena instruksi Simpan Saja.");
+            }
 
         } catch (\Exception $e) {
             Log::error("Gagal membuat/mengirim nota PDF untuk {$serviceOrder->order_number}: " . $e->getMessage());

@@ -54,6 +54,8 @@ Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
     Route::get('/api/ai/business-insight', [AiCopilotController::class, 'businessInsight'])->name('api.ai.business-insight');
     Route::post('/services/{serviceOrder}/spareparts', [ServiceOrderController::class, 'attachSparepart'])
         ->name('services.spareparts.attach');
+    Route::delete('/services/{serviceOrder}/spareparts/{pivotId}', [ServiceOrderController::class, 'detachSparepart'])
+        ->name('services.spareparts.detach');
     Route::resource('services', ServiceOrderController::class)
         ->parameters(['services' => 'serviceOrder'])
         ->only(['index', 'store', 'show', 'update', 'destroy']);

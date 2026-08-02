@@ -100,6 +100,7 @@ class ServiceOrderController extends Controller
                 'created_at' => $service->created_at->format('d M Y, H:i'),
                 'spare_parts' => $service->spareParts->map(fn ($sp) => [
                     'id' => $sp->id,
+                    'pivot_id' => $sp->pivot->id,
                     'name' => $sp->name,
                     'price' => $sp->pivot->price,
                     'quantity' => $sp->pivot->quantity,
@@ -114,8 +115,11 @@ class ServiceOrderController extends Controller
             ];
         });
 
+        $availableSpareParts = SparePart::select('id', 'name', 'selling_price', 'stock', 'is_always_indent')->get();
+
         return Inertia::render('services/list', [
             'serviceOrders' => $services,
+            'available_spare_parts' => $availableSpareParts,
             'filters' => [
                 'search' => $filters['search'] ?? '',
                 'status' => $filters['status'] ?? 'all',

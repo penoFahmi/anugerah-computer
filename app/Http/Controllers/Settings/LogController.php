@@ -19,9 +19,12 @@ class LogController extends Controller
 
         if ($request->has('search')) {
             $search = $request->get('search');
-            $query->where('message', 'like', "%{$search}%")
-                ->orWhere('final_intent', 'like', "%{$search}%")
-                ->orWhere('sender_name', 'like', "%{$search}%");
+            $query->where(function($q) use ($search) {
+                $q->where('message', 'like', "%{$search}%")
+                  ->orWhere('final_intent', 'like', "%{$search}%")
+                  ->orWhere('sender_name', 'like', "%{$search}%")
+                  ->orWhere('resolved_by', 'like', "%{$search}%");
+            });
         }
 
         if ($request->has('intent') && $request->get('intent') !== 'all') {
@@ -51,7 +54,8 @@ class LogController extends Controller
             $aggregateQuery->where(function($q) use ($search) {
                 $q->where('message', 'like', "%{$search}%")
                   ->orWhere('final_intent', 'like', "%{$search}%")
-                  ->orWhere('sender_name', 'like', "%{$search}%");
+                  ->orWhere('sender_name', 'like', "%{$search}%")
+                  ->orWhere('resolved_by', 'like', "%{$search}%");
             });
         }
         

@@ -1,9 +1,10 @@
 import { useForm, router } from '@inertiajs/react';
-import { Loader2, Clock, Wrench, FileText, Send, Check, Play, CheckCircle2, XCircle, HandCoins, ShieldCheck, Save, Plus, Banknote, CreditCard, QrCode, Sparkles, Wand2, List, MapPin, Home } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Loader2, Clock, Wrench, FileText, Send, Check, Play, CheckCircle2, XCircle, HandCoins, ShieldCheck, Save, Plus, Banknote, CreditCard, QrCode, Sparkles, Wand2, List, MapPin, Home, Trash2 } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
 import { toast } from 'sonner';
 import axios from 'axios';
-import Select from 'react-select';
+import { Search } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 import { Alert as UIAlert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -49,7 +50,22 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
 
     // State untuk input sparepart
     const [selectedSparepart, setSelectedSparepart] = useState<string>('');
+    const [sparepartSearchQuery, setSparepartSearchQuery] = useState('');
+    const [isSparepartDropdownOpen, setIsSparepartDropdownOpen] = useState(false);
     const [sparepartQty, setSparepartQty] = useState<number>(1);
+    
+    const sparepartDropdownRef = useRef<HTMLDivElement>(null);
+
+    // Handle klik di luar dropdown
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (sparepartDropdownRef.current && !sparepartDropdownRef.current.contains(event.target as Node)) {
+                setIsSparepartDropdownOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     useEffect(() => {
         if (isOpen && service) {
@@ -79,6 +95,7 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
     const processAction = (targetStatus: string, isTriggerWa: boolean = false) => {
         // Reset state input sparepart
         setSelectedSparepart('');
+        setSparepartSearchQuery('');
         setSparepartQty(1);
 
         const isWarranty = service?.complaint?.startsWith('KLAIM GARANSI');
@@ -229,44 +246,69 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                             Gunakan Sparepart / Jasa Tambahan
                         </Label>
                         <div className="flex flex-col sm:flex-row gap-2.5 relative z-50">
-                            <div className="flex-1 w-full">
-                                <Select
-                                    className="text-sm font-medium react-select-container"
-                                    classNamePrefix="react-select"
-                                    placeholder="Cari & ketik sparepart..."
-                                    menuPosition="fixed"
-                                    styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
-                                    options={available_spare_parts?.map(sp => ({
-                                        value: String(sp.id),
-                                        label: `${sp.name} - Rp ${formatRupiah(sp.selling_price)} ${(!sp.is_always_indent && sp.stock <= 0) ? '(Stok Habis)' : `(Stok: ${sp.stock})`}`,
-                                        isDisabled: !sp.is_always_indent && sp.stock <= 0
-                                    })) || []}
-                                    value={
-                                        selectedSparepart
-                                            ? {
-                                                value: selectedSparepart,
-                                                label: available_spare_parts?.find(s => String(s.id) === selectedSparepart)?.name + ' - Rp ' + formatRupiah(available_spare_parts?.find(s => String(s.id) === selectedSparepart)?.selling_price || 0)
-                                            }
-                                            : null
-                                    }
-                                    onChange={(option: any) => setSelectedSparepart(option ? option.value : '')}
-                                    isClearable
-                                    isSearchable
-                                    unstyled
-                                    classNames={{
-                                        control: (state) => `flex min-h-[38px] w-full rounded-md border bg-background px-3 py-1 text-sm shadow-sm transition-colors ${state.isFocused ? 'border-blue-500 ring-1 ring-blue-500 outline-none' : 'border-input hover:border-blue-400'}`,
-                                        menu: () => "mt-1.5 bg-popover text-popover-foreground border border-border rounded-md shadow-lg z-[9999] overflow-hidden",
-                                        menuList: () => "max-h-[200px] overflow-y-auto custom-scrollbar p-1.5",
-                                        option: (state) => `cursor-pointer rounded-sm py-2 px-3 text-sm font-medium transition-colors ${state.isFocused ? 'bg-muted text-foreground' : ''} ${state.isSelected ? 'bg-blue-600 text-white font-semibold' : ''} ${state.isDisabled ? 'opacity-50 cursor-not-allowed hover:bg-transparent' : 'hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-900/30'}`,
-                                        singleValue: () => "text-foreground font-semibold",
-                                        input: () => "text-foreground",
-                                        placeholder: () => "text-muted-foreground",
-                                        indicatorSeparator: () => "bg-border mx-2",
-                                        dropdownIndicator: () => "text-muted-foreground hover:text-foreground",
-                                        clearIndicator: () => "text-muted-foreground hover:text-red-500",
-                                        noOptionsMessage: () => "text-muted-foreground py-3 text-center text-sm",
-                                    }}
-                                />
+                            <div className="flex-1 w-full relative" ref={sparepartDropdownRef}>
+                                <div className="relative">
+                                    <Search className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
+                                    <Input 
+                                        className="pl-9 pr-9 h-[38px] bg-background font-semibold"
+                                        placeholder="Cari sparepart..."
+                                        value={sparepartSearchQuery}
+                                        onChange={(e) => {
+                                            setSparepartSearchQuery(e.target.value);
+                                            setIsSparepartDropdownOpen(true);
+                                            setSelectedSparepart('');
+                                        }}
+                                        onFocus={() => setIsSparepartDropdownOpen(true)}
+                                    />
+                                    {sparepartSearchQuery && (
+                                        <button 
+                                            type="button"
+                                            className="absolute right-3 top-2.5 text-muted-foreground hover:text-red-500 transition-colors"
+                                            onClick={() => {
+                                                setSelectedSparepart('');
+                                                setSparepartSearchQuery('');
+                                                setIsSparepartDropdownOpen(true);
+                                            }}
+                                        >
+                                            <XCircle className="h-4 w-4" />
+                                        </button>
+                                    )}
+                                </div>
+
+                                {isSparepartDropdownOpen && (
+                                    <div className="absolute z-50 mt-1.5 w-full max-h-[250px] overflow-y-auto custom-scrollbar rounded-md border bg-popover shadow-lg">
+                                        {available_spare_parts && available_spare_parts.filter(sp => sp.name.toLowerCase().includes(sparepartSearchQuery.toLowerCase())).length > 0 ? (
+                                            available_spare_parts
+                                                .filter(sp => sp.name.toLowerCase().includes(sparepartSearchQuery.toLowerCase()))
+                                                .map(sp => {
+                                                    const isOutOfStock = !sp.is_always_indent && sp.stock <= 0;
+                                                    return (
+                                                        <button
+                                                            key={sp.id}
+                                                            type="button"
+                                                            disabled={isOutOfStock}
+                                                            className={cn(
+                                                                "w-full flex items-center justify-between px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted focus:bg-muted border-b border-border/50 last:border-0",
+                                                                isOutOfStock ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                                                            )}
+                                                            onClick={() => {
+                                                                setSelectedSparepart(String(sp.id));
+                                                                setSparepartSearchQuery(sp.name);
+                                                                setIsSparepartDropdownOpen(false);
+                                                            }}
+                                                        >
+                                                            <span className="font-medium text-foreground">{sp.name}</span>
+                                                            <span className="text-xs ml-2 opacity-70">
+                                                                {isOutOfStock ? '(Stok Habis)' : `(Stok: ${sp.stock})`}
+                                                            </span>
+                                                        </button>
+                                                    )
+                                                })
+                                        ) : (
+                                            <div className="p-3 text-center text-sm text-muted-foreground">Data tidak ditemukan.</div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                             <div className="flex gap-2">
                                 <Input
@@ -290,8 +332,7 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                                             <span className="font-semibold text-foreground">{sp.name}</span>
                                         </div>
                                         <div className="flex items-center gap-3">
-                                            <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">Rp {formatRupiah(sp.subtotal)}</span>
-                                            <button onClick={() => handleRemoveSparepart(sp.id)} className="text-muted-foreground hover:text-red-500 transition-colors">
+                                            <button onClick={() => handleRemoveSparepart(sp.pivot_id)} className="text-muted-foreground hover:text-red-500 transition-colors">
                                                 <Trash2 className="h-3.5 w-3.5" />
                                             </button>
                                         </div>

@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import type { ServiceIndexProps, ServiceListItem } from '@/types/service';
 
-export default function ServicesIndex({ serviceOrders, filters }: ServiceIndexProps) {
+export default function ServicesIndex({ serviceOrders, filters, available_spare_parts }: ServiceIndexProps) {
     const { flash } = usePage<ServiceIndexProps>().props;
 
     // State Manajemen Modal
@@ -62,6 +62,17 @@ export default function ServicesIndex({ serviceOrders, filters }: ServiceIndexPr
         }
     }, [flash]);
 
+    // Sinkronisasi data modal ketika ada update dari backend (misal setelah tambah sparepart)
+    useEffect(() => {
+        if (selectedServiceToProcess && serviceOrders?.data) {
+            const updated = serviceOrders.data.find(s => s.id === selectedServiceToProcess.id);
+            if (updated) {
+                // Perbarui state secara diam-diam agar UI di dalam modal otomatis re-render
+                setSelectedServiceToProcess(updated);
+            }
+        }
+    }, [serviceOrders]);
+
     const handleOpenChat = (service: ServiceListItem) => {
         const phone = service.customer_phone;
         window.dispatchEvent(new CustomEvent('open-global-chat', { detail: { phone } }));
@@ -107,6 +118,7 @@ export default function ServicesIndex({ serviceOrders, filters }: ServiceIndexPr
                 isOpen={!!selectedServiceToProcess}
                 onClose={() => setSelectedServiceToProcess(null)}
                 service={selectedServiceToProcess}
+                available_spare_parts={available_spare_parts}
             />
             <ServiceAlert
                 open={!!selectedServiceToDelete}

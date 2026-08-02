@@ -55,4 +55,5 @@ export interface ServiceIndexProps extends GlobalPageProps {
         date?: string;
         type?: string;
     };
+    available_spare_parts?: any[];
 }

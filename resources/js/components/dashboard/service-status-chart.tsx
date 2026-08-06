@@ -19,12 +19,12 @@ const statusConfig: Record<string, { label: string, color: string }> = {
 }
 
 const chartConfig = {
-    waiting_checking: { label: "Antrean Baru", color: "hsl(var(--chart-1))" },
-    waiting_approval: { label: "Menunggu Konfirmasi", color: "hsl(var(--chart-2))" },
-    approved: { label: "Disetujui", color: "hsl(var(--chart-3))" },
-    in_progress: { label: "Dikerjakan", color: "hsl(var(--chart-4))" },
-    completed: { label: "Selesai", color: "hsl(var(--chart-5))" },
-    cancelled: { label: "Batal", color: "hsl(var(--destructive))" },
+    waiting_checking: { label: "Antrean Baru", color: "var(--chart-1)" },
+    waiting_approval: { label: "Menunggu Konfirmasi", color: "var(--chart-2)" },
+    approved: { label: "Disetujui", color: "var(--chart-3)" },
+    in_progress: { label: "Dikerjakan", color: "var(--chart-4)" },
+    completed: { label: "Selesai", color: "var(--chart-5)" },
+    cancelled: { label: "Batal", color: "var(--destructive)" },
 }
 
 export function ServiceStatusChart({ data = [] }: { data: ServiceChartData[] }) {

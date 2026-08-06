@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -55,19 +56,19 @@ class DashboardController extends Controller
             ->get(['id', 'order_number', 'customer_id', 'device_id', 'status', 'created_at']);
 
         // 6. Data Grafik Status Servis
-        $serviceChartData = \Illuminate\Support\Facades\DB::table('service_orders')
-            ->select('status', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
+        $serviceChartData = DB::table('service_orders')
+            ->select('status', DB::raw('count(*) as count'))
             ->whereNull('deleted_at')
             ->groupBy('status')
             ->get();
 
         // 7. Data Grafik Tren Keuangan (7 Hari Terakhir)
         $sevenDaysAgo = Carbon::today()->subDays(6);
-        $financeChartData = \Illuminate\Support\Facades\DB::table('transactions')
+        $financeChartData = DB::table('transactions')
             ->select(
-                \Illuminate\Support\Facades\DB::raw('DATE(transaction_date) as date'),
-                \Illuminate\Support\Facades\DB::raw("SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income"),
-                \Illuminate\Support\Facades\DB::raw("SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense")
+                DB::raw('DATE(transaction_date) as date'),
+                DB::raw("SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income"),
+                DB::raw("SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense")
             )
             ->whereDate('transaction_date', '>=', $sevenDaysAgo)
             ->groupBy('date')

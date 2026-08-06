@@ -13,11 +13,11 @@ interface FinanceChartData {
 const chartConfig = {
     income: {
         label: "Pemasukan",
-        color: "hsl(var(--chart-2))", // Greenish/emerald
+        color: "var(--chart-2)", // Greenish/emerald
     },
     expense: {
         label: "Pengeluaran",
-        color: "hsl(var(--destructive))", // Red
+        color: "var(--destructive)", // Red
     },
 }
 

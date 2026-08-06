@@ -103,6 +103,13 @@
 
     --radius: 0.625rem;
 
+    /* Chart Colors for Shadcn Recharts */
+    --chart-1: oklch(0.64 0.15 25); /* Blue/Indigo */
+    --chart-2: oklch(0.60 0.15 150); /* Emerald/Green */
+    --chart-3: oklch(0.70 0.15 50); /* Amber/Orange */
+    --chart-4: oklch(0.50 0.15 300); /* Purple */
+    --chart-5: oklch(0.55 0.15 20); /* Red/Rose */
+
     /* Sidebar - Warm White/Sand */
     --sidebar: oklch(0.97 0.02 70);
     --sidebar-foreground: oklch(0.25 0.04 45);
@@ -147,6 +154,13 @@
     --border: oklch(0.35 0.04 45);
     --input: oklch(0.35 0.04 45);
     --ring: oklch(0.75 0.10 65);
+
+    /* Chart Colors for Shadcn Recharts (Dark Mode) */
+    --chart-1: oklch(0.55 0.15 25); /* Blue/Indigo */
+    --chart-2: oklch(0.50 0.15 150); /* Emerald/Green */
+    --chart-3: oklch(0.60 0.15 50); /* Amber/Orange */
+    --chart-4: oklch(0.40 0.15 300); /* Purple */
+    --chart-5: oklch(0.45 0.15 20); /* Red/Rose */
 
     /* Sidebar - Deep Brown */
     --sidebar: oklch(0.15 0.02 45);

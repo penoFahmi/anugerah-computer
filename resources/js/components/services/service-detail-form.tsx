@@ -198,9 +198,11 @@ export function ServiceDetailForm({ service }: { service: ExtendedService }) {
                                     <Label className="text-xs text-blue-900/80 dark:text-blue-200">Garansi (Hari)</Label>
                                     <Input 
                                         type="number" min="0" 
-                                        className="h-8 text-xs bg-background border-blue-200 dark:border-blue-800" 
-                                        value={data.warranty_days} 
+                                        className="h-8 text-xs bg-background border-blue-200 dark:border-blue-800 disabled:opacity-50" 
+                                        value={service.complaint?.startsWith('KLAIM GARANSI') ? '0' : data.warranty_days} 
                                         onChange={e => setData('warranty_days', e.target.value)} 
+                                        disabled={service.complaint?.startsWith('KLAIM GARANSI')}
+                                        title={service.complaint?.startsWith('KLAIM GARANSI') ? 'Tidak bisa menambah garansi untuk Klaim Garansi' : ''}
                                     />
                                 </div>
 

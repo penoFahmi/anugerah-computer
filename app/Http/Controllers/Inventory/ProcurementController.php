@@ -32,14 +32,8 @@ class ProcurementController extends Controller
 
         $procurements = $query->paginate(10)->withQueryString();
 
-        // 2. Ambil daftar sparepart untuk dropdown di Form Modal Pengadaan
-        $spareparts = SparePart::select('id', 'name', 'sku', 'purchase_price', 'selling_price', 'stock')
-            ->orderBy('name')
-            ->get();
-
         return Inertia::render('inventory/procurement/list', [
             'procurements' => $procurements,
-            'spareparts' => $spareparts,
             'filters' => $request->only(['search']),
         ]);
     }

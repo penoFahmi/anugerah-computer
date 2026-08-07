@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers\Services;
 
-use App\Http\Controllers\Controller;
 use App\Enums\ServiceStatus;
 use App\Enums\TransactionCategory;
 use App\Enums\TransactionType;
 use App\Events\ServiceOrderBroadcast;
 use App\Events\ServiceOrderCreated;
+use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreServiceOrderRequest;
 use App\Http\Requests\UpdateServiceOrderRequest;
 use App\Jobs\SendFinalReceiptPdf;
+use App\Jobs\SendWaNotification;
 use App\Models\Customer;
 use App\Models\Device;
 use App\Models\ServiceOrder;
@@ -25,7 +26,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Notification;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -115,11 +115,8 @@ class ServiceOrderController extends Controller
             ];
         });
 
-        $availableSpareParts = SparePart::select('id', 'name', 'selling_price', 'stock', 'is_always_indent')->get();
-
         return Inertia::render('services/list', [
             'serviceOrders' => $services,
-            'available_spare_parts' => $availableSpareParts,
             'filters' => [
                 'search' => $filters['search'] ?? '',
                 'status' => $filters['status'] ?? 'all',
@@ -258,57 +255,7 @@ class ServiceOrderController extends Controller
         $oldStatus = $serviceOrder->status->value;
         $newStatus = $validated['status'];
 
-        // --- VALIDASI STATE MACHINE (STRICT) ---
-        if ($oldStatus !== $newStatus && ! $user->hasRole('administrator')) {
-            $isValidTransition = false;
-
-            switch ($oldStatus) {
-                case ServiceStatus::WAITING_CHECKING->value:
-                    if (in_array($newStatus, [ServiceStatus::WAITING_APPROVAL->value, ServiceStatus::CANCELLED->value])) {
-                        $estimatedCost = $validated['estimated_cost'] ?? $serviceOrder->estimated_cost;
-                        $isWarranty = str_starts_with($serviceOrder->complaint ?? '', 'KLAIM GARANSI');
-                        $isValidTransition = true;
-                    }
-                    break;
-                case ServiceStatus::WAITING_APPROVAL->value:
-                    if (in_array($newStatus, [ServiceStatus::APPROVED->value, ServiceStatus::CANCELLED->value])) {
-                        $isValidTransition = true;
-                    }
-                    break;
-                case ServiceStatus::APPROVED->value:
-                    if ($newStatus === ServiceStatus::IN_PROGRESS->value) {
-                        $isValidTransition = true;
-                    }
-                    break;
-                case ServiceStatus::IN_PROGRESS->value:
-                    if ($newStatus === ServiceStatus::COMPLETED->value) {
-                        $isValidTransition = true;
-                    }
-                    break;
-                case ServiceStatus::COMPLETED->value:
-                    if ($newStatus === ServiceStatus::TAKEN->value) {
-                        $isValidTransition = true;
-                    }
-                    break;
-                case ServiceStatus::CANCELLED->value:
-                    if ($newStatus === ServiceStatus::RETURNED->value) {
-                        $isValidTransition = true;
-                    }
-                    break;
-            }
-
-            if (! $isValidTransition) {
-                $oldLabel = $serviceOrder->status->label();
-                $newLabel = ServiceStatus::from($newStatus)->label();
-                Inertia::flash('toast', [
-                    'type' => 'error',
-                    'message' => "Transisi status tidak valid. Tidak bisa mengubah status dari '{$oldLabel}' menjadi '{$newLabel}' secara langsung.",
-                ]);
-
-                return back();
-            }
-        }
-        // ---------------------------------------
+        // Validasi state machine telah dipindahkan ke UpdateServiceOrderRequest::after()
 
         DB::transaction(function () use ($validated, $request, $serviceOrder, $user, $oldStatus, $newStatus) {
 
@@ -365,25 +312,40 @@ class ServiceOrderController extends Controller
                 $updateData['technician_notes'] = $validated['technician_notes'];
             }
 
+            // Jika mulai dikerjakan (IN_PROGRESS), pastikan status lokasi unit OTOMATIS menjadi Di Toko (true)
+            // Karena tidak mungkin dikerjakan kalau unitnya masih di rumah pelanggan.
+            if ($newStatus === ServiceStatus::IN_PROGRESS->value) {
+                $updateData['is_unit_left_at_store'] = true;
+            }
+
             $serviceOrder->update($updateData);
 
-            // Pemasukan ke Buku Besar jika ada pembayaran saat diambil (Khusus sukses/Taken)
-            if ($oldStatus !== ServiceStatus::TAKEN->value && $newStatus === ServiceStatus::TAKEN->value) {
-                // Biaya yang dibayar saat penyerahan = Final Cost - Down Payment (jika sudah bayar DP sebelumnya)
-                // Atau jika kasir input total bayar di DP, kita anggap total payment.
+            // Pemasukan ke Buku Besar jika ada pembayaran saat diambil (Khusus sukses/Taken atau Batal tapi ada Biaya Pengecekan)
+            if (
+                ($oldStatus !== ServiceStatus::TAKEN->value && $newStatus === ServiceStatus::TAKEN->value) ||
+                ($oldStatus !== ServiceStatus::RETURNED->value && $newStatus === ServiceStatus::RETURNED->value)
+            ) {
                 $finalCost = $validated['final_cost'] ?? $serviceOrder->final_cost ?? $serviceOrder->estimated_cost ?? 0;
                 $downPayment = $validated['down_payment'] ?? $serviceOrder->down_payment ?? 0;
 
-                Transaction::create([
-                    'service_order_id' => $serviceOrder->id,
-                    'user_id' => auth()->id(),
-                    'type' => TransactionType::INCOME,
-                    'category' => TransactionCategory::FINAL_SERVICE,
-                    'amount' => max(0, $finalCost),
-                    'payment_method' => $request->input('payment_method', 'cash'),
-                    'notes' => 'Pelunasan / Pembayaran Servis Nota: '.$serviceOrder->order_number,
-                    'transaction_date' => now(),
-                ]);
+                // Hanya catat transaksi jika finalCost > 0
+                // Untuk "Taken" (Selesai), ini adalah Biaya Servis.
+                // Untuk "Returned" (Batal), ini adalah Biaya Pengecekan (Checking Fee) jika toko menerapkannya.
+                if ($finalCost > 0) {
+                    $category = $newStatus === ServiceStatus::TAKEN->value ? TransactionCategory::FINAL_SERVICE : TransactionCategory::OTHER_INCOME;
+                    $notesPrefix = $newStatus === ServiceStatus::TAKEN->value ? 'Pelunasan / Pembayaran Servis' : 'Biaya Pengecekan / Pembatalan Servis';
+
+                    Transaction::create([
+                        'service_order_id' => $serviceOrder->id,
+                        'user_id' => auth()->id(),
+                        'type' => TransactionType::INCOME,
+                        'category' => $category,
+                        'amount' => max(0, $finalCost),
+                        'payment_method' => $request->input('payment_method', 'cash'),
+                        'notes' => $notesPrefix . ' Nota: ' . $serviceOrder->order_number,
+                        'transaction_date' => now(),
+                    ]);
+                }
             }
 
             event(new ServiceOrderBroadcast($serviceOrder, 'updated'));
@@ -391,12 +353,14 @@ class ServiceOrderController extends Controller
             $sendWa = $request->has('send_wa') ? $request->boolean('send_wa') : true;
 
             // C. OTOMATISASI GARANSI (Hanya Dibuat Saat Unit Diambil/Dikembalikan Pertama Kali)
-            if (!in_array($oldStatus, [ServiceStatus::TAKEN->value, ServiceStatus::RETURNED->value]) && in_array($newStatus, [ServiceStatus::TAKEN->value, ServiceStatus::RETURNED->value])) {
+            if (! in_array($oldStatus, [ServiceStatus::TAKEN->value, ServiceStatus::RETURNED->value]) && in_array($newStatus, [ServiceStatus::TAKEN->value, ServiceStatus::RETURNED->value])) {
 
                 if ($newStatus === ServiceStatus::RETURNED->value) {
-                    $waMessage = "Halo Kak *{$serviceOrder->customer->name}*,\n\nUnit *{$serviceOrder->device->brand}* telah Anda ambil kembali (Status: Batal Servis).\n\nTerima kasih telah berkunjung ke Anugerah Computer. Jika butuh bantuan di lain waktu, jangan ragu untuk menghubungi kami. 🙏";
+                    $waMessage = WaGateway::getHandoverMessage($serviceOrder, 'returned');
                 } else {
-                    $warrantyDays = (int) $request->input('warranty_days', 0);
+                    $isWarrantyClaim = str_starts_with($serviceOrder->complaint ?? '', 'KLAIM GARANSI');
+                    $warrantyDays = $isWarrantyClaim ? 0 : (int) $request->input('warranty_days', 0);
+                    $warrantyCode = null;
 
                     if ($warrantyDays > 0) {
                         $prefix = 'GAR-'.now()->format('Ymd').'-';
@@ -414,26 +378,20 @@ class ServiceOrderController extends Controller
                             'end_date' => now()->addDays($warrantyDays),
                             'status' => 'active',
                         ]);
-
-                        $waMessage = "Terima kasih Kak *{$serviceOrder->customer->name}* telah mempercayakan perbaikan unit *{$serviceOrder->device->brand}* di Anugerah Computer.\n\n"
-                            ."Unit Anda telah diserahkan dan masa garansi perbaikan aktif selama {$warrantyDays} hari hingga *".now()->addDays($warrantyDays)->format('d M Y')."*.\n"
-                            ."Kode Garansi: *{$warrantyCode}*\n\n"
-                            .'Harap simpan pesan ini sebagai bukti garansi. Semoga unitnya awet selalu! 🙏';
-                    } else {
-                        $waMessage = "Terima kasih Kak *{$serviceOrder->customer->name}* telah mempercayakan perbaikan unit *{$serviceOrder->device->brand}* di Anugerah Computer.\n\n"
-                            .'Unit Anda telah diserahkan. Semoga unitnya awet dan dapat digunakan dengan lancar kembali! Jika ada keluhan lain, jangan ragu untuk menghubungi kami. 🙏';
                     }
+
+                    $waMessage = WaGateway::getHandoverMessage($serviceOrder, 'taken', $isWarrantyClaim, $warrantyDays, $warrantyCode);
                 }
 
                 // Panggil WhatsApp API Gateway (melalui Job agar UI tidak lambat)
                 SendFinalReceiptPdf::dispatch($serviceOrder, $waMessage, $sendWa);
-            } else if ($sendWa && $newStatus !== $oldStatus) {
+            } elseif ($sendWa && $newStatus !== $oldStatus) {
                 // D. JIKA BUKAN SERAH TERIMA TAPI ADA PERUBAHAN STATUS, DAN TOMBOL "SIMPAN & KIRIM WA" DITEKAN
                 // Jika statusnya bukan "in_progress" (karena user tidak ingin spam di status ini), kirimkan notifikasinya.
                 if ($newStatus === ServiceStatus::WAITING_APPROVAL->value) {
-                    WaGateway::sendOffer($serviceOrder);
-                } else if ($newStatus === ServiceStatus::COMPLETED->value) {
-                    WaGateway::sendStatusUpdate($serviceOrder);
+                    SendWaNotification::dispatch($serviceOrder, 'offer');
+                } elseif ($newStatus === ServiceStatus::COMPLETED->value) {
+                    SendWaNotification::dispatch($serviceOrder, 'update');
                 }
             }
         });
@@ -598,11 +556,8 @@ class ServiceOrderController extends Controller
                 'created_at' => $service->created_at->diffForHumans(),
             ]);
 
-        $availableSpareParts = SparePart::select('id', 'name', 'selling_price', 'stock', 'is_always_indent')->get();
-
         return Inertia::render('services/kanban', [
             'services' => $services,
-            'available_spare_parts' => $availableSpareParts,
         ]);
     }
 
@@ -681,4 +636,3 @@ class ServiceOrderController extends Controller
         return back();
     }
 }
-

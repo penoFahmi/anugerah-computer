@@ -1,6 +1,7 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { useState, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
+import axios from 'axios';
 
 import AppLayout from '@/layouts/app-layout';
 import { PosCatalog } from '@/components/sales/pos/pos-catalog';
@@ -8,7 +9,7 @@ import { PosCart } from '@/components/sales/pos/pos-cart';
 import { ReceiptModal } from '@/components/sales/pos/receipt-modal';
 import type { PosPageProps, CartItem, PosProduct, PosSparepart } from '@/types/pos';
 
-export default function PosIndex({ products, spareparts }: PosPageProps) {
+export default function PosIndex() {
     const { flash } = usePage().props as any;
     
     // State global untuk halaman POS
@@ -74,9 +75,31 @@ export default function PosIndex({ products, spareparts }: PosPageProps) {
     const change = Math.max(0, paidAmount - finalAmount);
     const isPaymentValid = paidAmount >= finalAmount && cart.length > 0;
 
-    // Filter barang berdasarkan pencarian
-    const filteredProducts = products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
-    const filteredSpareparts = spareparts.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    // State untuk hasil pencarian async
+    const [filteredProducts, setFilteredProducts] = useState<PosProduct[]>([]);
+    const [filteredSpareparts, setFilteredSpareparts] = useState<PosSparepart[]>([]);
+
+    // Fetch barang secara asinkron berdasarkan searchQuery
+    useEffect(() => {
+        const fetchItems = async () => {
+            try {
+                const [prodRes, spareRes] = await Promise.all([
+                    axios.get(`/api/products/search?q=${searchQuery}`),
+                    axios.get(`/api/spare-parts/search?q=${searchQuery}`)
+                ]);
+                setFilteredProducts(prodRes.data);
+                setFilteredSpareparts(spareRes.data);
+            } catch (error) {
+                console.error("Gagal memuat barang", error);
+            }
+        };
+
+        const timeoutId = setTimeout(() => {
+            fetchItems();
+        }, 300); // Debounce 300ms
+
+        return () => clearTimeout(timeoutId);
+    }, [searchQuery]);
 
     // Fungsi Keranjang
     const addToCart = (item: PosProduct | PosSparepart) => {

@@ -1,5 +1,11 @@
 <?php
 
+use App\Http\Controllers\Admin\PegawaiController;
+use App\Http\Controllers\Admin\TestimonialController;
+use App\Http\Controllers\Admin\TrashController;
+use App\Http\Controllers\Api\AiCopilotController;
+use App\Http\Controllers\Api\ProductApiController;
+use App\Http\Controllers\Api\SparePartApiController;
 use App\Http\Controllers\Communication\ChatController;
 use App\Http\Controllers\Communication\ConfigWaController;
 use App\Http\Controllers\CRM\CustomerController;
@@ -11,20 +17,19 @@ use App\Http\Controllers\Inventory\ProductController;
 use App\Http\Controllers\Inventory\SparePartController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\Admin\PegawaiController;
+use App\Http\Controllers\PublicTestimonialController;
 use App\Http\Controllers\Sales\OnlineBookingController;
 use App\Http\Controllers\Sales\PosController;
 use App\Http\Controllers\Sales\TradeInController;
-use App\Http\Controllers\Services\ServiceOrderController;
-use App\Http\Controllers\Settings\LogController;
-use App\Http\Controllers\Admin\TrashController;
-use App\Http\Controllers\Services\WarrantyController;
-use App\Http\Controllers\Api\AiCopilotController;
 /*
 |--------------------------------------------------------------------------
 | Public Routes
 |--------------------------------------------------------------------------
 */
+use App\Http\Controllers\Services\ServiceOrderController;
+use App\Http\Controllers\Services\WarrantyController;
+use App\Http\Controllers\Settings\LogController;
+use App\Http\Controllers\Settings\StoreSettingController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LandingController::class, 'index'])->name('home');
@@ -49,7 +54,9 @@ Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
 
     // API & Resource Service Orders
     Route::get('/api/search-customer', [ServiceOrderController::class, 'searchCustomer'])->name('api.search-customer');
-    
+    Route::get('/api/spare-parts/search', [SparePartApiController::class, 'search'])->name('api.spare-parts.search');
+    Route::get('/api/products/search', [ProductApiController::class, 'search'])->name('api.products.search');
+
     // AI Copilot Endpoints
     Route::get('/api/ai/business-insight', [AiCopilotController::class, 'businessInsight'])->name('api.ai.business-insight');
     Route::post('/services/{serviceOrder}/spareparts', [ServiceOrderController::class, 'attachSparepart'])
@@ -124,17 +131,17 @@ Route::middleware(['auth', 'verified', 'is_active', 'role:administrator'])->grou
     Route::get('config/wa', [ConfigWaController::class, 'index'])->name('config.wa');
     Route::post('config/wa/logout', [ConfigWaController::class, 'logout'])->name('config.wa.logout');
     Route::get('logs', [LogController::class, 'index'])->name('logs.index');
-    
+
     // Konfigurasi Landing Page (Store Settings)
-    Route::get('settings/store', [\App\Http\Controllers\Settings\StoreSettingController::class, 'index'])->name('settings.store.index');
-    Route::post('settings/store', [\App\Http\Controllers\Settings\StoreSettingController::class, 'update'])->name('settings.store.update');
+    Route::get('settings/store', [StoreSettingController::class, 'index'])->name('settings.store.index');
+    Route::post('settings/store', [StoreSettingController::class, 'update'])->name('settings.store.update');
 
     // Manajemen Testimoni
-    Route::get('testimonials', [\App\Http\Controllers\Admin\TestimonialController::class, 'index'])->name('admin.testimonials.index');
-    Route::patch('testimonials/{testimonial}/status', [\App\Http\Controllers\Admin\TestimonialController::class, 'updateStatus'])->name('admin.testimonials.status');
-    Route::delete('testimonials/{testimonial}', [\App\Http\Controllers\Admin\TestimonialController::class, 'destroy'])->name('admin.testimonials.destroy');
+    Route::get('testimonials', [TestimonialController::class, 'index'])->name('admin.testimonials.index');
+    Route::patch('testimonials/{testimonial}/status', [TestimonialController::class, 'updateStatus'])->name('admin.testimonials.status');
+    Route::delete('testimonials/{testimonial}', [TestimonialController::class, 'destroy'])->name('admin.testimonials.destroy');
 });
 
-Route::post('/testimonials', [\App\Http\Controllers\PublicTestimonialController::class, 'store'])->name('public.testimonials.store');
+Route::post('/testimonials', [PublicTestimonialController::class, 'store'])->name('public.testimonials.store');
 
 require __DIR__.'/settings.php';

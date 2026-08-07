@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Enums\ServiceStatus;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class UpdateServiceOrderRequest extends FormRequest
 {
@@ -22,20 +23,20 @@ class UpdateServiceOrderRequest extends FormRequest
             'estimated_cost' => ['nullable', 'numeric', 'min:0'],
             'final_cost' => ['nullable', 'numeric', 'min:0'],
             'down_payment' => [
-                'nullable', 
-                'numeric', 
+                'nullable',
+                'numeric',
                 'min:0',
                 function ($attribute, $value, $fail) {
                     $serviceOrder = $this->route('serviceOrder');
                     $estimatedCost = (float) $this->input('estimated_cost', $serviceOrder->estimated_cost ?? 0);
                     $finalCost = (float) $this->input('final_cost', $serviceOrder->final_cost ?? 0);
-                    
+
                     $maxCost = max($estimatedCost, $finalCost);
-                    
+
                     if ($maxCost > 0 && $value > $maxCost) {
                         $fail('Uang muka (DP) tidak boleh melebihi total biaya servis.');
                     }
-                }
+                },
             ],
             'technician_notes' => ['nullable', 'string', 'max:2000'],
             'warranty_days' => ['nullable', 'integer', 'min:0', 'max:365'],
@@ -58,5 +59,75 @@ class UpdateServiceOrderRequest extends FormRequest
         }
 
         return $rules;
+    }
+
+    public function after(): array
+    {
+        return [
+            function (Validator $validator) {
+                $user = auth()->user();
+                $serviceOrder = $this->route('serviceOrder');
+
+                if (! $serviceOrder || ! $user) {
+                    return;
+                }
+
+                $oldStatus = $serviceOrder->status->value;
+                $newStatus = $this->input('status');
+
+                // Jika status berubah dan user BUKAN administrator, jalankan validasi strict
+                if ($oldStatus !== $newStatus && ! $user->hasRole('administrator')) {
+                    $isValidTransition = false;
+
+                    switch ($oldStatus) {
+                        case ServiceStatus::WAITING_CHECKING->value:
+                            if (in_array($newStatus, [ServiceStatus::WAITING_APPROVAL->value, ServiceStatus::CANCELLED->value])) {
+                                $isValidTransition = true;
+                            }
+                            break;
+                        case ServiceStatus::WAITING_APPROVAL->value:
+                            if (in_array($newStatus, [ServiceStatus::APPROVED->value, ServiceStatus::CANCELLED->value])) {
+                                $isValidTransition = true;
+                            }
+                            break;
+                        case ServiceStatus::APPROVED->value:
+                            if ($newStatus === ServiceStatus::IN_PROGRESS->value) {
+                                $isValidTransition = true;
+                            }
+                            break;
+                        case ServiceStatus::IN_PROGRESS->value:
+                            if ($newStatus === ServiceStatus::COMPLETED->value) {
+                                $isValidTransition = true;
+                            }
+                            break;
+                        case ServiceStatus::COMPLETED->value:
+                            if ($newStatus === ServiceStatus::TAKEN->value) {
+                                $isValidTransition = true;
+                            }
+                            break;
+                        case ServiceStatus::CANCELLED->value:
+                            if ($newStatus === ServiceStatus::RETURNED->value) {
+                                $isValidTransition = true;
+                            }
+                            break;
+                    }
+
+                    if (! $isValidTransition) {
+                        $oldLabel = $serviceOrder->status->label();
+                        $newLabel = ServiceStatus::from($newStatus)->label();
+                        $validator->errors()->add(
+                            'status',
+                            "Transisi status tidak valid. Tidak bisa mengubah status dari '{$oldLabel}' menjadi '{$newLabel}' secara langsung."
+                        );
+
+                        // Menambahkan sesi toast error manual karena form request redirect secara default
+                        session()->flash('toast', [
+                            'type' => 'error',
+                            'message' => "Transisi status tidak valid. Tidak bisa mengubah status dari '{$oldLabel}' menjadi '{$newLabel}' secara langsung.",
+                        ]);
+                    }
+                }
+            },
+        ];
     }
 }

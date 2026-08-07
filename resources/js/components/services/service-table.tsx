@@ -119,49 +119,7 @@ export function ServiceTable({
         }
     };
 
-    const renderLocationBadge = (item: ServiceListItem) => {
-        const isAtStore = item.is_unit_left_at_store === undefined ? true : Boolean(Number(item.is_unit_left_at_store));
-        const { status } = item;
 
-        // Jangan tampilkan lokasi jika sudah Selesai (Diambil), Batal/Return (Sudah dibawa pulang) 
-        if (status === 'taken' || status === 'returned') return null;
-
-        if (status === 'cancelled') {
-            if (isAtStore) {
-                return (
-                    <Badge variant="outline" className="px-1.5 py-0 text-[9px] w-full justify-center border-dashed border-amber-400 text-amber-600 dark:text-amber-400">
-                        DI TOKO
-                    </Badge>
-                );
-            }
-            return (
-                <Badge variant="outline" className="px-1.5 py-0 text-[9px] w-full justify-center border-dashed border-rose-400 text-rose-600 dark:text-rose-400">
-                    DIKEMBALIKAN
-                </Badge>
-            );
-        }
-
-        if (!['completed', 'taken', 'cancelled', 'returned'].includes(status) && !isAtStore) {
-            return (
-                <Badge variant="outline" className="px-1.5 py-0 text-[9px] w-full justify-center border-orange-400 text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20">
-                    DIBAWA PULANG
-                </Badge>
-            );
-        }
-
-        // Tampilkan "DI TOKO" secara eksplisit untuk unit yang ada di toko dan belum selesai (opsional)
-        // Biar tabel rapi, lebih baik yang di toko tidak usah pakai badge (Default),
-        // atau kita pakai badge hijau lembut. Mari pakai hijau lembut.
-        if (!['completed', 'taken', 'cancelled', 'returned'].includes(status) && isAtStore) {
-             return (
-                <Badge variant="outline" className="px-1.5 py-0 text-[9px] w-full justify-center border-emerald-200 text-emerald-600 dark:border-emerald-900 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/10">
-                    ADA DI TOKO
-                </Badge>
-            );
-        }
-
-        return null;
-    };
 
     return (
         <TooltipProvider>
@@ -232,18 +190,20 @@ export function ServiceTable({
                                             {item.customer_phone}
                                         </div>
                                     </TableCell>
-                                    <TableCell className="max-w-[280px]">
-                                        <div className="flex items-center gap-2">
-                                            <div className="text-sm font-semibold">
-                                                {item.device_name}
+                                    <TableCell className="max-w-[280px] py-3">
+                                        <div className="flex flex-col gap-0.5">
+                                            <div className="flex items-center gap-2">
+                                                <div className="text-sm font-semibold text-foreground">
+                                                    {item.device_name}
+                                                </div>
+                                                {item.complaint.includes(
+                                                    '[KLAIM GARANSI',
+                                                ) && (
+                                                    <Badge className="border-blue-300 bg-blue-100 px-1.5 py-0 text-[9px] text-blue-700 shadow-none">
+                                                        KLAIM GARANSI
+                                                    </Badge>
+                                                )}
                                             </div>
-                                            {item.complaint.includes(
-                                                '[KLAIM GARANSI',
-                                            ) && (
-                                                <Badge className="border-blue-300 bg-blue-100 px-1.5 py-0 text-[9px] text-blue-700 shadow-none">
-                                                    KLAIM GARANSI
-                                                </Badge>
-                                            )}
                                         </div>
                                         <Tooltip>
                                             <TooltipTrigger asChild>
@@ -262,6 +222,14 @@ export function ServiceTable({
                                                 </p>
                                             </TooltipContent>
                                         </Tooltip>
+
+                                        {/* INDIKATOR LOKASI UNIT: Hanya tampil jika dibawa pulang (Exception) */}
+                                        {!['completed', 'taken', 'cancelled', 'returned'].includes(item.status) && (item.is_unit_left_at_store == false || item.is_unit_left_at_store == 0 || item.is_unit_left_at_store === '0') && (
+                                            <div className="flex items-center gap-1 text-[10.5px] text-orange-600 dark:text-orange-400 font-bold mt-1">
+                                                Dibawa Pulang
+                                            </div>
+                                        )}
+
                                     </TableCell>
                                     <TableCell className="py-3 align-top min-w-[200px]">
                                         <div className="flex flex-col gap-1.5 text-[11px] px-1">
@@ -331,7 +299,6 @@ export function ServiceTable({
                                     <TableCell className="text-center align-middle">
                                         <div className="flex flex-col items-center justify-center gap-1.5 w-[140px] mx-auto">
                                             {renderStatusBadge(item)}
-                                            {renderLocationBadge(item)}
                                         </div>
                                     </TableCell>
                                     <TableCell className="py-3 pr-4 text-right">

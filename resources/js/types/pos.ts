@@ -31,6 +31,4 @@ export interface CartItem {
 }
 
 export interface PosPageProps extends GlobalPageProps {
-    products: PosProduct[];
-    spareparts: PosSparepart[];
 }

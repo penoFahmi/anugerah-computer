@@ -1,15 +1,18 @@
 import { useForm } from '@inertiajs/react';
 import { Loader2 } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import axios from 'axios';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import InputError from '@/components/ui/input-error';
-import type { SparePart } from '@/types/sparepart';
 
-export function ProcurementForm({ spareparts, onSuccess }: { spareparts: SparePart[], onSuccess: () => void }) {
+export function ProcurementForm({ onSuccess }: { onSuccess: () => void }) {
     const [selectedId, setSelectedId] = useState<string>('');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [fetchedParts, setFetchedParts] = useState<any[]>([]);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+
     const { data, setData, post, processing, errors } = useForm({
         spare_part_id: '',
         quantity: '1',
@@ -19,22 +22,29 @@ export function ProcurementForm({ spareparts, onSuccess }: { spareparts: SparePa
         supplier_note: '',
     });
 
-    const selectedPart = useMemo(() => spareparts.find(p => p.id.toString() === selectedId), [selectedId, spareparts]);
+    useEffect(() => {
+        const delay = setTimeout(() => {
+            if (searchQuery) {
+                axios.get(`/api/spare-parts/search?q=${searchQuery}`).then(res => setFetchedParts(res.data));
+            } else {
+                setFetchedParts([]);
+            }
+        }, 300);
+        return () => clearTimeout(delay);
+    }, [searchQuery]);
 
     // Saat barang dipilih, auto-fill harga
-    const handlePartChange = (id: string) => {
-        const part = spareparts.find(p => p.id.toString() === id);
-        if (part) {
-            setData({
-                spare_part_id: id,
-                quantity: data.quantity,
-                new_purchase_price: Number(part.purchase_price).toString(),
-                new_selling_price: Number(part.selling_price).toString(),
-                total_expense: (Number(data.quantity) * Number(part.purchase_price)).toString(),
-                supplier_note: data.supplier_note
-            });
-            setSelectedId(id);
-        }
+    const handlePartChange = (part: any) => {
+        setData({
+            ...data,
+            spare_part_id: part.id.toString(),
+            new_purchase_price: Number(part.purchase_price ?? 0).toString(),
+            new_selling_price: Number(part.selling_price ?? 0).toString(),
+            total_expense: (Number(data.quantity) * Number(part.purchase_price ?? 0)).toString(),
+        });
+        setSelectedId(part.id.toString());
+        setSearchQuery(part.name);
+        setDropdownOpen(false);
     };
 
     const handleCalc = (key: string, val: string) => {
@@ -50,14 +60,30 @@ export function ProcurementForm({ spareparts, onSuccess }: { spareparts: SparePa
 
     return (
         <form onSubmit={submit} className="space-y-4">
-            <div className="grid gap-2">
-                <Label>Pilih Sparepart</Label>
-                <Select onValueChange={handlePartChange}>
-                    <SelectTrigger><SelectValue placeholder="Pilih barang..." /></SelectTrigger>
-                    <SelectContent>
-                        {spareparts.map(p => <SelectItem key={p.id} value={p.id.toString()}>{p.name} (Stok: {p.stock})</SelectItem>)}
-                    </SelectContent>
-                </Select>
+            <div className="grid gap-2 relative">
+                <Label>Cari & Pilih Sparepart</Label>
+                <div className="relative">
+                    <Input 
+                        placeholder="Ketik nama atau SKU..." 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onFocus={() => setDropdownOpen(true)}
+                    />
+                </div>
+                {dropdownOpen && fetchedParts.length > 0 && (
+                    <div className="absolute top-16 z-50 w-full max-h-[200px] overflow-y-auto bg-popover border rounded-md shadow-md custom-scrollbar">
+                        {fetchedParts.map(p => (
+                            <div 
+                                key={p.id} 
+                                className="px-3 py-2 cursor-pointer hover:bg-muted text-sm border-b last:border-0"
+                                onClick={() => handlePartChange(p)}
+                            >
+                                <div className="font-semibold">{p.name}</div>
+                                <div className="text-xs text-muted-foreground">Stok: {p.stock} | Jual: Rp {p.selling_price}</div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
             
             <div className="grid grid-cols-2 gap-4">

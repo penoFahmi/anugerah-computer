@@ -11,7 +11,6 @@ export interface Procurement {
 
 export interface ProcurementPageProps extends GlobalPageProps {
     procurements: PaginatedData<Procurement>;
-    spareparts: SparePart[]; // Untuk dropdown pilih barang
     filters: {
         search: string | null;
     };

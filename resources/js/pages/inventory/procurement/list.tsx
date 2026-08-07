@@ -12,7 +12,7 @@ import { ProcurementTable } from '@/components/inventory/procurement/procurement
 import { ProcurementForm } from '@/components/inventory/procurement/procurement-form';
 import type { ProcurementPageProps } from '@/types/procurement';
 
-export default function ProcurementList({ procurements, spareparts, filters }: ProcurementPageProps) {
+export default function ProcurementList({ procurements, filters }: ProcurementPageProps) {
     const [open, setOpen] = useState(false);
     const { flash } = usePage<ProcurementPageProps>().props;
 
@@ -32,7 +32,7 @@ export default function ProcurementList({ procurements, spareparts, filters }: P
                         </DialogTrigger>
                         <DialogContent className="max-w-md">
                             <DialogHeader><DialogTitle>Form Pengadaan Stok</DialogTitle></DialogHeader>
-                            <ProcurementForm spareparts={spareparts} onSuccess={() => setOpen(false)} />
+                            <ProcurementForm onSuccess={() => setOpen(false)} />
                         </DialogContent>
                     </Dialog>
                 </div>

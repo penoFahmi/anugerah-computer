@@ -9,8 +9,13 @@ use App\Events\ServiceOrderBroadcast;
 use App\Models\BotAutoReply;
 use App\Models\ChatLog;
 use App\Models\ServiceOrder;
+use App\Models\User;
+use App\Notifications\RequiresHumanAttention;
 use App\Services\WaGateway;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 
 class IntentHandler
 {
@@ -23,19 +28,20 @@ class IntentHandler
         if (in_array($intent, ['setuju', 'batal'])) {
             if ($serviceOrder) {
                 // [BUG FIXED]: Mencegah Race Condition dengan DB::transaction & Pessimistic Locking
-                $isProcessed = \Illuminate\Support\Facades\DB::transaction(function () use ($serviceOrder, $intent, $chatLog, $rawPhone, $source) {
+                $isProcessed = DB::transaction(function () use ($serviceOrder, $intent, $chatLog, $rawPhone, $source) {
                     // Kunci baris data servis ini secara spesifik sampai operasi update selesai
                     $lockedOrder = ServiceOrder::where('id', $serviceOrder->id)->lockForUpdate()->first();
-                    
+
                     if ($lockedOrder && $lockedOrder->status->value === ServiceStatus::WAITING_APPROVAL->value) {
                         $newStatus = $intent === 'setuju' ? ServiceStatus::APPROVED : ServiceStatus::CANCELLED;
                         $lockedOrder->update(['status' => $newStatus]);
-                        
+
                         event(new ServiceOrderBroadcast($lockedOrder, 'updated'));
                         $this->handleKategori1($intent, $chatLog, $lockedOrder, $rawPhone, $source);
-                        
+
                         return true;
                     }
+
                     return false;
                 });
 
@@ -52,20 +58,21 @@ class IntentHandler
         $lowercaseMessage = strtolower($chatLog->message);
         if (preg_match('/\b(admin|cs|manusia|operator)\b/i', $lowercaseMessage)) {
             $needsHumanHandoff = true;
-            $handoffReason = "Pelanggan secara eksplisit meminta Admin/CS via kata kunci.";
+            $handoffReason = 'Pelanggan secara eksplisit meminta Admin/CS via kata kunci.';
         }
-        
+
         // Cek jika status sudah disetujui/dikerjakan, lalu user mencoba batal
-        if (!$needsHumanHandoff && $serviceOrder && in_array($serviceOrder->status->value, ['approved', 'in_progress'])) {
+        if (! $needsHumanHandoff && $serviceOrder && in_array($serviceOrder->status->value, ['approved', 'in_progress'])) {
             if ($intent === 'batal' || preg_match('/\b(batal|cancel|gak jadi|ndak jadi|tdk jadi|tidak jadi|urung|cancel)\b/i', $lowercaseMessage)) {
                 $needsHumanHandoff = true;
-                $handoffReason = "Pelanggan mencoba membatalkan servis yang sudah berstatus " . $serviceOrder->status->label() . ". Membutuhkan intervensi Admin.";
+                $handoffReason = 'Pelanggan mencoba membatalkan servis yang sudah berstatus '.$serviceOrder->status->label().'. Membutuhkan intervensi Admin.';
             }
         }
 
         // 3. EKSEKUSI HANDOFF (JIKA DIPERLUKAN)
         if ($needsHumanHandoff) {
             $this->triggerHumanHandoff($chatLog, $rawPhone, $serviceOrder, $handoffReason);
+
             return; // Hentikan AI di sini agar tidak membalas terus terusan
         }
 
@@ -75,7 +82,7 @@ class IntentHandler
             $this->handleGenerative($chatLog, $serviceOrder, $rawPhone, $history, $source, $intent);
         } catch (\Throwable $e) {
             // FALLBACK DARURAT: Jika Kuota API Groq habis atau internet mati, ambil dari DB
-            \Illuminate\Support\Facades\Log::error('LLM Down, fallback to DB: '.$e->getMessage());
+            Log::error('LLM Down, fallback to DB: '.$e->getMessage());
             $this->handleEmergencyDbFallback($intent, $chatLog, $serviceOrder, $rawPhone, $source);
         }
     }
@@ -83,14 +90,14 @@ class IntentHandler
     protected function handleEmergencyDbFallback(string $intent, ChatLog $chatLog, ?ServiceOrder $serviceOrder, string $rawPhone, string $source): void
     {
         $autoReply = BotAutoReply::where('intent_name', $intent)->first();
-        
+
         if ($autoReply) {
             $chatLog->update([
                 'resolved_by' => 'system',
                 'handling_status' => 'db_fallback_triggered',
                 'final_intent' => $intent, // Intent still valid
             ]);
-            WaGateway::sendMessage($rawPhone, $autoReply->response_text . "\n\n-System", $serviceOrder?->id, 'db_fallback_reply', 'System');
+            WaGateway::sendMessage($rawPhone, $autoReply->response_text."\n\n-System", $serviceOrder?->id, 'db_fallback_reply', 'System');
         } else {
             // Jika bot mati dan tidak ada template baku di DB, panggil Manusia!
             $this->triggerHumanHandoff($chatLog, $rawPhone, $serviceOrder, "Sistem AI (LLM) Error/Mati, dan tidak ada DB Fallback untuk intent: {$intent}");
@@ -99,11 +106,11 @@ class IntentHandler
 
     protected function handleKategori1(string $intent, ChatLog $chatLog, ?ServiceOrder $serviceOrder, string $rawPhone, string $source): void
     {
-        $balasan = "";
-        
+        $balasan = '';
+
         if ($intent === 'tanya_status') {
-            $searchPhone = str_starts_with($rawPhone, '62') ? '0' . substr($rawPhone, 2) : $rawPhone;
-            $activeOrders = ServiceOrder::whereHas('customer', function($q) use ($rawPhone, $searchPhone) {
+            $searchPhone = str_starts_with($rawPhone, '62') ? '0'.substr($rawPhone, 2) : $rawPhone;
+            $activeOrders = ServiceOrder::whereHas('customer', function ($q) use ($rawPhone, $searchPhone) {
                 $q->where('phone', $rawPhone)->orWhere('phone', $searchPhone);
             })->whereNotIn('status', ['completed', 'cancelled', 'returned', 'taken'])->get();
 
@@ -112,65 +119,65 @@ class IntentHandler
                 $balasan = "Halo Kak, unit *{$order->device->brand}* Anda saat ini berstatus: *{$order->status->label()}*.";
             } elseif ($activeOrders->count() > 1) {
                 $balasan = "Halo Kak, Anda memiliki beberapa unit yang sedang kami proses:\n";
-                foreach($activeOrders as $order) {
+                foreach ($activeOrders as $order) {
                     $balasan .= "- *{$order->device->brand}*: {$order->status->label()}\n";
                 }
             } else {
-                $balasan = "Halo Kak, kami tidak menemukan data servis aktif untuk nomor ini. Boleh minta nomor nota servisnya (contoh: SRV-XXX-XXX)?";
+                $balasan = 'Halo Kak, kami tidak menemukan data servis aktif untuk nomor ini. Boleh minta nomor nota servisnya (contoh: SRV-XXX-XXX)?';
             }
         } else {
-        // Ambil dari database auto replies
-        $autoReply = BotAutoReply::where('intent_name', $intent)->first();
-        $balasan = $autoReply ? $autoReply->response_text : "Terkait hal tersebut, mohon hubungi admin kami ya Kak.";
+            // Ambil dari database auto replies
+            $autoReply = BotAutoReply::where('intent_name', $intent)->first();
+            $balasan = $autoReply ? $autoReply->response_text : 'Terkait hal tersebut, mohon hubungi admin kami ya Kak.';
         }
 
         $isLlm = ($source !== 'agent_nlp_fasttext');
         $resolvedBy = $isLlm ? 'llm_model' : 'nlp_model';
-        
+
         $chatLog->update([
             'resolved_by' => $resolvedBy,
             'handling_status' => 'processed',
             'final_intent' => $intent,
         ]);
-        
+
         $msgType = $isLlm ? 'llm_intent_fallback_reply' : 'nlp_direct_reply';
-        
-        // PENTING: Karena teks balasan Kategori 1 (Setuju, Batal, Status) SELALU 
-        // mengambil dari Database atau template statis (BUKAN dikarang oleh LLM), 
-        // maka pesan keluarnya murni dari 'system', tanpa memandang apakah 
+
+        // PENTING: Karena teks balasan Kategori 1 (Setuju, Batal, Status) SELALU
+        // mengambil dari Database atau template statis (BUKAN dikarang oleh LLM),
+        // maka pesan keluarnya murni dari 'system', tanpa memandang apakah
         // pesan masuknya ditebak oleh NLP Lokal atau Fallback LLM.
         $senderName = 'System';
         $signature = '-System';
         $outboundResolver = 'system';
 
-        WaGateway::sendMessage($rawPhone, $balasan . "\n\n" . $signature, $serviceOrder?->id, $msgType, $senderName, $outboundResolver);
+        WaGateway::sendMessage($rawPhone, $balasan."\n\n".$signature, $serviceOrder?->id, $msgType, $senderName, $outboundResolver);
     }
 
     protected function handleGenerative(ChatLog $chatLog, ?ServiceOrder $serviceOrder, string $rawPhone, array $history, string $source, string $intent = 'lainnya'): void
     {
         $originalMessage = $chatLog->message;
-        $systemContext = "";
+        $systemContext = '';
 
         if ($serviceOrder) {
             $serviceOrder->load('warranty');
             $warrantyStatus = 'Belum terbit (karena unit belum selesai diservis atau dikembalikan)';
             if (in_array($serviceOrder->status->value, ['completed', 'returned', 'taken'])) {
                 if ($serviceOrder->warranty) {
-                    $wStatus = strtoupper($serviceOrder->warranty->status);
+                    $wStatus = strtoupper($serviceOrder->warranty->status->label());
                     $wEndDate = Carbon::parse($serviceOrder->warranty->end_date)->format('d M Y');
                     $warrantyStatus = "{$wStatus} (Berlaku s/d: {$wEndDate})";
                 } else {
-                    $warrantyStatus = "Tidak Ada Garansi";
+                    $warrantyStatus = 'Tidak Ada Garansi';
                 }
             }
 
             if ($serviceOrder->is_unit_left_at_store) {
-                $unitLocationContext = "- Unit laptop pelanggan SAAT INI SUDAH ADA DI TOKO (telah dititipkan). JANGAN PERNAH menyuruh pelanggan membawa unit ke toko lagi. Jika mereka setuju servis, katakan saja mekanik akan langsung mengerjakannya.";
+                $unitLocationContext = '- Unit laptop pelanggan SAAT INI SUDAH ADA DI TOKO (telah dititipkan). JANGAN PERNAH menyuruh pelanggan membawa unit ke toko lagi. Jika mereka setuju servis, katakan saja mekanik akan langsung mengerjakannya.';
             } else {
-                $unitLocationContext = "- Unit laptop pelanggan SAAT INI DIBAWA PULANG oleh pelanggan. Jika mereka setuju servis, minta mereka membawa unit kembali ke toko.";
+                $unitLocationContext = '- Unit laptop pelanggan SAAT INI DIBAWA PULANG oleh pelanggan. Jika mereka setuju servis, minta mereka membawa unit kembali ke toko.';
             }
 
-            $systemContext = 
+            $systemContext =
                 "- Pelanggan ini menggunakan nomor HP yang terdaftar.\n".
                 "- Nota: {$serviceOrder->order_number}\n".
                 "- Unit: {$serviceOrder->device->brand} {$serviceOrder->device->model}\n".
@@ -182,7 +189,7 @@ class IntentHandler
 
             $serviceOrder->update(['last_customer_message' => $originalMessage]);
         } else {
-            $systemContext = 
+            $systemContext =
                 "- Pelanggan baru / Tidak ada nota aktif.\n".
                 "- Intent NLP: {$intent}";
         }
@@ -211,13 +218,13 @@ class IntentHandler
             'llm_completion_tokens' => $existingCompletion + $csCompletionTokens,
         ]);
 
-        WaGateway::sendMessage($rawPhone, $aiResponse . "\n\n-CS", $serviceOrder?->id, 'llm_cs_reply', 'AI Customer Servis', $resolvedBy);
+        WaGateway::sendMessage($rawPhone, $aiResponse."\n\n-CS", $serviceOrder?->id, 'llm_cs_reply', 'AI Customer Servis', $resolvedBy);
     }
 
     public function triggerHumanHandoff(ChatLog $chatLog, string $rawPhone, ?ServiceOrder $serviceOrder, string $alasan): void
     {
         $balasan = 'Maaf Kak, pesan Anda akan segera ditangani langsung oleh Admin toko kami. Mohon tunggu sebentar ya. 🙏';
-        WaGateway::sendMessage($rawPhone, $balasan . "\n\n-System", $serviceOrder?->id, 'human_handoff_trigger', 'System');
+        WaGateway::sendMessage($rawPhone, $balasan."\n\n-System", $serviceOrder?->id, 'human_handoff_trigger', 'System');
 
         $chatLog->update([
             'resolved_by' => 'system',
@@ -226,8 +233,8 @@ class IntentHandler
             'llm_raw_response' => ['error' => $alasan],
         ]);
 
-        $admins = \App\Models\User::all();
-        \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\RequiresHumanAttention($chatLog));
+        $admins = User::all();
+        Notification::send($admins, new RequiresHumanAttention($chatLog));
 
         event(new ChatRequiresHuman($chatLog));
     }

@@ -29,22 +29,7 @@ class PosController extends Controller
      */
     public function index(): Response
     {
-        // 1. Ambil data Sparepart yang masih ada stoknya
-        $spareparts = SparePart::where('stock', '>', 0)
-            ->select('id', 'sku', 'name', 'selling_price', 'stock')
-            ->orderBy('name')
-            ->get();
-
-        // 2. Ambil data Laptop yang statusnya masih 'ready'
-        $products = Product::where('status', 'ready')
-            ->select('id', 'slug', 'name', 'selling_price', 'image_path', 'ram', 'storage')
-            ->orderBy('name')
-            ->get();
-
-        return Inertia::render('sales/pos/list', [
-            'spareparts' => $spareparts,
-            'products' => $products,
-        ]);
+        return Inertia::render('sales/pos/list');
     }
 
     /**

@@ -1,10 +1,11 @@
 import { useForm, router } from '@inertiajs/react';
-import { Loader2, Clock, Wrench, FileText, Send, Check, Play, CheckCircle2, XCircle, HandCoins, ShieldCheck, Save, Plus, Banknote, CreditCard, QrCode, Sparkles, Wand2, List, MapPin, Home, Trash2 } from 'lucide-react';
+import { Loader2, Clock, Wrench, FileText, Send, Check, Play, CheckCircle2, XCircle, HandCoins, ShieldCheck, Save, Plus, Banknote, CreditCard, QrCode, Sparkles, Wand2, List, MapPin, Home, Trash2, X, CheckCircle, FileDown, AlertTriangle, MoreVertical, ChevronDown } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 import { Alert as UIAlert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -53,8 +54,23 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
     const [sparepartSearchQuery, setSparepartSearchQuery] = useState('');
     const [isSparepartDropdownOpen, setIsSparepartDropdownOpen] = useState(false);
     const [sparepartQty, setSparepartQty] = useState<number>(1);
-    
+    const [fetchedSpareparts, setFetchedSpareparts] = useState<any[]>([]);
+
     const sparepartDropdownRef = useRef<HTMLDivElement>(null);
+
+    // Fetch spareparts from API async
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(() => {
+            if (sparepartSearchQuery && !selectedSparepart) {
+                axios.get(`/api/spare-parts/search?q=${sparepartSearchQuery}`).then((res) => {
+                    setFetchedSpareparts(res.data);
+                });
+            } else if (!sparepartSearchQuery) {
+                setFetchedSpareparts([]);
+            }
+        }, 300);
+        return () => clearTimeout(delayDebounceFn);
+    }, [sparepartSearchQuery, selectedSparepart]);
 
     // Handle klik di luar dropdown
     useEffect(() => {
@@ -112,12 +128,12 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
         };
 
         const toastId = isTriggerWa ? toast.loading('Menyimpan data dan mengirim pesan WhatsApp...') : toast.loading('Menyimpan data...');
-        
+
         router.put(`/services/${service.id}`, payload, {
             preserveScroll: true,
-            onSuccess: () => { 
-                toast.dismiss(toastId); 
-                onClose(); 
+            onSuccess: () => {
+                toast.dismiss(toastId);
+                onClose();
             },
             onError: () => { toast.dismiss(toastId); }
         });
@@ -135,11 +151,12 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
 
     const renderFormContent = () => {
         const status = service.status;
+        const isWarranty = service?.complaint?.startsWith('KLAIM GARANSI');
 
         const warningBawaPulang = !service.is_unit_left_at_store && status !== 'taken' && status !== 'returned' && (
             <UIAlert className="bg-orange-500/10 border-orange-500/30 mb-4">
                 <AlertDescription className="text-orange-700 dark:text-orange-400 text-xs font-bold flex items-center gap-2">
-                    <Home className="h-4 w-4" /> 
+                    <Home className="h-4 w-4" />
                     Unit tidak ada di toko (Dibawa Pulang Pelanggan).
                 </AlertDescription>
             </UIAlert>
@@ -249,7 +266,7 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                             <div className="flex-1 w-full relative" ref={sparepartDropdownRef}>
                                 <div className="relative">
                                     <Search className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
-                                    <Input 
+                                    <Input
                                         className="pl-9 pr-9 h-[38px] bg-background font-semibold"
                                         placeholder="Cari sparepart..."
                                         value={sparepartSearchQuery}
@@ -261,7 +278,7 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                                         onFocus={() => setIsSparepartDropdownOpen(true)}
                                     />
                                     {sparepartSearchQuery && (
-                                        <button 
+                                        <button
                                             type="button"
                                             className="absolute right-3 top-2.5 text-muted-foreground hover:text-red-500 transition-colors"
                                             onClick={() => {
@@ -277,9 +294,8 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
 
                                 {isSparepartDropdownOpen && (
                                     <div className="absolute z-50 mt-1.5 w-full max-h-[250px] overflow-y-auto custom-scrollbar rounded-md border bg-popover shadow-lg">
-                                        {available_spare_parts && available_spare_parts.filter(sp => sp.name.toLowerCase().includes(sparepartSearchQuery.toLowerCase())).length > 0 ? (
-                                            available_spare_parts
-                                                .filter(sp => sp.name.toLowerCase().includes(sparepartSearchQuery.toLowerCase()))
+                                        {fetchedSpareparts.length > 0 ? (
+                                            fetchedSpareparts
                                                 .map(sp => {
                                                     const isOutOfStock = !sp.is_always_indent && sp.stock <= 0;
                                                     return (
@@ -451,31 +467,40 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                         </div>
                     </div>
 
-                    <div className="bg-emerald-500/10 border border-emerald-500/20 p-3.5 rounded-xl flex flex-col gap-2 mb-4">
-                        <Label className="text-xs font-bold text-emerald-800 dark:text-emerald-400 flex items-center gap-1.5">
-                            <ShieldCheck className="h-4 w-4" /> Masa Berlaku Garansi (Hari)
-                        </Label>
-                        <div className="flex items-center gap-3">
-                            <Input
-                                type="number" min="0" max="365"
-                                className="w-16 h-8 text-sm bg-background border-emerald-500/30 text-center font-bold text-foreground px-1"
-                                value={data.warranty_days}
-                                onChange={(e) => setData('warranty_days', e.target.value)}
-                            />
-                            <div className="flex flex-wrap gap-2 flex-1">
-                                {['0', '7', '14', '30', '90'].map((days) => (
-                                    <Badge
-                                        key={days}
-                                        variant="outline"
-                                        className="cursor-pointer hover:bg-emerald-500/20 bg-background text-xs font-medium px-2.5 py-1 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 transition-colors"
-                                        onClick={() => setData('warranty_days', days)}
-                                    >
-                                        {days === '30' ? '1 Bln' : days === '90' ? '3 Bln' : days}
-                                    </Badge>
-                                ))}
+                    {!isWarranty ? (
+                        <div className="bg-emerald-500/10 border border-emerald-500/20 p-3.5 rounded-xl flex flex-col gap-2 mb-4">
+                            <Label className="text-xs font-bold text-emerald-800 dark:text-emerald-400 flex items-center gap-1.5">
+                                <ShieldCheck className="h-4 w-4" /> Masa Berlaku Garansi (Hari)
+                            </Label>
+                            <div className="flex items-center gap-3">
+                                <Input
+                                    type="number" min="0" max="365"
+                                    className="w-16 h-8 text-sm bg-background border-emerald-500/30 text-center font-bold text-foreground px-1"
+                                    value={data.warranty_days}
+                                    onChange={(e) => setData('warranty_days', e.target.value)}
+                                />
+                                <div className="flex flex-wrap gap-2 flex-1">
+                                    {['0', '7', '14', '30', '90'].map((days) => (
+                                        <Badge
+                                            key={days}
+                                            variant="outline"
+                                            className="cursor-pointer hover:bg-emerald-500/20 bg-background text-xs font-medium px-2.5 py-1 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 transition-colors"
+                                            onClick={() => setData('warranty_days', days)}
+                                        >
+                                            {days === '30' ? '1 Bln' : days === '90' ? '3 Bln' : days}
+                                        </Badge>
+                                    ))}
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    ) : (
+                        <div className="bg-blue-500/10 border border-blue-500/30 p-3.5 rounded-xl mb-4">
+                            <p className="text-blue-700 dark:text-blue-400 text-xs font-bold flex items-center gap-2">
+                                <ShieldCheck className="h-4 w-4" />
+                                Ini adalah unit Klaim Garansi. Tidak ada garansi baru yang diterbitkan.
+                            </p>
+                        </div>
+                    )}
 
                     <div className="space-y-1.5 flex-1 flex flex-col min-h-0">
                         <Label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
@@ -524,12 +549,30 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
 
         if (status === 'waiting_checking') {
             return (
-                <div className="flex flex-col sm:flex-row sm:justify-between items-center w-full gap-3">
-                    <Button type="button" size="sm" variant="destructive" className="w-full sm:w-auto" onClick={() => setAlertConfig({ open: true, action: 'cancelled', title: 'Batalkan Servis', desc: 'Yakin membatalkan servis ini? Status nota akan ditutup.' })} disabled={processing}>
-                        <XCircle className="h-4 w-4 mr-1.5" /> Batal
-                    </Button>
-                    <div className="flex flex-wrap justify-end gap-2 w-full sm:w-auto">
-                        <Button type="button" size="sm" variant="outline" onClick={() => processAction(status)} disabled={processing}>Simpan Draf</Button>
+                <div className="flex items-center justify-between w-full">
+                    <Button type="button" size="sm" variant="ghost" className="text-muted-foreground" onClick={onClose} disabled={processing}>Tutup</Button>
+                    <div className="flex items-center gap-2">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button type="button" size="sm" variant="outline" className="px-2" disabled={processing}>
+                                    <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56">
+                                <DropdownMenuItem onClick={() => processAction(status)}>
+                                    <Save className="mr-2 h-4 w-4 text-muted-foreground" />
+                                    <span>Simpan Draf</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => processAction('waiting_approval', false)}>
+                                    <CheckCircle className="mr-2 h-4 w-4 text-muted-foreground" />
+                                    <span>Lanjut (Tanpa WA)</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="text-red-600 focus:bg-red-50 focus:text-red-700" onClick={() => setAlertConfig({ open: true, action: 'cancelled', isWa: false, title: 'Batalkan Servis', desc: 'Yakin membatalkan servis ini? Status nota akan ditutup.' })}>
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    <span>Batalkan Servis</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                         <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm" onClick={() => processAction('waiting_approval', true)} disabled={processing}>
                             <Send className="h-4 w-4 mr-1.5" /> Kirim Penawaran WA
                         </Button>
@@ -538,14 +581,58 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
             );
         }
 
-        if (status === 'waiting_approval' || status === 'approved') {
+        if (status === 'waiting_approval') {
             return (
-                <div className="flex flex-col sm:flex-row sm:justify-between items-center w-full gap-3">
-                    <Button type="button" size="sm" variant="destructive" className="w-full sm:w-auto" onClick={() => setAlertConfig({ open: true, action: 'cancelled', title: 'Batalkan Servis', desc: 'Yakin membatalkan servis ini? Status nota akan ditutup.' })} disabled={processing}>
-                        <XCircle className="h-4 w-4 mr-1.5" /> Batal
-                    </Button>
-                    <div className="flex flex-wrap justify-end gap-2 w-full sm:w-auto">
-                        <Button type="button" size="sm" variant="outline" onClick={() => processAction(status)} disabled={processing}>Simpan Draf</Button>
+                <div className="flex items-center justify-between w-full">
+                    <Button type="button" size="sm" variant="ghost" className="text-muted-foreground" onClick={onClose} disabled={processing}>Tutup</Button>
+                    <div className="flex items-center gap-2">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button type="button" size="sm" variant="outline" className="px-2" disabled={processing}>
+                                    <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56">
+                                <DropdownMenuItem onClick={() => processAction(status)}>
+                                    <Save className="mr-2 h-4 w-4 text-muted-foreground" />
+                                    <span>Simpan Draf</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="text-red-600 focus:bg-red-50 focus:text-red-700" onClick={() => setAlertConfig({ open: true, action: 'cancelled', isWa: false, title: 'Batalkan Servis', desc: 'Yakin membatalkan servis ini?' })}>
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    <span>Batalkan Servis</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        <Button type="button" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm" onClick={() => processAction('approved', false)} disabled={processing}>
+                            <CheckCircle className="h-4 w-4 mr-1.5" /> Disetujui Pelanggan
+                        </Button>
+                    </div>
+                </div>
+            );
+        }
+
+        if (status === 'approved') {
+            return (
+                <div className="flex items-center justify-between w-full">
+                    <Button type="button" size="sm" variant="ghost" className="text-muted-foreground" onClick={onClose} disabled={processing}>Tutup</Button>
+                    <div className="flex items-center gap-2">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button type="button" size="sm" variant="outline" className="px-2" disabled={processing}>
+                                    <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56">
+                                <DropdownMenuItem onClick={() => processAction(status)}>
+                                    <Save className="mr-2 h-4 w-4 text-muted-foreground" />
+                                    <span>Simpan Draf</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="text-red-600 focus:bg-red-50 focus:text-red-700" onClick={() => setAlertConfig({ open: true, action: 'cancelled', isWa: false, title: 'Batalkan Servis', desc: 'Yakin membatalkan servis ini?' })}>
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    <span>Batalkan Servis</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                         <Button type="button" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm" onClick={() => processAction('in_progress')} disabled={processing}>
                             <Play className="h-4 w-4 mr-1.5 fill-current" /> Mulai Kerjakan
                         </Button>
@@ -556,17 +643,32 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
 
         if (status === 'in_progress') {
             return (
-                <div className="flex flex-col sm:flex-row sm:justify-between items-center w-full gap-3">
-                    <Button type="button" size="sm" variant="destructive" className="w-full sm:w-auto" onClick={() => setAlertConfig({ open: true, action: 'cancelled', title: 'Batalkan Servis', desc: 'Yakin membatalkan servis ini? Status nota akan ditutup.' })} disabled={processing}>
-                        <XCircle className="h-4 w-4 mr-1.5" /> Batal
-                    </Button>
-                    <div className="flex flex-wrap justify-end gap-2 w-full sm:w-auto">
-                        <Button type="button" size="sm" variant="outline" onClick={() => processAction('in_progress')} disabled={processing}>Simpan Progres</Button>
-                        <Button type="button" size="sm" variant="secondary" onClick={() => processAction('completed', false)} disabled={processing}>
-                            Selesai
-                        </Button>
+                <div className="flex items-center justify-between w-full">
+                    <Button type="button" size="sm" variant="ghost" className="text-muted-foreground" onClick={onClose} disabled={processing}>Tutup</Button>
+                    <div className="flex items-center gap-2">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button type="button" size="sm" variant="outline" className="px-2" disabled={processing}>
+                                    <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56">
+                                <DropdownMenuItem onClick={() => processAction('in_progress')}>
+                                    <Save className="mr-2 h-4 w-4 text-muted-foreground" />
+                                    <span>Simpan Progres</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => processAction('completed', false)}>
+                                    <CheckCircle className="mr-2 h-4 w-4 text-muted-foreground" />
+                                    <span>Selesai (Tanpa WA)</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="text-red-600 focus:bg-red-50 focus:text-red-700" onClick={() => setAlertConfig({ open: true, action: 'cancelled', isWa: false, title: 'Batalkan Servis', desc: 'Yakin membatalkan servis ini?' })}>
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    <span>Batalkan Servis</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                         <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm" onClick={() => processAction('completed', true)} disabled={processing}>
-                            <Send className="h-4 w-4 mr-1.5 fill-current" /> Selesai & WA
+                            <Send className="h-4 w-4 mr-1.5" /> Selesai & WA
                         </Button>
                     </div>
                 </div>
@@ -575,14 +677,26 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
 
         if (status === 'completed') {
             return (
-                <div className="flex flex-col sm:flex-row sm:justify-between items-center w-full gap-3">
-                    <Button type="button" size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => processAction('completed')} disabled={processing}>
-                        <Save className="h-4 w-4 mr-1.5" /> Update Tagihan
-                    </Button>
-                    <div className="flex flex-wrap justify-end gap-2 w-full sm:w-auto">
-                        <Button type="button" size="sm" variant="secondary" onClick={() => setAlertConfig({ open: true, action: 'taken', isWa: false, title: 'Serahkan Unit (Senyap)', desc: 'Nota akan ditutup permanen dan garansi diaktifkan tanpa mengirim WA.' })} disabled={processing}>
-                            Serahkan
-                        </Button>
+                <div className="flex items-center justify-between w-full">
+                    <Button type="button" size="sm" variant="ghost" className="text-muted-foreground" onClick={onClose} disabled={processing}>Tutup</Button>
+                    <div className="flex items-center gap-2">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button type="button" size="sm" variant="outline" className="px-2" disabled={processing}>
+                                    <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56">
+                                <DropdownMenuItem onClick={() => processAction('completed')}>
+                                    <Save className="mr-2 h-4 w-4 text-muted-foreground" />
+                                    <span>Update Tagihan</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setAlertConfig({ open: true, action: 'taken', isWa: false, title: 'Serahkan Unit (Senyap)', desc: 'Nota akan ditutup permanen dan garansi diaktifkan tanpa mengirim WA.' })}>
+                                    <HandCoins className="mr-2 h-4 w-4 text-muted-foreground" />
+                                    <span>Serahkan (Tanpa WA)</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                         <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm" onClick={() => setAlertConfig({ open: true, action: 'taken', isWa: true, title: 'Serahkan Unit & WA', desc: 'Nota akan ditutup permanen dan garansi akan dikirimkan ke WA pelanggan.' })} disabled={processing}>
                             <HandCoins className="h-4 w-4 mr-1.5" /> Serahkan & WA
                         </Button>
@@ -593,12 +707,22 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
 
         if (status === 'cancelled') {
             return (
-                <div className="flex flex-col sm:flex-row sm:justify-between items-center w-full gap-3">
-                    <Button type="button" size="sm" variant="ghost" className="w-full sm:w-auto" onClick={onClose} disabled={processing}>Tutup</Button>
-                    <div className="flex flex-wrap justify-end gap-2 w-full sm:w-auto">
-                        <Button type="button" size="sm" variant="secondary" onClick={() => setAlertConfig({ open: true, action: 'returned', isWa: false, title: 'Kembalikan Unit (Senyap)', desc: 'Nota akan ditutup permanen sebagai servis batal (tanpa WA).' })} disabled={processing}>
-                            Kembalikan
-                        </Button>
+                <div className="flex items-center justify-between w-full">
+                    <Button type="button" size="sm" variant="ghost" className="text-muted-foreground" onClick={onClose} disabled={processing}>Tutup</Button>
+                    <div className="flex items-center gap-2">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button type="button" size="sm" variant="outline" className="px-2" disabled={processing}>
+                                    <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56">
+                                <DropdownMenuItem onClick={() => setAlertConfig({ open: true, action: 'returned', isWa: false, title: 'Kembalikan Unit (Senyap)', desc: 'Nota akan ditutup permanen sebagai servis batal (tanpa WA).' })}>
+                                    <HandCoins className="mr-2 h-4 w-4 text-muted-foreground" />
+                                    <span>Kembalikan (Tanpa WA)</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                         <Button type="button" size="sm" className="bg-orange-600 hover:bg-orange-700 text-white font-bold shadow-sm" onClick={() => setAlertConfig({ open: true, action: 'returned', isWa: true, title: 'Kembalikan Unit & WA', desc: 'Nota akan ditutup permanen dan WA Batal dikirimkan.' })} disabled={processing}>
                             <HandCoins className="h-4 w-4 mr-1.5" /> Kembalikan & WA
                         </Button>
@@ -617,7 +741,7 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
     return (
         <>
             <Dialog open={isOpen} onOpenChange={onClose}>
-                <DialogContent className="max-h-[90vh] flex flex-col sm:max-w-[500px] p-0 rounded-xl shadow-2xl border-border overflow-hidden bg-card">
+                <DialogContent showCloseButton={false} className="max-h-[90vh] flex flex-col sm:max-w-[500px] p-0 rounded-xl shadow-2xl border-border overflow-hidden bg-card">
 
                     <div className="shrink-0 flex items-center justify-between border-b border-border bg-muted/20 p-4">
                         <div className="flex items-center gap-3">
@@ -669,7 +793,10 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                 </DialogContent>
             </Dialog>
 
-            <AlertDialog open={alertConfig.open} onOpenChange={(open) => setAlertConfig(prev => ({ ...prev, open }))}>
+            <AlertDialog open={alertConfig.open} onOpenChange={(open) => {
+                setAlertConfig(prev => ({ ...prev, open }));
+                if (!open && alertConfig.action === 'cancelled') setData('final_cost', '');
+            }}>
                 <AlertDialogContent className="rounded-xl border-border">
                     <AlertDialogHeader>
                         <AlertDialogTitle>{alertConfig.title}</AlertDialogTitle>
@@ -677,6 +804,23 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                             {alertConfig.desc}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
+                    {alertConfig.action === 'cancelled' && (
+                        <div className="py-2">
+                            <Label className="text-xs mb-1.5 block">Biaya Pengecekan (Opsional)</Label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">Rp</span>
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    className="pl-9 h-9"
+                                    placeholder="0 (Kosongkan jika gratis)"
+                                    value={data.final_cost || ''}
+                                    onChange={(e) => setData('final_cost', e.target.value)}
+                                />
+                            </div>
+                            <p className="text-[10px] text-muted-foreground mt-1.5">Isi jika toko menerapkan tarif/biaya pengecekan (checking fee) untuk servis yang dibatalkan.</p>
+                        </div>
+                    )}
                     <AlertDialogFooter>
                         <AlertDialogCancel>Batal</AlertDialogCancel>
                         <AlertDialogAction

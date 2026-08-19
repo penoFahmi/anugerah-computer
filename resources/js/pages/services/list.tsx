@@ -8,7 +8,9 @@ import { ServiceFilters } from '@/components/services/service-filters';
 import { ServiceFormModal } from '@/components/services/service-form-modal';
 import { ServiceProcessModal } from '@/components/services/service-process-modal';
 import { ServiceTable } from '@/components/services/service-table';
+import { ImportExcelModal } from '@/components/services/import-excel-modal';
 import { Button } from '@/components/ui/button';
+import { Download, FileSpreadsheet } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import type { ServiceIndexProps, ServiceListItem } from '@/types/service';
 
@@ -20,6 +22,7 @@ export default function ServicesIndex({ serviceOrders, filters, available_spare_
     const [selectedServiceToProcess, setSelectedServiceToProcess] = useState<ServiceListItem | null>(null);
     const [selectedServiceToDelete, setSelectedServiceToDelete] = useState<ServiceListItem | null>(null);
     const [unreadPhones, setUnreadPhones] = useState<string[]>([]);
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
     const { auth } = usePage<any>().props;
 
@@ -89,13 +92,24 @@ export default function ServicesIndex({ serviceOrders, filters, available_spare_
                         <h2 className="text-lg font-bold text-foreground">Pusat Servis</h2>
                         <p className="text-sm text-muted-foreground mt-0.5">Manajemen pekerjaan teknisi dan Live Chat WA pelanggan</p>
                     </div>
-                    <Button size="sm" onClick={() => setIsCreateModalOpen(true)}>
-                        <Plus className="mr-2 h-4 w-4" /> Terima Servisan
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button size="sm" onClick={() => setIsCreateModalOpen(true)}>
+                            <Plus className="mr-2 h-4 w-4" /> Terima Servisan
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Komponen Filter (Mencakup Tabs Status dan Search) */}
-                <ServiceFilters filters={filters} />
+                <ServiceFilters filters={filters}>
+                    <div className="flex items-center gap-2">
+                        <Button size="sm" variant="outline" className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" onClick={() => window.location.href = '/services/export'}>
+                            <Download className="md:mr-2 h-4 w-4" /> <span className="hidden md:inline">Export</span>
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50" onClick={() => setIsImportModalOpen(true)}>
+                            <FileSpreadsheet className="md:mr-2 h-4 w-4" /> <span className="hidden md:inline">Import</span>
+                        </Button>
+                    </div>
+                </ServiceFilters>
 
                 {/* Tabel */}
                 <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
@@ -113,6 +127,10 @@ export default function ServicesIndex({ serviceOrders, filters, available_spare_
             <ServiceFormModal
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
+            />
+            <ImportExcelModal
+                isOpen={isImportModalOpen}
+                onClose={() => setIsImportModalOpen(false)}
             />
             <ServiceProcessModal
                 isOpen={!!selectedServiceToProcess}

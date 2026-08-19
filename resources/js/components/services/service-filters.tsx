@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import type { ServiceIndexProps } from '@/types/service';
 import { ServiceStatusTabs } from './service-status-tabs';
 
-export function ServiceFilters({ filters }: { filters: ServiceIndexProps['filters'] }) {
+export function ServiceFilters({ filters, children }: { filters: ServiceIndexProps['filters'], children?: React.ReactNode }) {
     const [filterState, setFilterState] = useState({
         search: filters.search ?? '',
         status: filters.status ?? 'all',
@@ -83,6 +83,8 @@ export function ServiceFilters({ filters }: { filters: ServiceIndexProps['filter
                         <FilterX className="h-4 w-4 text-muted-foreground" />
                     </Button>
                 )}
+                <div className="flex-1" />
+                {children}
             </div>
         </div>
     );

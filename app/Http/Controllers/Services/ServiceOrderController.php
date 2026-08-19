@@ -21,6 +21,9 @@ use App\Models\User;
 use App\Models\Warranty;
 use App\Services\WaGateway;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Imports\ServiceOrderImport;
+use App\Exports\ServiceOrderExport;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -125,6 +128,60 @@ class ServiceOrderController extends Controller
                 'per_page' => $perPage,
             ],
         ]);
+    }
+
+    /**
+     * Download Excel template or export existing data.
+     */
+    public function exportExcel(Request $request)
+    {
+        if ($request->query('template')) {
+            // Provide a quick empty template structure
+            return response()->streamDownload(function () {
+                $file = fopen('php://output', 'w');
+                fputcsv($file, [
+                    'Customer Name', 'Customer Phone', 'Device Brand', 'Device Model', 
+                    'Complaint', 'Status', 'Estimated Cost', 'Down Payment', 
+                    'Final Cost', 'Technician Notes', 'Created At'
+                ]);
+                fputcsv($file, [
+                    'Budi Santoso', '081234567890', 'Asus', 'ROG Zephyrus', 
+                    'Mati total kena air', 'completed', '1500000', '500000', 
+                    '1500000', 'Ganti motherboard', '2023-12-01 14:00:00'
+                ]);
+                fclose($file);
+            }, 'Template_Import_Servisan.csv');
+        }
+
+        return Excel::download(new ServiceOrderExport, 'Data_Servisan.xlsx');
+    }
+
+    /**
+     * Handle the Excel file import.
+     */
+    public function importExcel(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv|max:10240',
+        ]);
+
+        try {
+            Excel::import(new ServiceOrderImport, $request->file('file'));
+
+            Inertia::flash('toast', [
+                'type' => 'success',
+                'message' => 'Data dari Excel berhasil diimpor!',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Excel Import Error: ' . $e->getMessage());
+
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => 'Gagal mengimpor data. Pastikan format file sesuai template. (' . $e->getMessage() . ')',
+            ]);
+        }
+
+        return back();
     }
 
     /**

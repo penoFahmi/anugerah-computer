@@ -22,7 +22,7 @@ class WaGateway
 
     public static function sendDocument(string $phone, string $caption, string $pdfUrl, string $filename, ?int $serviceOrderId = null, string $intent = 'notification'): bool
     {
-        $endpoint = self::getBaseUrl().'/send-document';
+        $endpoint = self::getBaseUrl() . '/send-document';
 
         try {
             $response = Http::withHeaders(['X-Token' => self::getToken()])
@@ -52,7 +52,7 @@ class WaGateway
                     'sender_name' => 'System',
                     'message_type' => 'document',
                     'direction' => 'outbound',
-                    'message' => '[Dokumen PDF] '.$caption,
+                    'message' => '[Dokumen PDF] ' . $caption,
                     'resolved_by' => 'system',
                     'final_intent' => null,
                     'handling_status' => $intent,
@@ -63,7 +63,7 @@ class WaGateway
 
             return false;
         } catch (\Exception $e) {
-            Log::error('Baileys API - Gagal Kirim Dokumen: '.$e->getMessage());
+            Log::error('Baileys API - Gagal Kirim Dokumen: ' . $e->getMessage());
 
             return false;
         }
@@ -85,15 +85,15 @@ class WaGateway
 
     public static function sendOffer(ServiceOrder $order): bool
     {
-        $formattedCost = 'Rp '.number_format($order->estimated_cost, 0, ',', '.');
-        $message = "Halo Kak *{$order->customer->name}*,\n\nUntuk perbaikan unit *{$order->device->brand} {$order->device->model}* (Nota: *{$order->order_number}*), estimasi biayanya adalah sekitar *{$formattedCost}*. *{$order->technician_notes}*.\n\nApakah Anda setuju untuk melanjutkan perbaikan dengan biaya tersebut?\n\nSilakan balas *SETUJU* atau *TIDAK*.\n\nTerima kasih.\n\n-System";
+        $formattedCost = 'Rp ' . number_format($order->estimated_cost, 0, ',', '.');
+        $message = "Halo Kak *{$order->customer->name}*,\n\nUntuk perbaikan unit *{$order->device->brand} {$order->device->model}* (Nota: *{$order->order_number}*), estimasi biayanya perbaikan *{$formattedCost}*. *{$order->technician_notes}*.\n\nApakah Anda Setuju untuk melanjutkan perbaikan dengan biaya tersebut?.\n\nTerima kasih.\n\n-System";
 
         return self::sendMessage($order->customer->phone, $message, $order->id, 'send_offer', 'System');
     }
 
     public static function sendMessage(string $phone, string $message, ?int $serviceOrderId = null, string $intent = 'notification', string $senderName = 'System', string $resolvedBy = 'system'): bool
     {
-        $endpoint = self::getBaseUrl().'/send-message';
+        $endpoint = self::getBaseUrl() . '/send-message';
 
         try {
             $response = Http::withHeaders(['X-Token' => self::getToken()])
@@ -106,7 +106,7 @@ class WaGateway
             if ($response->successful()) {
                 $data = $response->json();
 
-                // [BUGFIX]: API Baileys mungkin mereturn HTTP 200 meskipun WA belum Scan QR.
+                // API Baileys mungkin mereturn HTTP 200 meskipun WA belum Scan QR.
                 // Kita harus mengecek field 'status' di dalam JSON-nya.
                 if (isset($data['status']) && $data['status'] === false) {
                     Log::warning('Baileys API - Terhubung tapi WA belum Scan QR (Kirim Pesan).', $data);
@@ -132,7 +132,7 @@ class WaGateway
 
             return false;
         } catch (\Exception $e) {
-            Log::error('Baileys API - Gagal Send Message: '.$e->getMessage());
+            Log::error('Baileys API - Gagal Send Message: ' . $e->getMessage());
 
             return false;
         }
@@ -141,7 +141,7 @@ class WaGateway
     public static function sendStatusUpdate(ServiceOrder $order): bool
     {
         $customerName = $order->customer->name;
-        $deviceName = $order->device->brand.' '.$order->device->model;
+        $deviceName = $order->device->brand . ' ' . $order->device->model;
         $orderNumber = $order->order_number;
         $note = $order->technician_notes;
 
@@ -158,14 +158,14 @@ class WaGateway
                 break;
             case 'completed':
                 $cost = $order->final_cost > 0 ? $order->final_cost : $order->estimated_cost;
-                $formattedCost = 'Rp '.number_format((float) $cost, 0, ',', '.');
+                $formattedCost = 'Rp ' . number_format((float) $cost, 0, ',', '.');
                 $message .= "Perbaikan unit Kakak *TELAH SELESAI* dan sudah bisa diambil di toko.\nTotal Biaya: *{$formattedCost}*.";
                 break;
             case 'cancelled':
                 $message .= 'Perbaikan unit Kakak *DIBATALKAN*. Silakan ambil unit Anda.';
                 break;
             default:
-                $message .= 'Status unit Kakak saat ini: *'.$order->status->label().'*';
+                $message .= 'Status unit Kakak saat ini: *' . $order->status->label() . '*';
                 break;
         }
 
@@ -187,31 +187,31 @@ class WaGateway
             $endDate = now()->addDays($warrantyDays)->format('d M Y');
 
             return "Terima kasih Kak *{$customerName}* telah mempercayakan perbaikan unit *{$deviceName}* di Anugerah Computer.\n\n"
-                ."Unit Anda telah diserahkan dan masa garansi perbaikan aktif selama {$warrantyDays} hari hingga *{$endDate}*.\n"
-                ."Kode Garansi: *{$warrantyCode}*\n\n"
-                ."Harap simpan pesan ini sebagai bukti garansi. Semoga unitnya awet selalu! 🙏\n\n-System";
+                . "Unit Anda telah diserahkan dan masa garansi perbaikan aktif selama {$warrantyDays} hari hingga *{$endDate}*.\n"
+                . "Kode Garansi: *{$warrantyCode}*\n\n"
+                . "Harap simpan pesan ini sebagai bukti garansi. Semoga unitnya awet selalu! 🙏\n\n-System";
         }
 
         if ($isWarrantyClaim) {
             return "Halo Kak *{$customerName}*,\n\n"
-                ."Unit *{$deviceName}* untuk klaim garansi telah selesai diperbaiki dan diserahkan kembali. Semoga unitnya awet dan dapat digunakan dengan lancar! Jika ada keluhan lain, jangan ragu untuk menghubungi kami. 🙏\n\n-System";
+                . "Unit *{$deviceName}* untuk klaim garansi telah selesai diperbaiki dan diserahkan kembali. Semoga unitnya awet dan dapat digunakan dengan lancar! Jika ada keluhan lain, jangan ragu untuk menghubungi kami. 🙏\n\n-System";
         }
 
         return "Terima kasih Kak *{$customerName}* telah mempercayakan perbaikan unit *{$deviceName}* di Anugerah Computer.\n\n"
-            ."Unit Anda telah diserahkan. Semoga unitnya awet dan dapat digunakan dengan lancar kembali! Jika ada keluhan lain, jangan ragu untuk menghubungi kami. 🙏\n\n-System";
+            . "Unit Anda telah diserahkan. Semoga unitnya awet dan dapat digunakan dengan lancar kembali! Jika ada keluhan lain, jangan ragu untuk menghubungi kami. 🙏\n\n-System";
     }
 
     /**
-     * [THESIS: FSM STATE OVERRIDE]
+     * [FSM STATE OVERRIDE]
      * Mengirim pesan manual dari Admin/Staff dengan menyematkan inisial/tanda tangan.
      */
     public static function sendManualMessage(string $phone, string $rawMessage, ?User $user, ?int $serviceOrderId = null): bool
     {
         $fullName = $user ? $user->name : 'Admin';
         $words = explode(' ', trim($fullName));
-        $initials = count($words) >= 2 ? strtoupper(substr($words[0], 0, 1).substr(end($words), 0, 1)) : strtoupper(substr($words[0], 0, 1));
+        $initials = count($words) >= 2 ? strtoupper(substr($words[0], 0, 1) . substr(end($words), 0, 1)) : strtoupper(substr($words[0], 0, 1));
 
-        $finalMessage = trim($rawMessage)."\n\n-{$initials}";
+        $finalMessage = trim($rawMessage) . "\n\n-{$initials}";
 
         return self::sendMessage(
             $phone,

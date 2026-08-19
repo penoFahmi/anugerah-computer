@@ -44,7 +44,9 @@ class ChatbotPipeline
             'is_svm_successful' => $isSvmSuccessful,
         ]);
 
-        // 2. Evaluasi Threshold
+        // --------------------
+        // 2. Evaluasi Threshold 0.75 (75%) untuk memutuskan apakah hasil NLP dapat diterima
+        // --------------------
         if ($nlpConfidence >= 0.75) {
             return [
                 'intent' => $nlpIntent,
@@ -53,7 +55,9 @@ class ChatbotPipeline
             ];
         }
 
+        // --------------------
         // 3. Fallback ke LLM (Groq)
+        // --------------------
         $chatLog->update(['is_llm_triggered' => 1]);
         try {
             $intentAgent = new IntentAnalyzer;

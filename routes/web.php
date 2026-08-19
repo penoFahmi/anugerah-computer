@@ -63,6 +63,11 @@ Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
         ->name('services.spareparts.attach');
     Route::delete('/services/{serviceOrder}/spareparts/{pivotId}', [ServiceOrderController::class, 'detachSparepart'])
         ->name('services.spareparts.detach');
+    
+    // Modul Servis
+    Route::get('/services/export', [ServiceOrderController::class, 'exportExcel'])->name('services.export');
+    Route::post('/services/import', [ServiceOrderController::class, 'importExcel'])->name('services.import');
+    
     Route::resource('services', ServiceOrderController::class)
         ->parameters(['services' => 'serviceOrder'])
         ->only(['index', 'store', 'show', 'update', 'destroy']);
@@ -104,6 +109,11 @@ Route::middleware(['auth', 'verified', 'is_active'])->group(function () {
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
     Route::delete('/notifications/{id}', [NotificationController::class, 'destroy'])->name('notifications.destroy');
+
+    // Konfigurasi Landing Page (Store Settings)
+    Route::get('settings/store', [StoreSettingController::class, 'index'])->name('settings.store.index');
+    Route::post('settings/store', [StoreSettingController::class, 'update'])->name('settings.store.update');
+
 });
 
 /*
@@ -131,10 +141,6 @@ Route::middleware(['auth', 'verified', 'is_active', 'role:administrator'])->grou
     Route::get('config/wa', [ConfigWaController::class, 'index'])->name('config.wa');
     Route::post('config/wa/logout', [ConfigWaController::class, 'logout'])->name('config.wa.logout');
     Route::get('logs', [LogController::class, 'index'])->name('logs.index');
-
-    // Konfigurasi Landing Page (Store Settings)
-    Route::get('settings/store', [StoreSettingController::class, 'index'])->name('settings.store.index');
-    Route::post('settings/store', [StoreSettingController::class, 'update'])->name('settings.store.update');
 
     // Manajemen Testimoni
     Route::get('testimonials', [TestimonialController::class, 'index'])->name('admin.testimonials.index');

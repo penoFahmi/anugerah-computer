@@ -237,7 +237,7 @@ export function ServiceDetailForm({ service }: { service: ExtendedService }) {
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <Label className="text-xs text-blue-900/80 dark:text-blue-200">Uang Muka / DP</Label>
+                                    <Label className="text-xs text-blue-900/80 dark:text-blue-200">Uang Muka (DP) Awal</Label>
                                     <div className="relative">
                                         <span className="absolute left-2 top-2 text-[10px] font-bold text-blue-900/50 dark:text-blue-200/50">Rp</span>
                                         <Input 
@@ -247,6 +247,11 @@ export function ServiceDetailForm({ service }: { service: ExtendedService }) {
                                             className="h-8 pl-6 text-xs bg-background border-blue-200 dark:border-blue-800 font-mono" 
                                         />
                                     </div>
+                                    {data.status === 'taken' && (
+                                        <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                                            Pelunasan Saat Diambil: Rp {formatRupiah(Math.max(0, Number(data.final_cost || 0) - Number(data.down_payment || 0)))}
+                                        </p>
+                                    )}
                                 </div>
 
                                 {(data.status === 'cancelled' || data.status === 'returned') && (

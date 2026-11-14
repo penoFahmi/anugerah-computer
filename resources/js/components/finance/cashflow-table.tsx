@@ -10,6 +10,61 @@ interface CashflowTableProps {
     transactions: PaginatedData<CashflowTransaction>;
 }
 
+const getCategoryBadge = (category: string) => {
+    switch (category) {
+        case 'dp_servis':
+            return {
+                label: 'DP Servis',
+                className: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800'
+            };
+        case 'pelunasan_servis':
+            return {
+                label: 'Pelunasan Servis',
+                className: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+            };
+        case 'pengembalian_dana':
+            return {
+                label: 'Refund Pelanggan',
+                className: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
+            };
+        case 'biaya_pengecekan':
+            return {
+                label: 'Biaya Cek (Batal)',
+                className: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
+            };
+        case 'penjualan_kasir':
+            return {
+                label: 'Penjualan POS',
+                className: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800'
+            };
+        case 'pembelian_bekas':
+            return {
+                label: 'Beli Laptop Bekas',
+                className: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800'
+            };
+        case 'pembelian_stok_sparepart':
+            return {
+                label: 'Stok Sparepart',
+                className: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800'
+            };
+        case 'operasional_toko':
+            return {
+                label: 'Operasional Toko',
+                className: 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
+            };
+        case 'pendapatan_lain':
+            return {
+                label: 'Pendapatan Lain',
+                className: 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800'
+            };
+        default:
+            return {
+                label: String(category).replace(/_/g, ' '),
+                className: 'bg-muted text-muted-foreground border-border'
+            };
+    }
+};
+
 export function CashflowTable({ transactions }: CashflowTableProps) {
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('id-ID', {
@@ -57,7 +112,16 @@ export function CashflowTable({ transactions }: CashflowTableProps) {
                                 </Badge>
                             )}
                         </TableCell>
-                        <TableCell className="capitalize">{String(item.category).replace(/_/g, ' ').toLowerCase()}</TableCell>
+                        <TableCell>
+                            {(() => {
+                                const badgeInfo = getCategoryBadge(item.category);
+                                return (
+                                    <Badge variant="outline" className={`font-semibold text-[11px] ${badgeInfo.className}`}>
+                                        {badgeInfo.label}
+                                    </Badge>
+                                );
+                            })()}
+                        </TableCell>
                         <TableCell className="max-w-[200px] truncate" title={item.notes || ''}>{item.notes || '-'}</TableCell>
                         <TableCell className={`text-right font-semibold ${item.type === 'income' ? 'text-emerald-600' : 'text-red-600'}`}>
                             {item.type === 'income' ? '+' : '-'}{formatCurrency(item.amount)}

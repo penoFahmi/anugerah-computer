@@ -25,6 +25,7 @@
 | SRV-08 | Pengiriman Otomatis Struk PDF Lunas ke WA | 🟢 Selesai | Job antrean `SendFinalReceiptPdf` menyimpan ke storage publik lalu kirim link dokumen via WA. |
 | SRV-09 | Integritas Kas & Rollback Idempoten | 🟢 Selesai | Logika `syncServiceFinancials`: pelunasan hanya mencatat sisa tagihan (`final - DP`), auto-rollback kas masuk fiktif dan garansi saat salah klik status mundur dari `taken`/`returned`. |
 | SRV-10 | Pembatalan Fleksibel & Refund DP Kasir | 🟢 Selesai | Pembatalan gratis/berbayar, opsi refund DP (full, potong cek, hangus), petunjuk visual fisik kasir (Kas Keluar vs Kas Masuk), dan rollback bebas bug. |
+| SRV-11 | Pemisahan Jelas DP vs Pelunasan Servis di Kasir | 🟢 Selesai | Eliminasi input rancu DP di modal serahkan unit, kalkulasi otomatis sisa pelunasan, badge warna kategori arus kas, dan koreksi histori pembukuan. |
 
 ---
 
@@ -63,7 +64,7 @@
 ## 5. 💵 Modul Keuangan (Finance) & Arus Kas
 | ID | Fitur | Status | Catatan Teknis / Detail |
 | :---: | :--- | :---: | :--- |
-| FIN-01 | Buku Kas Harian (`/finance/cashflow`) | 🟢 Selesai | Daftar pemasukan & pengeluaran, ringkasan harian, filter tanggal & tipe transaksi. |
+| FIN-01 | Buku Kas Harian (`/finance/cashflow`) | 🟢 Selesai | Daftar pemasukan & pengeluaran, ringkasan harian, filter tanggal & tipe transaksi, serta badge warna representatif tiap kategori (DP, Pelunasan, Refund, Cek, dll). |
 | FIN-02 | Laporan Laba Rugi Bulanan (`/finance/profit-loss`) | 🟢 Selesai | Agregasi pemasukan, pengeluaran, dan net profit per bulan dalam tahun berjalan. |
 | FIN-03 | Grafik Tren Arus Kas Multi-Periode | 🟢 Selesai | Grafik interaktif pada dashboard dengan filter: Hari Ini (per jam), Minggu Ini (7 hari), Bulan Ini (harian), dan Tahun Ini (12 bulan). |
 | FIN-04 | KPI Finansial Dinamis Dashboard | 🟢 Selesai | Total Pemasukan, Pengeluaran, dan Laba Bersih yang otomatis menyesuaikan periode filter yang dipilih. |

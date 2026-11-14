@@ -54,6 +54,8 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
         open: false, action: '', title: '', desc: '', isWa: false,
     });
 
+    const [isEditingDp, setIsEditingDp] = useState(false);
+
     // State untuk input sparepart
     const [selectedSparepart, setSelectedSparepart] = useState<string>('');
     const [sparepartSearchQuery, setSparepartSearchQuery] = useState('');
@@ -114,6 +116,7 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                 payment_method: 'cash',
             });
             clearErrors();
+            setIsEditingDp(false);
             setSelectedSparepart('');
             setSparepartQty(1);
         }
@@ -420,66 +423,167 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                     <div className="bg-slate-900 dark:bg-slate-950 rounded-xl p-5 text-slate-100 shadow-xl border border-slate-800 shrink-0 relative overflow-hidden">
                         <div className="absolute left-0 right-0 top-0 h-1 bg-gradient-to-r from-emerald-500/50 via-teal-500/50 to-emerald-500/50" />
 
-                        <div className="flex justify-between items-center mb-4 border-b border-slate-700/80 pb-4">
-                            <span className="text-xs text-slate-400 font-medium tracking-wide uppercase flex items-center gap-2">
-                                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                                Biaya Akhir (Final)
-                            </span>
+                        {/* Biaya Akhir */}
+                        <div className="flex justify-between items-center mb-3 border-b border-slate-700/80 pb-3">
+                            <div>
+                                <span className="text-xs text-slate-400 font-medium tracking-wide uppercase flex items-center gap-2">
+                                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                                    Biaya Akhir Perbaikan
+                                </span>
+                                <span className="text-[10px] text-slate-500">Total biaya jasa & sparepart</span>
+                            </div>
                             <span className="text-base font-mono font-bold text-white">Rp {formatRupiah(finalCost)}</span>
                         </div>
 
-                        <div className="flex justify-between items-center mb-4 border-b border-slate-700/80 pb-4">
-                            <span className="text-xs text-slate-400 font-medium tracking-wide uppercase">Uang Muka / Dibayar</span>
-                            <div className="relative w-36">
-                                <span className="absolute left-3 top-2.5 text-[11px] font-bold text-slate-500">Rp</span>
-                                <Input
-                                    type="text"
-                                    className="pl-8 h-9 text-sm bg-slate-950 border-slate-700 focus-visible:ring-emerald-500 focus-visible:border-emerald-500 text-emerald-400 font-mono font-bold text-right shadow-inner"
-                                    value={data.down_payment ? formatRupiah(Number(data.down_payment)) : ''}
-                                    onChange={(e) => {
-                                        const clean = e.target.value.replace(/\D/g, '');
-                                        setData('down_payment', clean);
-                                    }}
-                                />
+                        {/* Uang Muka (DP) Terbayar di Awal */}
+                        <div className="flex justify-between items-center mb-4 border-b border-slate-700/80 pb-3">
+                            <div>
+                                <span className="text-xs text-slate-400 font-medium tracking-wide uppercase block">
+                                    Uang Muka (DP) Awal
+                                </span>
+                                <span className="text-[10px] text-slate-500">
+                                    {dp > 0 ? 'Tercatat di kas masuk saat pendaftaran' : 'Tanpa DP di awal'}
+                                </span>
                             </div>
-                        </div>
-
-                        <div className="flex justify-between items-center pt-2 mb-6 bg-slate-950/50 -mx-5 px-5 py-3 border-y border-slate-800/50">
-                            <span className="text-sm font-bold text-white tracking-widest uppercase">
-                                {isOverpaid ? 'Uang Kembali' : (remaining === 0 ? 'Status Pembayaran' : 'Sisa Tagihan')}
-                            </span>
-                            <span className={`text-2xl font-black font-mono tracking-tight ${isOverpaid ? 'text-blue-400' : remaining > 0 ? 'text-orange-400' : 'text-emerald-400'}`}>
-                                {remaining === 0 && !isOverpaid ? 'LUNAS' : `Rp ${formatRupiah(Math.abs(remaining))}`}
-                            </span>
-                        </div>
-
-                        <div className="flex flex-col gap-2.5">
-                            <span className="text-xs text-slate-400 font-medium tracking-wide uppercase">Metode Pembayaran</span>
-                            <div className="grid grid-cols-3 gap-2">
-                                {[
-                                    { id: 'cash', label: 'Tunai', icon: Banknote },
-                                    { id: 'transfer', label: 'Transfer', icon: CreditCard },
-                                    { id: 'qris', label: 'QRIS', icon: QrCode }
-                                ].map((method) => {
-                                    const Icon = method.icon;
-                                    const isSelected = data.payment_method === method.id;
-                                    return (
+                            <div className="flex items-center gap-2">
+                                {!isEditingDp ? (
+                                    <>
+                                        <span className="text-sm font-mono font-bold text-slate-200">
+                                            Rp {formatRupiah(dp)}
+                                        </span>
                                         <button
-                                            key={method.id}
                                             type="button"
-                                            onClick={() => setData('payment_method', method.id)}
-                                            className={`flex flex-col items-center justify-center gap-1.5 p-2 rounded-lg border transition-all ${isSelected
-                                                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.1)]'
-                                                : 'bg-slate-800/50 text-slate-400 border-slate-700 hover:bg-slate-800 hover:text-slate-300'
-                                                }`}
+                                            onClick={() => setIsEditingDp(true)}
+                                            className="text-[10px] text-emerald-400 hover:text-emerald-300 underline font-semibold ml-1"
                                         >
-                                            <Icon className="h-5 w-5" />
-                                            <span className="text-[10px] font-bold uppercase tracking-wider">{method.label}</span>
+                                            Koreksi DP
                                         </button>
-                                    );
-                                })}
+                                    </>
+                                ) : (
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="relative w-32">
+                                            <span className="absolute left-2.5 top-1.5 text-[10px] font-bold text-slate-500">Rp</span>
+                                            <Input
+                                                type="text"
+                                                className="pl-7 h-7 text-xs bg-slate-950 border-slate-700 focus-visible:ring-emerald-500 text-emerald-400 font-mono font-bold text-right shadow-inner"
+                                                value={data.down_payment ? formatRupiah(Number(data.down_payment)) : ''}
+                                                onChange={(e) => {
+                                                    const clean = e.target.value.replace(/\D/g, '');
+                                                    setData('down_payment', clean);
+                                                }}
+                                                placeholder="0"
+                                            />
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="secondary"
+                                            className="h-7 px-2 text-[10px]"
+                                            onClick={() => setIsEditingDp(false)}
+                                        >
+                                            Selesai
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                         </div>
+
+                        {/* KOTAK STATUS PELUNASAN KASIR */}
+                        {remaining > 0 ? (
+                            <div className="p-3.5 rounded-xl border border-emerald-500/40 bg-emerald-950/40 space-y-2 mb-4">
+                                <div className="flex justify-between items-center">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400">
+                                            <HandCoins className="h-5 w-5" />
+                                        </div>
+                                        <div>
+                                            <span className="text-xs font-bold uppercase tracking-wider text-emerald-300 block">
+                                                Tagihan Pelunasan (Kas Masuk)
+                                            </span>
+                                            <span className="text-[11px] text-emerald-200/70">
+                                                {dp > 0
+                                                    ? `Biaya Rp ${formatRupiah(finalCost)} dikurangi DP Rp ${formatRupiah(dp)}`
+                                                    : 'Pelanggan membayar lunas saat pengambilan unit'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <span className="text-2xl font-black font-mono text-emerald-300">
+                                        Rp {formatRupiah(remaining)}
+                                    </span>
+                                </div>
+                                <p className="text-[10px] text-emerald-400/90 font-medium pt-1.5 border-t border-emerald-500/20">
+                                    ✓ Klik tombol <strong>"Serahkan Unit & WA (Lunas)"</strong> untuk menyerahkan barang & otomatis membukukan kas masuk <strong>Pelunasan Servis: Rp {formatRupiah(remaining)}</strong>.
+                                </p>
+                            </div>
+                        ) : remaining === 0 ? (
+                            <div className="p-3.5 rounded-xl border border-blue-500/40 bg-blue-950/40 flex justify-between items-center mb-4">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="p-1.5 rounded-lg bg-blue-500/20 text-blue-400">
+                                        <CheckCircle2 className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <span className="text-xs font-bold uppercase tracking-wider text-blue-300 block">
+                                            Status Pembayaran: SUDAH LUNAS
+                                        </span>
+                                        <span className="text-[11px] text-blue-200/70">
+                                            Seluruh biaya sudah dilunasi di awal via Uang Muka (DP). Kasir tidak perlu menagih lagi.
+                                        </span>
+                                    </div>
+                                </div>
+                                <span className="text-lg font-bold font-mono text-blue-300">
+                                    Rp 0
+                                </span>
+                            </div>
+                        ) : (
+                            <div className="p-3.5 rounded-xl border border-rose-500/40 bg-rose-950/40 flex justify-between items-center mb-4">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="p-1.5 rounded-lg bg-rose-500/20 text-rose-400">
+                                        <ArrowUpRight className="h-4 w-4" />
+                                    </div>
+                                    <div>
+                                        <span className="text-xs font-bold uppercase tracking-wider text-rose-300 block">
+                                            Uang Kembali (Kelebihan Bayar DP)
+                                        </span>
+                                        <span className="text-[11px] text-rose-200/70">
+                                            Kembalikan kelebihan uang ke pelanggan
+                                        </span>
+                                    </div>
+                                </div>
+                                <span className="text-xl font-black font-mono text-rose-300">
+                                    Rp {formatRupiah(Math.abs(remaining))}
+                                </span>
+                            </div>
+                        )}
+
+                        {remaining > 0 && (
+                            <div className="flex flex-col gap-2.5">
+                                <span className="text-xs text-slate-400 font-medium tracking-wide uppercase">Metode Pembayaran Pelunasan</span>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {[
+                                        { id: 'cash', label: 'Tunai', icon: Banknote },
+                                        { id: 'transfer', label: 'Transfer', icon: CreditCard },
+                                        { id: 'qris', label: 'QRIS', icon: QrCode }
+                                    ].map((method) => {
+                                        const Icon = method.icon;
+                                        const isSelected = data.payment_method === method.id;
+                                        return (
+                                            <button
+                                                key={method.id}
+                                                type="button"
+                                                onClick={() => setData('payment_method', method.id)}
+                                                className={`flex flex-col items-center justify-center gap-1.5 p-2 rounded-lg border transition-all ${isSelected
+                                                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.1)]'
+                                                    : 'bg-slate-800/50 text-slate-400 border-slate-700 hover:bg-slate-800 hover:text-slate-300'
+                                                    }`}
+                                            >
+                                                <Icon className="h-5 w-5" />
+                                                <span className="text-[10px] font-bold uppercase tracking-wider">{method.label}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {!isWarranty ? (
@@ -813,7 +917,7 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                                 : 'Unit fisik telah diambil oleh pelanggan dan masa garansi aktif.'}
                         </p>
 
-                        {isReturned && (
+                        {isReturned ? (
                             <div className="w-full max-w-xs bg-background/90 rounded-lg p-3 border border-border text-xs space-y-1.5 text-left shadow-sm">
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">DP Terbayar:</span>
@@ -826,6 +930,27 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                                 <div className="flex justify-between border-t border-border/60 pt-1.5 font-bold">
                                     <span className="text-rose-600 dark:text-rose-400">Refund DP Dikembalikan:</span>
                                     <span className="font-mono text-rose-600 dark:text-rose-400">Rp {formatRupiah(refund)}</span>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="w-full max-w-xs bg-background/90 rounded-lg p-3.5 border border-border text-xs space-y-2 text-left shadow-sm">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-muted-foreground">Total Biaya Servis:</span>
+                                    <span className="font-mono font-bold text-foreground">
+                                        Rp {formatRupiah(Number(data.final_cost || service.final_cost || 0))}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-muted-foreground">Uang Muka (DP):</span>
+                                    <span className="font-mono font-medium text-blue-600 dark:text-blue-400">
+                                        Rp {formatRupiah(dp)}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center border-t border-border/60 pt-2 font-bold">
+                                    <span className="text-emerald-700 dark:text-emerald-400">Pelunasan Diambil:</span>
+                                    <span className="font-mono text-emerald-700 dark:text-emerald-400">
+                                        Rp {formatRupiah(Math.max(0, Number(data.final_cost || service.final_cost || 0) - dp))}
+                                    </span>
                                 </div>
                             </div>
                         )}
@@ -988,8 +1113,25 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
-                        <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm" onClick={() => setAlertConfig({ open: true, action: 'taken', isWa: true, title: 'Serahkan Unit & WA', desc: 'Nota akan ditutup permanen dan garansi akan dikirimkan ke WA pelanggan.' })} disabled={processing}>
-                            <HandCoins className="h-4 w-4 mr-1.5" /> Serahkan & WA
+                        <Button
+                            type="button"
+                            size="sm"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm"
+                            onClick={() => {
+                                const remaining = Math.max(0, Number(data.final_cost || service.final_cost || 0) - Number(data.down_payment || 0));
+                                setAlertConfig({
+                                    open: true,
+                                    action: 'taken',
+                                    isWa: true,
+                                    title: 'Serahkan Unit & WA (Lunas)',
+                                    desc: remaining > 0
+                                        ? `Nota akan ditutup permanen, pelunasan sebesar Rp ${formatRupiah(remaining)} otomatis dicatat di Buku Kas (Arus Kas), dan garansi dikirim ke WA pelanggan.`
+                                        : 'Nota akan ditutup permanen sebagai lunas penuh, dan kartu garansi dikirim ke WA pelanggan.'
+                                });
+                            }}
+                            disabled={processing}
+                        >
+                            <HandCoins className="h-4 w-4 mr-1.5" /> Serahkan & WA (Lunas)
                         </Button>
                     </div>
                 </div>

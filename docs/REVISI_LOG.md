@@ -4,6 +4,43 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, penyesuaian logika bisnis,
 
 ---
 
+### [2026-11-14] - Perbaikan Pembukuan Pelunasan vs DP di Arus Kas & Penyempurnaan UI Kasir Penyerahan Unit
+- **Kategori**: Integritas Keuangan & Antarmuka Kasir (UI/UX)
+- **Masalah yang Ditemukan (Root Causes)**:
+  1. **Input Rancu "Uang Muka / Dibayar" di Modal Selesai**: Pada modal proses servis (`service-process-modal.tsx`), ketika servisan selesai dan siap diserahkan, terdapat kolom input bertuliskan "Uang Muka / Dibayar" yang terikat ke state `down_payment`.
+  2. **Salah Tafsir Kasir**: Kasir mengira kolom tersebut adalah tempat mengetik "Uang yang dibayar pelanggan saat ambil unit" (misal Rp 700.000). Kasir mengetik Rp 700.000 ke kolom itu.
+  3. **Efek Fatal di Arus Kas**: Nilai `down_payment` berubah menjadi Rp 700.000 sehingga sisa tagihan pelunasan dihitung Rp 0 (`final_cost - down_payment = 0`). Akibatnya, seluruh nominal Rp 700.000 dibukukan di sistem sebagai kategori `dp_servis` (Uang Muka), bukan `pelunasan_servis`.
+  4. **Studi Kasus Data Riil**: Pada nota `SRV-20261110-001` (Order ID: 2), transaksi ID 4 tercatat sebagai `dp_servis` Rp 700.000 saat unit diambil, padahal pelanggan tidak ada DP awal dan melunasi penuh di akhir.
+  5. **Kurangnya Kejelasan Visual di Buku Kas**: Di halaman `/finance/cashflow`, kolom kategori transaksi masih berupa teks mentah tanpa penanda visual, sehingga kasir/owner sulit membedakan secara instan transaksi DP vs Pelunasan vs Refund.
+- **Perubahan yang Dilakukan**:
+  1. **Pemisahan Tegas DP vs Pelunasan di Modal Selesai (`service-process-modal.tsx`)**:
+     - Menghapus input rancu `Uang Muka / Dibayar` dari panel selesai.
+     - Biaya Akhir Perbaikan dan Uang Muka (DP) Awal ditampilkan secara rapi dan read-only (dengan tombol `[Koreksi DP]` jika kasir memang perlu mengoreksi DP pendaftaran).
+     - Menambahkan **Kotak Tagihan Pelunasan (Kasir Directive)** berlatar hijau terang (*Emerald*) yang otomatis menghitung sisa tagihan (`Tagihan Pelunasan (Kas Masuk): Rp X`) dengan instruksi eksplisit: *"✓ Saat tombol 'Serahkan Unit' ditekan, nominal Rp X otomatis dibukukan sebagai Pelunasan Servis (LUNAS) di Buku Kas."*
+     - Menangani kondisi jika DP sudah lunas (`remaining === 0`) atau kelebihan DP (`remaining < 0`).
+     - Menyediakan pilihan metode bayar pelunasan (Tunai, Transfer, QRIS).
+     - Tombol aksi penyerahan dipertegas menjadi `"Serahkan Unit & WA (Lunas)"`.
+  2. **Rincian Finansial Lengkap di Status Diambil (`taken`)**:
+     - Pada kartu status `taken`, modal menampilkan ringkasan struk pelunasan lengkap: Total Biaya, DP Awal, dan Pelunasan Saat Diambil.
+  3. **Penyempurnaan Formulir Edit Lengkap (`service-detail-form.tsx`)**:
+     - Melabeli kolom secara presisi sebagai `"Uang Muka (DP) Awal"`.
+     - Memberikan helper text dinamis yang memperlihatkan nilai pelunasan saat unit diambil.
+  4. **Penyempurnaan Visual Badge di Buku Kas (`cashflow-table.tsx`)**:
+     - Menambahkan helper `getCategoryBadge` dengan warna representatif:
+       - `dp_servis` -> 🔵 Badge Biru `[DP Servis]`
+       - `pelunasan_servis` -> 🟢 Badge Hijau Emerald `[Pelunasan Servis]`
+       - `pengembalian_dana` -> 🔴 Badge Merah Rose `[Refund Pelanggan]`
+       - `biaya_pengecekan` -> 🟡 Badge Kuning Amber `[Biaya Cek (Batal)]`
+       - `penjualan_kasir` -> 🟣 Badge Ungu `[Penjualan POS]`
+       - `pembelian_bekas` -> 🔵 Badge Indigo `[Beli Laptop Bekas]`
+       - `pembelian_stok_sparepart` -> 🟠 Badge Oranye `[Stok Sparepart]`
+       - `operasional_toko` -> ⚫ Badge Abu-abu `[Operasional Toko]`
+  5. **Koreksi Data Riil di Database**:
+     - Memperbaiki data nota `SRV-20261110-001` (Order ID: 2): mengembalikan `down_payment = 0` dan mengoreksi transaksi ID 4 menjadi kategori `pelunasan_servis` senilai Rp 700.000.
+- **Dampak**: Pembukuan di Buku Kas 100% akurat: DP tercatat sebagai DP Servis saat pendaftaran, dan pelunasan tercatat sebagai Pelunasan Servis saat unit diambil. Kasir tidak akan keliru menginput data, dan laporan kas harian mudah dipantau.
+
+---
+
 ### [2026-11-14] - Implementasi Alur Pembatalan Fleksibel & Pengembalian Dana (Refund DP) Kasir
 - **Kategori**: Alur Bisnis Servis & Integritas Keuangan Kasir
 - **Kebutuhan Bisnis (Konteks Toko Pontianak)**:

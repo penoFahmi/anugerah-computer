@@ -4,6 +4,53 @@ Dokumen ini mencatat setiap perubahan, perbaikan bug, penyesuaian logika bisnis,
 
 ---
 
+### [2026-11-14] - Implementasi Alur Pembatalan Fleksibel & Pengembalian Dana (Refund DP) Kasir
+- **Kategori**: Alur Bisnis Servis & Integritas Keuangan Kasir
+- **Kebutuhan Bisnis (Konteks Toko Pontianak)**:
+  - Pembatalan servis memiliki alur fleksibel: kadang gratis (bebas biaya Rp 0), kadang dikenakan biaya pengecekan/analisa teknisi (*checking fee*).
+  - Jika pelanggan pernah membayar Uang Muka (DP), pengembalian dana harus fleksibel:
+    1. **Kembalikan DP Penuh (100% Refund)**: Kasir mengembalikan seluruh DP ke pelanggan.
+    2. **Potong Biaya Cek, Sisa Dibalikkan (Refund Sebagian)**: DP dipotong biaya cek, selisihnya dikembalikan ke pelanggan.
+    3. **DP Hangus / Tanpa Refund (Refund Rp 0)**: DP hangus atau dianggap biaya pengecekan, kasir tidak mengeluarkan uang.
+    4. **Biaya Cek Melebihi DP**: Pelanggan membayar sisa kekurangan biaya cek kepada kasir.
+  - Kasir membutuhkan instruksi fisik yang jelas dan mencolok di antarmuka agar tidak bingung apakah harus mengeluarkan uang kas dari laci (*Kas Keluar / Refund*) atau menerima uang dari pelanggan (*Kas Masuk / Biaya Cek*).
+- **Perubahan yang Dilakukan**:
+  1. **Backend Validation (`app/Http/Requests/UpdateServiceOrderRequest.php`)**:
+     - Menambahkan aturan validasi `'refund_amount' => ['nullable', 'numeric', 'min:0']`.
+     - Mengecualikan validasi batas DP (`down_payment <= maxCost`) untuk status `CANCELLED` dan `RETURNED` agar tidak memblokir pembatalan servis yang biaya akhirnya Rp 0.
+     - Memperluas matriks transisi status (`after()` hook) agar pegawai/teknisi dapat membatalkan servis dari semua status aktif (`WAITING_CHECKING`, `WAITING_APPROVAL`, `APPROVED`, `IN_PROGRESS`, `COMPLETED`), memproses pengembalian unit (`RETURNED`), serta melakukan *rollback* status jika terjadi salah klik.
+  2. **Logika Pembukuan Kas Idempoten (`ServiceOrderController::syncServiceFinancials`)**:
+     - Menambahkan parameter `refundAmount`.
+     - Jika status `RETURNED` atau `CANCELLED`:
+       - **Kas Keluar (Refund)**: Jika `refundAmount > 0`, sistem mencatat/memperbarui transaksi bertipe `EXPENSE` dengan kategori `TransactionCategory::REFUND`.
+       - **Kas Masuk (Checking Fee)**: Jika ada biaya cek yang melebihi DP (`finalCost - downPayment > 0`), sistem mencatat transaksi bertipe `INCOME` dengan kategori `TransactionCategory::CHECKING_FEE`.
+       - Mencegah *double-counting*: Nilai DP yang ditahan toko tidak dicatat ulang sebagai checking fee karena uang fisiknya sudah tercatat di kas masuk saat pendaftaran awal.
+       - Otomatis menghapus transaksi pelunasan `FINAL_SERVICE`.
+     - **Rollback Bersih**: Jika status diubah kembali ke status aktif (`in_progress`, `completed`, dll.), semua transaksi `REFUND`, `CHECKING_FEE`, dan garansi otomatis dihapus bersih.
+  3. **Data Eager-Loading (`ServiceOrderController.php`)**:
+     - Memuat relasi `transactions` pada `index()` dan `show()` untuk mengekstrak `refund_amount` tanpa kueri tambahan (N+1 safe).
+  4. **Antarmuka Modal Proses Servis (`service-process-modal.tsx`)**:
+     - Menambahkan state `refund_amount`.
+     - Merombak total tampilan untuk status `cancelled` menjadi **Panel Penyelesaian Batal & Pengembalian Unit**:
+       - Ringkasan DP yang pernah dibayar.
+       - Input fleksibel Biaya Pengecekan (default Rp 0 / Bebas Biaya).
+       - Tombol jalan pintas 1-klik kebijakan toko: *Refund Full (100%)*, *Potong Biaya Cek*, *DP Hangus (Rp 0)*.
+       - Input manual nominal refund.
+       - **Kartu Petunjuk Aksi Kasir**: Menampilkan instruksi visual besar berlatar belakang warna mencolok:
+         - 🟥 **KAS KELUAR (Refund)**: "Kembalikan uang fisik ke pelanggan: Rp X"
+         - 🟩 **KAS MASUK (Biaya Cek)**: "Terima pembayaran dari pelanggan: Rp X"
+         - 🟦 **BEBAS BIAYA (Rp 0)**: "Tidak ada pertukaran uang kas"
+       - Pilihan metode bayar kasir (Tunai, Transfer, QRIS).
+       - Input catatan teknisi / alasan pembatalan.
+       - Tombol aksi: "Kembalikan & WA", dropdown "Kembalikan (Tanpa WA)", dan "Lanjut Servis (Buka Kembali)".
+     - Menambahkan menu **Opsi Koreksi / Rollback** pada status `taken` dan `returned` agar pegawai dapat membatalkan kesalahan klik status tanpa hambatan.
+  5. **Formulir Edit Lengkap (`service-detail-form.tsx`)**:
+     - Menambahkan input "Pengembalian Dana (Refund DP)" yang otomatis muncul saat status diubah ke `cancelled` atau `returned`.
+     - Mengubah label `final_cost` menjadi "Biaya Pengecekan" ketika berada pada status batal.
+- **Dampak**: Alur pembatalan servis toko di Pontianak terlayani secara 100% fleksibel, kasir memiliki panduan visual fisik yang presisi tanpa risiko salah hitung kas, dan pembukuan uang masuk/keluar di sistem sinkron sempurna dengan laci kasir riil.
+
+---
+
 ### [2026-11-14] - Audit & Perbaikan Menyeluruh Alur Servis & Pembukuan Kas Masuk
 - **Kategori**: Alur Bisnis Servis & Integritas Keuangan
 - **Masalah yang Ditemukan (Root Causes)**:

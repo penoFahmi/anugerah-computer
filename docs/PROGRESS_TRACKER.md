@@ -1,7 +1,7 @@
 # 📊 Progress Tracker & Status Fitur
 
-*Terakhir Diperbarui: 9 November 2026*  
-*Status Keseluruhan Proyek: **~88% Selesai***
+*Terakhir Diperbarui: 14 November 2026*  
+*Status Keseluruhan Proyek: **~90% Selesai***
 
 ---
 
@@ -24,6 +24,7 @@
 | SRV-07 | Ekspor & Impor Servis via Excel | 🟢 Selesai | Template CSV dan ekspor/impor massal format `.xlsx`. |
 | SRV-08 | Pengiriman Otomatis Struk PDF Lunas ke WA | 🟢 Selesai | Job antrean `SendFinalReceiptPdf` menyimpan ke storage publik lalu kirim link dokumen via WA. |
 | SRV-09 | Integritas Kas & Rollback Idempoten | 🟢 Selesai | Logika `syncServiceFinancials`: pelunasan hanya mencatat sisa tagihan (`final - DP`), auto-rollback kas masuk fiktif dan garansi saat salah klik status mundur dari `taken`/`returned`. |
+| SRV-10 | Pembatalan Fleksibel & Refund DP Kasir | 🟢 Selesai | Pembatalan gratis/berbayar, opsi refund DP (full, potong cek, hangus), petunjuk visual fisik kasir (Kas Keluar vs Kas Masuk), dan rollback bebas bug. |
 
 ---
 

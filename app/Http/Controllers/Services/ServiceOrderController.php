@@ -54,6 +54,7 @@ class ServiceOrderController extends Controller
             'customer' => fn ($q) => $q->withTrashed(),
             'device' => fn ($q) => $q->withTrashed(),
             'spareParts',
+            'transactions',
         ]);
 
         // OPTIMASI: Menggunakan Local Scope `scopeSearch` dari Model ServiceOrder!
@@ -85,6 +86,8 @@ class ServiceOrderController extends Controller
             $baseCost = $service->final_cost ?? $service->estimated_cost ?? 0;
             $downPayment = $service->down_payment ?? 0;
             $remaining = max(0, $baseCost - $downPayment);
+            $refundTransaction = $service->transactions->firstWhere('category', TransactionCategory::REFUND);
+            $refundAmount = $refundTransaction ? $refundTransaction->amount : 0;
 
             return [
                 'id' => $service->id,
@@ -98,6 +101,7 @@ class ServiceOrderController extends Controller
                 'estimated_cost' => $service->estimated_cost,
                 'final_cost' => $service->final_cost,
                 'down_payment' => $service->down_payment,
+                'refund_amount' => $refundAmount,
                 'technician_notes' => $service->technician_notes,
                 'is_unit_left_at_store' => $service->is_unit_left_at_store,
                 'created_at' => $service->created_at->format('d M Y, H:i'),
@@ -114,6 +118,7 @@ class ServiceOrderController extends Controller
                     'final' => $service->final_cost,
                     'dp' => $service->down_payment,
                     'remaining' => $remaining,
+                    'refund' => $refundAmount,
                 ],
             ];
         });
@@ -295,6 +300,7 @@ class ServiceOrderController extends Controller
             'technician:id,name',
             'handedOverBy:id,name',
             'warranty',
+            'transactions',
         ]);
 
         $recentServices = ServiceOrder::with(['customer', 'device'])
@@ -402,12 +408,14 @@ class ServiceOrderController extends Controller
             // SINKRONISASI KAS MASUK & ARUS KEUANGAN (ROBUST, IDEMPOTENT, & REVERSIBLE)
             $finalCost = (float) ($validated['final_cost'] ?? $serviceOrder->final_cost ?? $serviceOrder->estimated_cost ?? 0);
             $downPayment = (float) ($validated['down_payment'] ?? $serviceOrder->down_payment ?? 0);
+            $refundAmount = (float) ($validated['refund_amount'] ?? $request->input('refund_amount', 0));
             $paymentMethod = $request->input('payment_method', 'cash');
 
             $this->syncServiceFinancials(
                 $serviceOrder,
                 $finalCost,
                 $downPayment,
+                $refundAmount,
                 $paymentMethod,
                 $oldStatus,
                 $newStatus,
@@ -488,6 +496,7 @@ class ServiceOrderController extends Controller
         ServiceOrder $serviceOrder,
         float $finalCost,
         float $downPayment,
+        float $refundAmount,
         string $paymentMethod,
         string $oldStatus,
         string $newStatus,
@@ -556,24 +565,57 @@ class ServiceOrderController extends Controller
                 }
             }
 
-            // Hapus biaya pengecekan jika sebelumnya pernah ada
+            // Hapus biaya pengecekan dan refund jika sebelumnya pernah ada
             $serviceOrder->transactions()
-                ->where('category', TransactionCategory::CHECKING_FEE)
+                ->whereIn('category', [TransactionCategory::CHECKING_FEE, TransactionCategory::REFUND])
                 ->delete();
 
-        // 3. PENANGANAN STATUS BATAL & DIKEMBALIKAN (RETURNED)
-        } elseif ($newStatus === ServiceStatus::RETURNED->value) {
-            $checkingFee = max(0, $finalCost);
+        // 3. PENANGANAN STATUS BATAL & DIKEMBALIKAN (RETURNED ATAU CANCELLED)
+        } elseif (in_array($newStatus, [ServiceStatus::RETURNED->value, ServiceStatus::CANCELLED->value])) {
+            // A. PENGEMBALIAN DANA (REFUND DP) KAS KELUAR
+            $refundTransaction = $serviceOrder->transactions()
+                ->where('category', TransactionCategory::REFUND)
+                ->first();
+
+            if ($refundAmount > 0) {
+                if ($refundTransaction) {
+                    $refundTransaction->update([
+                        'amount' => $refundAmount,
+                        'payment_method' => $paymentMethod,
+                        'notes' => 'Pengembalian Dana (Refund) DP Batal Servis Nota: ' . $serviceOrder->order_number,
+                    ]);
+                } else {
+                    Transaction::create([
+                        'service_order_id' => $serviceOrder->id,
+                        'user_id' => $userId,
+                        'type' => TransactionType::EXPENSE,
+                        'category' => TransactionCategory::REFUND,
+                        'amount' => $refundAmount,
+                        'payment_method' => $paymentMethod,
+                        'notes' => 'Pengembalian Dana (Refund) DP Batal Servis Nota: ' . $serviceOrder->order_number,
+                        'transaction_date' => now(),
+                    ]);
+                }
+            } else {
+                if ($refundTransaction) {
+                    $refundTransaction->delete();
+                }
+            }
+
+            // B. BIAYA PENGECEKAN / PEMBATALAN (KAS MASUK TAMBAHAN DARI PELANGGAN)
+            // Hanya dicatat jika biaya cek melebihi DP atau jika tanpa DP
+            $netCheckingFee = max(0, $finalCost - $downPayment);
 
             $checkingTransaction = $serviceOrder->transactions()
                 ->where('category', TransactionCategory::CHECKING_FEE)
                 ->first();
 
-            if ($checkingFee > 0) {
+            if ($netCheckingFee > 0) {
                 if ($checkingTransaction) {
                     $checkingTransaction->update([
-                        'amount' => $checkingFee,
+                        'amount' => $netCheckingFee,
                         'payment_method' => $paymentMethod,
+                        'notes' => 'Biaya Pengecekan / Pembatalan Servis Nota: ' . $serviceOrder->order_number,
                     ]);
                 } else {
                     Transaction::create([
@@ -581,7 +623,7 @@ class ServiceOrderController extends Controller
                         'user_id' => $userId,
                         'type' => TransactionType::INCOME,
                         'category' => TransactionCategory::CHECKING_FEE,
-                        'amount' => $checkingFee,
+                        'amount' => $netCheckingFee,
                         'payment_method' => $paymentMethod,
                         'notes' => 'Biaya Pengecekan / Pembatalan Servis Nota: ' . $serviceOrder->order_number,
                         'transaction_date' => now(),
@@ -598,11 +640,15 @@ class ServiceOrderController extends Controller
                 ->where('category', TransactionCategory::FINAL_SERVICE)
                 ->delete();
 
-        // 4. STATUS MUNDUR / BELUM DIAMBIL (MISAL DARI TAKEN KEMBALI KE IN_PROGRESS/COMPLETED)
+        // 4. STATUS MUNDUR / BELUM DIAMBIL (MISAL DARI TAKEN/RETURNED KEMBALI KE IN_PROGRESS/COMPLETED DLL)
         } else {
-            // Hapus transaksi pelunasan & biaya pengecekan agar tidak tercatat uang masuk fiktif
+            // Hapus transaksi pelunasan, biaya pengecekan, & refund agar tidak tercatat uang masuk/keluar fiktif
             $serviceOrder->transactions()
-                ->whereIn('category', [TransactionCategory::FINAL_SERVICE, TransactionCategory::CHECKING_FEE])
+                ->whereIn('category', [
+                    TransactionCategory::FINAL_SERVICE,
+                    TransactionCategory::CHECKING_FEE,
+                    TransactionCategory::REFUND,
+                ])
                 ->delete();
 
             // Jika status mundur dari TAKEN/RETURNED, hapus garansi yang terlanjur terbit akibat salah klik
@@ -726,6 +772,7 @@ class ServiceOrderController extends Controller
             'technician:id,name',
             'handedOverBy:id,name',
             'warranty',
+            'transactions',
         ]);
 
         $pdf = Pdf::loadView('pdf.service_receipt', ['order' => $serviceOrder])

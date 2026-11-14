@@ -1,5 +1,5 @@
 import { useForm, router } from '@inertiajs/react';
-import { Loader2, Clock, Wrench, FileText, Send, Check, Play, CheckCircle2, XCircle, HandCoins, ShieldCheck, Save, Plus, Banknote, CreditCard, QrCode, Sparkles, Wand2, List, MapPin, Home, Trash2, X, CheckCircle, FileDown, AlertTriangle, MoreVertical, ChevronDown } from 'lucide-react';
+import { Loader2, Clock, Wrench, FileText, Send, Check, Play, CheckCircle2, XCircle, HandCoins, ShieldCheck, Save, Plus, Banknote, CreditCard, QrCode, Sparkles, Wand2, List, MapPin, Home, Trash2, X, CheckCircle, FileDown, AlertTriangle, MoreVertical, ChevronDown, ArrowDownLeft, ArrowUpRight, RotateCcw, Undo2 } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { toast } from 'sonner';
 import axios from 'axios';
@@ -30,7 +30,11 @@ import type { ServiceListItem } from '@/types/service';
 interface ServiceProcessModalProps {
     isOpen: boolean;
     onClose: () => void;
-    service: ServiceListItem & { final_cost?: string | number | null, down_payment?: string | number | null } | null;
+    service: ServiceListItem & {
+        final_cost?: string | number | null;
+        down_payment?: string | number | null;
+        refund_amount?: string | number | null;
+    } | null;
     available_spare_parts?: any[];
 }
 
@@ -39,6 +43,7 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
         estimated_cost: '',
         final_cost: '',
         down_payment: '',
+        refund_amount: '',
         technician_notes: '',
         warranty_days: '30',
         is_full_update: false,
@@ -91,10 +96,18 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                 ? Number(service.final_cost)
                 : (service.estimated_cost ? Number(service.estimated_cost) : 0);
 
+            const initialDp = service.down_payment ? Number(service.down_payment) : 0;
+            const initialRefund = service.refund_amount !== undefined && service.refund_amount !== null
+                ? Number(service.refund_amount)
+                : initialDp;
+
             setData({
                 estimated_cost: service.estimated_cost ? Math.round(Number(service.estimated_cost)).toString() : '',
-                final_cost: initialFinalCost ? Math.round(initialFinalCost).toString() : '',
-                down_payment: service.down_payment ? Math.round(Number(service.down_payment)).toString() : '',
+                final_cost: service.status === 'cancelled' || service.status === 'returned'
+                    ? (service.final_cost !== null && service.final_cost !== undefined ? Math.round(Number(service.final_cost)).toString() : '0')
+                    : (initialFinalCost ? Math.round(initialFinalCost).toString() : ''),
+                down_payment: initialDp ? Math.round(initialDp).toString() : '',
+                refund_amount: initialRefund ? Math.round(initialRefund).toString() : '',
                 technician_notes: service.technician_notes || '',
                 warranty_days: '30',
                 is_full_update: false,
@@ -121,6 +134,7 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
             estimated_cost: data.estimated_cost ? Number(data.estimated_cost) : null,
             final_cost: data.final_cost ? Number(data.final_cost) : null,
             down_payment: data.down_payment ? Number(data.down_payment) : 0,
+            refund_amount: data.refund_amount ? Number(data.refund_amount) : 0,
             technician_notes: data.technician_notes,
             warranty_days: data.warranty_days ? Number(data.warranty_days) : 0,
             payment_method: data.payment_method || 'cash',
@@ -514,31 +528,307 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
         }
 
         if (status === 'cancelled') {
+            const dp = Number(data.down_payment || 0);
+            const checkingFee = Number(data.final_cost || 0);
+            const refund = Number(data.refund_amount || 0);
+            const extraPayFromCustomer = Math.max(0, checkingFee - dp);
+
             return (
                 <div className="flex flex-col h-full space-y-4">
                     {warningBawaPulang}
-                    <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 p-6 rounded-xl w-full text-center space-y-2 flex-1 flex flex-col justify-center items-center">
-                        <div className="mx-auto w-12 h-12 bg-white dark:bg-red-900/40 rounded-full flex items-center justify-center mb-2 shadow-sm">
-                            <XCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
+
+                    {/* Banner Pembatalan */}
+                    <UIAlert className="bg-red-500/10 border-red-500/30 py-2.5">
+                        <AlertDescription className="text-red-700 dark:text-red-400 text-xs font-semibold flex items-center gap-2">
+                            <XCircle className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
+                            <span>Penyelesaian Pembatalan & Pengembalian Unit ke Pelanggan</span>
+                        </AlertDescription>
+                    </UIAlert>
+
+                    {/* Dark Card untuk Kalkulasi Keuangan Kasir */}
+                    <div className="bg-slate-900 dark:bg-slate-950 rounded-xl p-4 text-slate-100 shadow-xl border border-slate-800 space-y-3.5 shrink-0 relative overflow-hidden">
+                        <div className="absolute left-0 right-0 top-0 h-1 bg-gradient-to-r from-red-500/50 via-orange-500/50 to-amber-500/50" />
+
+                        {/* Baris 1: Uang Muka / DP */}
+                        <div className="flex justify-between items-center pb-2.5 border-b border-slate-800">
+                            <div>
+                                <span className="text-xs text-slate-400 font-medium tracking-wide uppercase block">
+                                    Uang Muka (DP)
+                                </span>
+                                <span className="text-[10px] text-slate-500">
+                                    {dp > 0 ? 'DP tercatat di kas toko' : 'Tidak ada pembayaran DP awal'}
+                                </span>
+                            </div>
+                            <span className="text-sm font-mono font-bold text-emerald-400">
+                                Rp {formatRupiah(dp)}
+                            </span>
                         </div>
-                        <h4 className="font-bold text-red-900 dark:text-red-100 uppercase tracking-wide">Servis Dibatalkan</h4>
-                        <p className="text-sm text-red-800/80 dark:text-red-200/80">
-                            Servis ini telah dibatalkan. Menunggu pelanggan untuk mengambil unitnya kembali.
-                        </p>
+
+                        {/* Baris 2: Input Biaya Cek */}
+                        <div className="flex justify-between items-center pb-2.5 border-b border-slate-800">
+                            <div>
+                                <span className="text-xs text-slate-300 font-semibold tracking-wide uppercase block">
+                                    Biaya Pengecekan
+                                </span>
+                                <span className="text-[10px] text-slate-500">
+                                    {checkingFee === 0 ? 'Bebas biaya cek (Rp 0)' : 'Dikenakan biaya pemeriksaan unit'}
+                                </span>
+                            </div>
+                            <div className="relative w-36">
+                                <span className="absolute left-3 top-2 text-[11px] font-bold text-slate-500">Rp</span>
+                                <Input
+                                    type="text"
+                                    className="pl-8 h-8 text-xs bg-slate-950 border-slate-700 focus-visible:ring-orange-500 focus-visible:border-orange-500 text-orange-400 font-mono font-bold text-right shadow-inner"
+                                    placeholder="0"
+                                    value={data.final_cost ? formatRupiah(data.final_cost) : ''}
+                                    onChange={(e) => {
+                                        const clean = e.target.value.replace(/\D/g, '');
+                                        setData('final_cost', clean);
+                                    }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Baris 3: Shortcut Opsi Pontianak jika pernah ada DP */}
+                        {dp > 0 && (
+                            <div className="space-y-1.5 pt-0.5">
+                                <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">
+                                    Pilihan Cepat Penyelesaian DP:
+                                </span>
+                                <div className="grid grid-cols-3 gap-1.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setData((prev) => ({
+                                                ...prev,
+                                                final_cost: '0',
+                                                refund_amount: dp.toString(),
+                                            }));
+                                        }}
+                                        className={cn(
+                                            "px-2 py-1.5 rounded-lg text-[10px] font-bold border transition-all text-center",
+                                            refund === dp && checkingFee === 0
+                                                ? "bg-rose-500/20 text-rose-300 border-rose-500/50 shadow-sm"
+                                                : "bg-slate-800/60 text-slate-400 border-slate-700 hover:bg-slate-800"
+                                        )}
+                                    >
+                                        Refund 100% (Full)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const fee = checkingFee > 0 ? checkingFee : Math.round(dp / 2);
+                                            const sisa = Math.max(0, dp - fee);
+                                            setData((prev) => ({
+                                                ...prev,
+                                                final_cost: fee.toString(),
+                                                refund_amount: sisa.toString(),
+                                            }));
+                                        }}
+                                        className={cn(
+                                            "px-2 py-1.5 rounded-lg text-[10px] font-bold border transition-all text-center",
+                                            refund > 0 && refund < dp
+                                                ? "bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-sm"
+                                                : "bg-slate-800/60 text-slate-400 border-slate-700 hover:bg-slate-800"
+                                        )}
+                                    >
+                                        Potong Biaya Cek
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setData((prev) => ({
+                                                ...prev,
+                                                refund_amount: '0',
+                                            }));
+                                        }}
+                                        className={cn(
+                                            "px-2 py-1.5 rounded-lg text-[10px] font-bold border transition-all text-center",
+                                            refund === 0
+                                                ? "bg-blue-500/20 text-blue-300 border-blue-500/50 shadow-sm"
+                                                : "bg-slate-800/60 text-slate-400 border-slate-700 hover:bg-slate-800"
+                                        )}
+                                    >
+                                        DP Hangus (Rp 0)
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Baris 4: Input Nominal Refund Manual (jika ada DP) */}
+                        {dp > 0 && (
+                            <div className="flex justify-between items-center pt-2 border-t border-slate-800">
+                                <div>
+                                    <span className="text-xs text-rose-300 font-semibold tracking-wide uppercase block">
+                                        DP Dikembalikan (Refund)
+                                    </span>
+                                    <span className="text-[10px] text-slate-500">
+                                        Maksimal Rp {formatRupiah(dp)}
+                                    </span>
+                                </div>
+                                <div className="relative w-36">
+                                    <span className="absolute left-3 top-2 text-[11px] font-bold text-rose-500">Rp</span>
+                                    <Input
+                                        type="text"
+                                        className="pl-8 h-8 text-xs bg-slate-950 border-slate-700 focus-visible:ring-rose-500 focus-visible:border-rose-500 text-rose-400 font-mono font-bold text-right shadow-inner"
+                                        placeholder="0"
+                                        value={data.refund_amount ? formatRupiah(data.refund_amount) : ''}
+                                        onChange={(e) => {
+                                            const clean = e.target.value.replace(/\D/g, '');
+                                            setData('refund_amount', clean);
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* INSTRUKSI VISUAL KASIR YANG SANGAT JELAS */}
+                        <div className="pt-1.5">
+                            {refund > 0 ? (
+                                <div className="p-3 rounded-lg border border-rose-500/40 bg-rose-950/40 flex items-center justify-between">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="p-1.5 rounded-md bg-rose-500/20 text-rose-400">
+                                            <ArrowUpRight className="h-4 w-4" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-bold uppercase tracking-wider text-rose-300">
+                                                Kas Keluar (Refund Pelanggan)
+                                            </p>
+                                            <p className="text-[11px] text-rose-200/80">
+                                                Kembalikan uang fisik ke pelanggan
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <span className="text-lg font-black font-mono text-rose-300">
+                                        Rp {formatRupiah(refund)}
+                                    </span>
+                                </div>
+                            ) : extraPayFromCustomer > 0 ? (
+                                <div className="p-3 rounded-lg border border-emerald-500/40 bg-emerald-950/40 flex items-center justify-between">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="p-1.5 rounded-md bg-emerald-500/20 text-emerald-400">
+                                            <ArrowDownLeft className="h-4 w-4" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+                                                Kas Masuk (Sisa Biaya Cek)
+                                            </p>
+                                            <p className="text-[11px] text-emerald-200/80">
+                                                Terima pembayaran dari pelanggan
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <span className="text-lg font-black font-mono text-emerald-300">
+                                        Rp {formatRupiah(extraPayFromCustomer)}
+                                    </span>
+                                </div>
+                            ) : (
+                                <div className="p-3 rounded-lg border border-slate-700 bg-slate-950/60 flex items-center justify-between">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="p-1.5 rounded-md bg-slate-800 text-slate-400">
+                                            <Check className="h-4 w-4" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                                                {dp > 0 ? 'DP Hangus / Bebas Pengeluaran' : 'Bebas Biaya (Rp 0)'}
+                                            </p>
+                                            <p className="text-[11px] text-slate-400">
+                                                {dp > 0 ? 'Kasir tidak mengeluarkan atau menerima uang' : 'Tidak ada pertukaran uang kas'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <span className="text-base font-bold font-mono text-slate-300">
+                                        Rp 0
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Pilihan Metode Pembayaran jika ada arus kas */}
+                        {(refund > 0 || extraPayFromCustomer > 0) && (
+                            <div className="flex flex-col gap-2 pt-2 border-t border-slate-800">
+                                <span className="text-[10px] text-slate-400 font-medium tracking-wide uppercase">
+                                    {refund > 0 ? 'Metode Pengeluaran Refund:' : 'Metode Pembayaran Biaya Cek:'}
+                                </span>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {[
+                                        { id: 'cash', label: 'Tunai', icon: Banknote },
+                                        { id: 'transfer', label: 'Transfer', icon: CreditCard },
+                                        { id: 'qris', label: 'QRIS', icon: QrCode }
+                                    ].map((method) => {
+                                        const Icon = method.icon;
+                                        const isSelected = data.payment_method === method.id;
+                                        return (
+                                            <button
+                                                key={method.id}
+                                                type="button"
+                                                onClick={() => setData('payment_method', method.id)}
+                                                className={`flex flex-col items-center justify-center gap-1 p-2 rounded-lg border transition-all ${isSelected
+                                                    ? 'bg-orange-500/20 text-orange-400 border-orange-500/50 shadow-[0_0_10px_rgba(249,115,22,0.1)]'
+                                                    : 'bg-slate-800/50 text-slate-400 border-slate-700 hover:bg-slate-800 hover:text-slate-300'
+                                                    }`}
+                                            >
+                                                <Icon className="h-4 w-4" />
+                                                <span className="text-[10px] font-bold uppercase tracking-wider">{method.label}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Alasan Pembatalan */}
+                    <div className="space-y-1.5 flex-1 flex flex-col min-h-0">
+                        <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                            <FileText className="h-3.5 w-3.5 text-muted-foreground" /> Alasan Pembatalan / Catatan Pengembalian
+                        </Label>
+                        <Textarea
+                            placeholder="Alasan batal: Biaya tidak cocok, sparepart kosong, unit tidak dapat diperbaiki..."
+                            className="flex-1 text-xs resize-none bg-background p-2.5 custom-scrollbar min-h-[60px]"
+                            value={data.technician_notes}
+                            onChange={(e) => setData('technician_notes', e.target.value)}
+                        />
                     </div>
                 </div>
             );
         }
 
         if (status === 'taken' || status === 'returned') {
+            const dp = Number(data.down_payment || 0);
+            const checkingFee = Number(data.final_cost || 0);
+            const refund = Number(service.refund_amount || data.refund_amount || 0);
+            const isReturned = status === 'returned';
+
             return (
                 <div className="flex flex-col h-full items-center justify-center space-y-4">
-                    <div className="bg-muted border border-border p-6 rounded-xl w-full text-center space-y-2 flex-1 flex flex-col justify-center items-center">
-                        <div className={`mx-auto w-12 h-12 bg-background rounded-full flex items-center justify-center mb-2 shadow-sm ${status === 'returned' ? 'text-orange-500' : 'text-emerald-600'}`}>
-                            {status === 'returned' ? <XCircle className="h-6 w-6" /> : <HandCoins className="h-6 w-6" />}
+                    <div className="bg-muted border border-border p-6 rounded-xl w-full text-center space-y-3 flex-1 flex flex-col justify-center items-center">
+                        <div className={`mx-auto w-12 h-12 bg-background rounded-full flex items-center justify-center mb-1 shadow-sm ${isReturned ? 'text-orange-500' : 'text-emerald-600'}`}>
+                            {isReturned ? <XCircle className="h-6 w-6" /> : <HandCoins className="h-6 w-6" />}
                         </div>
                         <h4 className="font-bold text-foreground uppercase tracking-wide">{service.status_label}</h4>
-                        <p className="text-sm text-muted-foreground">Siklus operasional nota ini telah ditutup secara permanen.</p>
+                        <p className="text-xs text-muted-foreground">
+                            {isReturned
+                                ? 'Unit fisik telah diserahkan kembali ke pelanggan sebagai servis batal.'
+                                : 'Unit fisik telah diambil oleh pelanggan dan masa garansi aktif.'}
+                        </p>
+
+                        {isReturned && (
+                            <div className="w-full max-w-xs bg-background/90 rounded-lg p-3 border border-border text-xs space-y-1.5 text-left shadow-sm">
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">DP Terbayar:</span>
+                                    <span className="font-mono font-medium">Rp {formatRupiah(dp)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Biaya Pengecekan:</span>
+                                    <span className="font-mono font-medium">Rp {formatRupiah(checkingFee)}</span>
+                                </div>
+                                <div className="flex justify-between border-t border-border/60 pt-1.5 font-bold">
+                                    <span className="text-rose-600 dark:text-rose-400">Refund DP Dikembalikan:</span>
+                                    <span className="font-mono text-rose-600 dark:text-rose-400">Rp {formatRupiah(refund)}</span>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             );
@@ -718,9 +1008,17 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56">
+                                <DropdownMenuItem onClick={() => processAction('cancelled')}>
+                                    <Save className="mr-2 h-4 w-4 text-muted-foreground" />
+                                    <span>Simpan Perubahan Biaya</span>
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setAlertConfig({ open: true, action: 'returned', isWa: false, title: 'Kembalikan Unit (Senyap)', desc: 'Nota akan ditutup permanen sebagai servis batal (tanpa WA).' })}>
                                     <HandCoins className="mr-2 h-4 w-4 text-muted-foreground" />
                                     <span>Kembalikan (Tanpa WA)</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="text-blue-600 focus:bg-blue-50 focus:text-blue-700" onClick={() => setAlertConfig({ open: true, action: 'in_progress', isWa: false, title: 'Buka Kembali Servisan', desc: 'Pelanggan setuju lanjut servis? Status akan dikembalikan ke Sedang Diperbaiki.' })}>
+                                    <Play className="mr-2 h-4 w-4 fill-current" />
+                                    <span>Lanjut Servis (Buka Kembali)</span>
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
@@ -733,8 +1031,47 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
         }
 
         if (status === 'taken' || status === 'returned') {
+            const isReturned = status === 'returned';
+
             return (
-                <Button type="button" size="sm" variant="outline" className="w-full" onClick={onClose}>Tutup Panel</Button>
+                <div className="flex items-center justify-between w-full">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button type="button" size="sm" variant="outline" className="text-xs text-muted-foreground gap-1.5" disabled={processing}>
+                                <Undo2 className="h-3.5 w-3.5" /> Opsi Koreksi / Rollback
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-56">
+                            {isReturned ? (
+                                <>
+                                    <DropdownMenuItem onClick={() => processAction('cancelled')}>
+                                        <RotateCcw className="mr-2 h-4 w-4 text-orange-600" />
+                                        <span>Kembali ke Status Dibatalkan</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => processAction('in_progress')}>
+                                        <Play className="mr-2 h-4 w-4 text-blue-600 fill-current" />
+                                        <span>Buka ke Sedang Diperbaiki</span>
+                                    </DropdownMenuItem>
+                                </>
+                            ) : (
+                                <>
+                                    <DropdownMenuItem onClick={() => processAction('completed')}>
+                                        <RotateCcw className="mr-2 h-4 w-4 text-emerald-600" />
+                                        <span>Kembali ke Status Selesai</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => processAction('in_progress')}>
+                                        <Play className="mr-2 h-4 w-4 text-blue-600 fill-current" />
+                                        <span>Buka ke Sedang Diperbaiki</span>
+                                    </DropdownMenuItem>
+                                </>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <Button type="button" size="sm" variant="default" onClick={onClose}>
+                        Tutup Panel
+                    </Button>
+                </div>
             );
         }
     };

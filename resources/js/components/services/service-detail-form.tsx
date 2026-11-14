@@ -30,6 +30,7 @@ export function ServiceDetailForm({ service }: { service: ExtendedService }) {
         estimated_cost: service.estimated_cost ? Math.round(Number(service.estimated_cost)).toString() : '',
         final_cost: service.final_cost ? Math.round(Number(service.final_cost)).toString() : '',
         down_payment: service.down_payment ? Math.round(Number(service.down_payment)).toString() : '',
+        refund_amount: service.refund_amount ? Math.round(Number(service.refund_amount)).toString() : '',
         payment_method: service.payment_method || 'cash',
         warranty_days: service.warranty_days?.toString() || '0',
         technician_notes: service.technician_notes || '',
@@ -65,6 +66,7 @@ export function ServiceDetailForm({ service }: { service: ExtendedService }) {
             estimated_cost: currentData.estimated_cost ? Number(currentData.estimated_cost) : null,
             final_cost: currentData.final_cost ? Number(currentData.final_cost) : null,
             down_payment: currentData.down_payment ? Number(currentData.down_payment) : null,
+            refund_amount: currentData.refund_amount ? Number(currentData.refund_amount) : 0,
             warranty_days: currentData.warranty_days ? Number(currentData.warranty_days) : 0,
         }));
 
@@ -220,7 +222,9 @@ export function ServiceDetailForm({ service }: { service: ExtendedService }) {
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <Label className="text-xs font-bold text-blue-900 dark:text-blue-200">Biaya Akhir</Label>
+                                    <Label className="text-xs font-bold text-blue-900 dark:text-blue-200">
+                                        {data.status === 'cancelled' || data.status === 'returned' ? 'Biaya Pengecekan' : 'Biaya Akhir'}
+                                    </Label>
                                     <div className="relative">
                                         <span className="absolute left-2 top-2 text-[10px] font-bold text-blue-900/50 dark:text-blue-200/50">Rp</span>
                                         <Input 
@@ -244,6 +248,32 @@ export function ServiceDetailForm({ service }: { service: ExtendedService }) {
                                         />
                                     </div>
                                 </div>
+
+                                {(data.status === 'cancelled' || data.status === 'returned') && (
+                                    <div className="space-y-1.5 col-span-2 bg-rose-50/60 dark:bg-rose-950/20 p-2.5 rounded-lg border border-rose-200/80 dark:border-rose-900/50">
+                                        <div className="flex justify-between items-center">
+                                            <Label className="text-xs font-bold text-rose-800 dark:text-rose-300">Pengembalian Dana (Refund DP)</Label>
+                                            {Number(data.down_payment || 0) > 0 && (
+                                                <span className="text-[10px] text-muted-foreground font-mono">
+                                                    DP Awal: Rp {formatRupiah(data.down_payment)}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="relative">
+                                            <span className="absolute left-2 top-2 text-[10px] font-bold text-rose-800/50 dark:text-rose-300/50">Rp</span>
+                                            <Input 
+                                                type="text" 
+                                                value={data.refund_amount ? formatRupiah(data.refund_amount) : ''} 
+                                                onChange={e => setData('refund_amount', e.target.value.replace(/\D/g, ''))} 
+                                                placeholder="0"
+                                                className="h-8 pl-6 text-xs bg-background border-rose-300 dark:border-rose-800 font-mono font-bold text-rose-700 dark:text-rose-400" 
+                                            />
+                                        </div>
+                                        <p className="text-[10px] text-rose-700/70 dark:text-rose-400/70">
+                                            Nominal uang DP yang dikembalikan fisik ke pelanggan saat pembatalan servis.
+                                        </p>
+                                    </div>
+                                )}
 
                                 <div className="space-y-1.5">
                                     <Label className="text-xs text-blue-900/80 dark:text-blue-200">Metode Bayar</Label>

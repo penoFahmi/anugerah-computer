@@ -22,11 +22,16 @@ class UpdateServiceOrderRequest extends FormRequest
             'status' => ['required', Rule::enum(ServiceStatus::class)],
             'estimated_cost' => ['nullable', 'numeric', 'min:0'],
             'final_cost' => ['nullable', 'numeric', 'min:0'],
+            'refund_amount' => ['nullable', 'numeric', 'min:0'],
             'down_payment' => [
                 'nullable',
                 'numeric',
                 'min:0',
                 function ($attribute, $value, $fail) {
+                    $newStatus = $this->input('status');
+                    if (in_array($newStatus, [ServiceStatus::CANCELLED->value, ServiceStatus::RETURNED->value])) {
+                        return;
+                    }
                     $serviceOrder = $this->route('serviceOrder');
                     $estimatedCost = (float) $this->input('estimated_cost', $serviceOrder->estimated_cost ?? 0);
                     $finalCost = (float) $this->input('final_cost', $serviceOrder->final_cost ?? 0);
@@ -81,32 +86,55 @@ class UpdateServiceOrderRequest extends FormRequest
 
                     switch ($oldStatus) {
                         case ServiceStatus::WAITING_CHECKING->value:
-                            if (in_array($newStatus, [ServiceStatus::WAITING_APPROVAL->value, ServiceStatus::CANCELLED->value])) {
+                            if (in_array($newStatus, [ServiceStatus::WAITING_APPROVAL->value, ServiceStatus::CANCELLED->value, ServiceStatus::RETURNED->value])) {
                                 $isValidTransition = true;
                             }
                             break;
                         case ServiceStatus::WAITING_APPROVAL->value:
-                            if (in_array($newStatus, [ServiceStatus::APPROVED->value, ServiceStatus::CANCELLED->value])) {
+                            if (in_array($newStatus, [ServiceStatus::APPROVED->value, ServiceStatus::CANCELLED->value, ServiceStatus::RETURNED->value])) {
                                 $isValidTransition = true;
                             }
                             break;
                         case ServiceStatus::APPROVED->value:
-                            if ($newStatus === ServiceStatus::IN_PROGRESS->value) {
+                            if (in_array($newStatus, [ServiceStatus::IN_PROGRESS->value, ServiceStatus::CANCELLED->value, ServiceStatus::RETURNED->value])) {
                                 $isValidTransition = true;
                             }
                             break;
                         case ServiceStatus::IN_PROGRESS->value:
-                            if ($newStatus === ServiceStatus::COMPLETED->value) {
+                            if (in_array($newStatus, [ServiceStatus::COMPLETED->value, ServiceStatus::CANCELLED->value, ServiceStatus::RETURNED->value])) {
                                 $isValidTransition = true;
                             }
                             break;
                         case ServiceStatus::COMPLETED->value:
-                            if ($newStatus === ServiceStatus::TAKEN->value) {
+                            if (in_array($newStatus, [ServiceStatus::TAKEN->value, ServiceStatus::CANCELLED->value, ServiceStatus::RETURNED->value, ServiceStatus::IN_PROGRESS->value])) {
                                 $isValidTransition = true;
                             }
                             break;
                         case ServiceStatus::CANCELLED->value:
-                            if ($newStatus === ServiceStatus::RETURNED->value) {
+                            if (in_array($newStatus, [
+                                ServiceStatus::RETURNED->value,
+                                ServiceStatus::WAITING_CHECKING->value,
+                                ServiceStatus::WAITING_APPROVAL->value,
+                                ServiceStatus::APPROVED->value,
+                                ServiceStatus::IN_PROGRESS->value
+                            ])) {
+                                $isValidTransition = true;
+                            }
+                            break;
+                        case ServiceStatus::RETURNED->value:
+                            if (in_array($newStatus, [
+                                ServiceStatus::CANCELLED->value,
+                                ServiceStatus::IN_PROGRESS->value,
+                                ServiceStatus::COMPLETED->value
+                            ])) {
+                                $isValidTransition = true;
+                            }
+                            break;
+                        case ServiceStatus::TAKEN->value:
+                            if (in_array($newStatus, [
+                                ServiceStatus::COMPLETED->value,
+                                ServiceStatus::IN_PROGRESS->value
+                            ])) {
                                 $isValidTransition = true;
                             }
                             break;

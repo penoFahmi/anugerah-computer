@@ -30,11 +30,13 @@ export interface ServiceListItem {
     estimated_cost: string | number | null;
     final_cost?: string | number | null;
     down_payment?: string | number | null;
+    refund_amount?: string | number | null;
     financials: {
         estimated: string | number | null;
         final: string | number | null;
         dp: string | number | null;
         remaining: number;
+        refund?: string | number | null;
     };
     technician_notes?: string | null;
     is_unit_left_at_store: boolean;

@@ -27,7 +27,12 @@ export default function WarrantiesIndex({ warranties, filters }: WarrantyIndexPr
 
     useEffect(() => {
         if (flash?.toast) {
-            toast[flash.toast.type](flash.toast.message);
+            const { type, message } = flash.toast;
+            if (type && type in toast && typeof (toast as any)[type] === 'function') {
+                (toast as any)[type](message);
+            } else {
+                toast(message);
+            }
         }
     }, [flash]);
 
@@ -52,7 +57,7 @@ export default function WarrantiesIndex({ warranties, filters }: WarrantyIndexPr
 
     const resetFilters = () => {
         setFilterState({ search: '', status: 'all', per_page: '10' });
-        router.get('/warranties', {}, { preserveState: true, replace: true });
+        router.get('/garansi', {}, { preserveState: true, replace: true });
     };
 
     const openModal = (warranty: WarrantyListItem, type: 'claim' | 'void') => {
@@ -138,5 +143,5 @@ export default function WarrantiesIndex({ warranties, filters }: WarrantyIndexPr
 }
 
 WarrantiesIndex.layout = (page: React.ReactNode) => (
-    <AppLayout breadcrumbs={[{ title: 'Garansi', href: '/warranties' }]}>{page}</AppLayout>
+    <AppLayout breadcrumbs={[{ title: 'Garansi', href: '/garansi' }]}>{page}</AppLayout>
 );

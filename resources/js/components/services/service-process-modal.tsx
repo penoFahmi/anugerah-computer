@@ -123,6 +123,7 @@ export function ServiceProcessModal({ isOpen, onClose, service, available_spare_
             down_payment: data.down_payment ? Number(data.down_payment) : 0,
             technician_notes: data.technician_notes,
             warranty_days: data.warranty_days ? Number(data.warranty_days) : 0,
+            payment_method: data.payment_method || 'cash',
             is_full_update: false,
             send_wa: isTriggerWa,
         };

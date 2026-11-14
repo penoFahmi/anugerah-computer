@@ -228,7 +228,7 @@ class ServiceOrderController extends Controller
                 $isUnitLeftAtStore = $request->has('is_unit_left_at_store') ? $request->boolean('is_unit_left_at_store') : true;
 
                 // Simpan Service Order
-                return ServiceOrder::create([
+                $order = ServiceOrder::create([
                     'order_number' => $orderNumber,
                     'customer_id' => $customer->id,
                     'device_id' => $device->id,
@@ -241,6 +241,22 @@ class ServiceOrderController extends Controller
                     'down_payment' => $downPayment,
                     'created_by' => auth()->id(),
                 ]);
+
+                // Catat Uang Muka (DP) ke Buku Kas jika ada pembayaran di awal
+                if ($downPayment > 0) {
+                    Transaction::create([
+                        'service_order_id' => $order->id,
+                        'user_id' => auth()->id(),
+                        'type' => TransactionType::INCOME,
+                        'category' => TransactionCategory::DP_SERVICE,
+                        'amount' => $downPayment,
+                        'payment_method' => $request->input('payment_method', 'cash'),
+                        'notes' => 'Uang Muka (DP) Servis Nota: ' . $order->order_number,
+                        'transaction_date' => now(),
+                    ]);
+                }
+
+                return $order;
             });
 
             $sendWa = $request->has('send_wa') ? $request->boolean('send_wa') : true;
@@ -352,6 +368,12 @@ class ServiceOrderController extends Controller
                 }
                 // Otomatis tandai unit sudah tidak ada di toko jika sudah diserahkan/kembali
                 $updateData['is_unit_left_at_store'] = false;
+            } else {
+                // JIKA STATUS DIUBAH MUNDUR (dari TAKEN/RETURNED ke status yang belum diambil):
+                if (in_array($oldStatus, [ServiceStatus::TAKEN->value, ServiceStatus::RETURNED->value])) {
+                    $updateData['handed_over_by'] = null;
+                    $updateData['is_unit_left_at_store'] = true;
+                }
             }
 
             $updateData['status'] = $newStatus;
@@ -377,33 +399,20 @@ class ServiceOrderController extends Controller
 
             $serviceOrder->update($updateData);
 
-            // Pemasukan ke Buku Besar jika ada pembayaran saat diambil (Khusus sukses/Taken atau Batal tapi ada Biaya Pengecekan)
-            if (
-                ($oldStatus !== ServiceStatus::TAKEN->value && $newStatus === ServiceStatus::TAKEN->value) ||
-                ($oldStatus !== ServiceStatus::RETURNED->value && $newStatus === ServiceStatus::RETURNED->value)
-            ) {
-                $finalCost = $validated['final_cost'] ?? $serviceOrder->final_cost ?? $serviceOrder->estimated_cost ?? 0;
-                $downPayment = $validated['down_payment'] ?? $serviceOrder->down_payment ?? 0;
+            // SINKRONISASI KAS MASUK & ARUS KEUANGAN (ROBUST, IDEMPOTENT, & REVERSIBLE)
+            $finalCost = (float) ($validated['final_cost'] ?? $serviceOrder->final_cost ?? $serviceOrder->estimated_cost ?? 0);
+            $downPayment = (float) ($validated['down_payment'] ?? $serviceOrder->down_payment ?? 0);
+            $paymentMethod = $request->input('payment_method', 'cash');
 
-                // Hanya catat transaksi jika finalCost > 0
-                // Untuk "Taken" (Selesai), ini adalah Biaya Servis.
-                // Untuk "Returned" (Batal), ini adalah Biaya Pengecekan (Checking Fee) jika toko menerapkannya.
-                if ($finalCost > 0) {
-                    $category = $newStatus === ServiceStatus::TAKEN->value ? TransactionCategory::FINAL_SERVICE : TransactionCategory::OTHER_INCOME;
-                    $notesPrefix = $newStatus === ServiceStatus::TAKEN->value ? 'Pelunasan / Pembayaran Servis' : 'Biaya Pengecekan / Pembatalan Servis';
-
-                    Transaction::create([
-                        'service_order_id' => $serviceOrder->id,
-                        'user_id' => auth()->id(),
-                        'type' => TransactionType::INCOME,
-                        'category' => $category,
-                        'amount' => max(0, $finalCost),
-                        'payment_method' => $request->input('payment_method', 'cash'),
-                        'notes' => $notesPrefix . ' Nota: ' . $serviceOrder->order_number,
-                        'transaction_date' => now(),
-                    ]);
-                }
-            }
+            $this->syncServiceFinancials(
+                $serviceOrder,
+                $finalCost,
+                $downPayment,
+                $paymentMethod,
+                $oldStatus,
+                $newStatus,
+                $user->id
+            );
 
             event(new ServiceOrderBroadcast($serviceOrder, 'updated'));
 
@@ -420,21 +429,30 @@ class ServiceOrderController extends Controller
                     $warrantyCode = null;
 
                     if ($warrantyDays > 0) {
-                        $prefix = 'GAR-'.now()->format('Ymd').'-';
-                        $lastWarranty = Warranty::where('warranty_code', 'like', $prefix.'%')
-                            ->orderBy('warranty_code', 'desc')
-                            ->lockForUpdate()
-                            ->first();
+                        if ($serviceOrder->warranty) {
+                            $serviceOrder->warranty()->update([
+                                'start_date' => now(),
+                                'end_date' => now()->addDays($warrantyDays),
+                                'status' => 'active',
+                            ]);
+                            $warrantyCode = $serviceOrder->warranty->warranty_code;
+                        } else {
+                            $prefix = 'GAR-'.now()->format('Ymd').'-';
+                            $lastWarranty = Warranty::where('warranty_code', 'like', $prefix.'%')
+                                ->orderBy('warranty_code', 'desc')
+                                ->lockForUpdate()
+                                ->first();
 
-                        $nextSeq = $lastWarranty ? (int) substr($lastWarranty->warranty_code, -3) + 1 : 1;
-                        $warrantyCode = $prefix.str_pad((string) $nextSeq, 3, '0', STR_PAD_LEFT);
+                            $nextSeq = $lastWarranty ? (int) substr($lastWarranty->warranty_code, -3) + 1 : 1;
+                            $warrantyCode = $prefix.str_pad((string) $nextSeq, 3, '0', STR_PAD_LEFT);
 
-                        $serviceOrder->warranty()->create([
-                            'warranty_code' => $warrantyCode,
-                            'start_date' => now(),
-                            'end_date' => now()->addDays($warrantyDays),
-                            'status' => 'active',
-                        ]);
+                            $serviceOrder->warranty()->create([
+                                'warranty_code' => $warrantyCode,
+                                'start_date' => now(),
+                                'end_date' => now()->addDays($warrantyDays),
+                                'status' => 'active',
+                            ]);
+                        }
                     }
 
                     $waMessage = WaGateway::getHandoverMessage($serviceOrder, 'taken', $isWarrantyClaim, $warrantyDays, $warrantyCode);
@@ -459,6 +477,139 @@ class ServiceOrderController extends Controller
         ]);
 
         return back();
+    }
+
+    /**
+     * Sinkronisasi pembukuan kas masuk (Transaction) dan garansi
+     * secara otomatis, idempoten, dan dapat dibatalkan (reversible)
+     * jika terjadi salah klik status atau perubahan nominal.
+     */
+    protected function syncServiceFinancials(
+        ServiceOrder $serviceOrder,
+        float $finalCost,
+        float $downPayment,
+        string $paymentMethod,
+        string $oldStatus,
+        string $newStatus,
+        int $userId
+    ): void {
+        // 1. SINKRONISASI UANG MUKA (DP)
+        $dpTransaction = $serviceOrder->transactions()
+            ->where('category', TransactionCategory::DP_SERVICE)
+            ->first();
+
+        if ($downPayment > 0) {
+            if ($dpTransaction) {
+                $dpTransaction->update([
+                    'amount' => $downPayment,
+                    'payment_method' => $paymentMethod,
+                ]);
+            } else {
+                Transaction::create([
+                    'service_order_id' => $serviceOrder->id,
+                    'user_id' => $userId,
+                    'type' => TransactionType::INCOME,
+                    'category' => TransactionCategory::DP_SERVICE,
+                    'amount' => $downPayment,
+                    'payment_method' => $paymentMethod,
+                    'notes' => 'Uang Muka (DP) Servis Nota: ' . $serviceOrder->order_number,
+                    'transaction_date' => now(),
+                ]);
+            }
+        } else {
+            if ($dpTransaction) {
+                $dpTransaction->delete();
+            }
+        }
+
+        // 2. PENANGANAN STATUS SELESAI & DIAMBIL (TAKEN)
+        if ($newStatus === ServiceStatus::TAKEN->value) {
+            // Sisa pelunasan = Biaya Akhir dikurangi DP yang sudah dibayar
+            $remaining = max(0, $finalCost - $downPayment);
+
+            $finalTransaction = $serviceOrder->transactions()
+                ->where('category', TransactionCategory::FINAL_SERVICE)
+                ->first();
+
+            if ($remaining > 0) {
+                if ($finalTransaction) {
+                    $finalTransaction->update([
+                        'amount' => $remaining,
+                        'payment_method' => $paymentMethod,
+                        'notes' => 'Pelunasan Servis Nota: ' . $serviceOrder->order_number,
+                    ]);
+                } else {
+                    Transaction::create([
+                        'service_order_id' => $serviceOrder->id,
+                        'user_id' => $userId,
+                        'type' => TransactionType::INCOME,
+                        'category' => TransactionCategory::FINAL_SERVICE,
+                        'amount' => $remaining,
+                        'payment_method' => $paymentMethod,
+                        'notes' => 'Pelunasan Servis Nota: ' . $serviceOrder->order_number,
+                        'transaction_date' => now(),
+                    ]);
+                }
+            } else {
+                if ($finalTransaction) {
+                    $finalTransaction->delete();
+                }
+            }
+
+            // Hapus biaya pengecekan jika sebelumnya pernah ada
+            $serviceOrder->transactions()
+                ->where('category', TransactionCategory::CHECKING_FEE)
+                ->delete();
+
+        // 3. PENANGANAN STATUS BATAL & DIKEMBALIKAN (RETURNED)
+        } elseif ($newStatus === ServiceStatus::RETURNED->value) {
+            $checkingFee = max(0, $finalCost);
+
+            $checkingTransaction = $serviceOrder->transactions()
+                ->where('category', TransactionCategory::CHECKING_FEE)
+                ->first();
+
+            if ($checkingFee > 0) {
+                if ($checkingTransaction) {
+                    $checkingTransaction->update([
+                        'amount' => $checkingFee,
+                        'payment_method' => $paymentMethod,
+                    ]);
+                } else {
+                    Transaction::create([
+                        'service_order_id' => $serviceOrder->id,
+                        'user_id' => $userId,
+                        'type' => TransactionType::INCOME,
+                        'category' => TransactionCategory::CHECKING_FEE,
+                        'amount' => $checkingFee,
+                        'payment_method' => $paymentMethod,
+                        'notes' => 'Biaya Pengecekan / Pembatalan Servis Nota: ' . $serviceOrder->order_number,
+                        'transaction_date' => now(),
+                    ]);
+                }
+            } else {
+                if ($checkingTransaction) {
+                    $checkingTransaction->delete();
+                }
+            }
+
+            // Hapus transaksi pelunasan servis jika ada
+            $serviceOrder->transactions()
+                ->where('category', TransactionCategory::FINAL_SERVICE)
+                ->delete();
+
+        // 4. STATUS MUNDUR / BELUM DIAMBIL (MISAL DARI TAKEN KEMBALI KE IN_PROGRESS/COMPLETED)
+        } else {
+            // Hapus transaksi pelunasan & biaya pengecekan agar tidak tercatat uang masuk fiktif
+            $serviceOrder->transactions()
+                ->whereIn('category', [TransactionCategory::FINAL_SERVICE, TransactionCategory::CHECKING_FEE])
+                ->delete();
+
+            // Jika status mundur dari TAKEN/RETURNED, hapus garansi yang terlanjur terbit akibat salah klik
+            if (in_array($oldStatus, [ServiceStatus::TAKEN->value, ServiceStatus::RETURNED->value])) {
+                $serviceOrder->warranty()->delete();
+            }
+        }
     }
 
     /**
@@ -490,6 +641,9 @@ class ServiceOrderController extends Controller
 
         event(new ServiceOrderBroadcast($serviceOrder, 'deleted'));
 
+        // Bersihkan transaksi keuangan dan garansi agar tidak menjadi data yatim di laporan kas
+        $serviceOrder->transactions()->delete();
+        $serviceOrder->warranty()->delete();
         $serviceOrder->delete();
 
         Inertia::flash('toast', ['type' => 'info', 'message' => "Servisan {$orderNumber} telah dihapus."]);

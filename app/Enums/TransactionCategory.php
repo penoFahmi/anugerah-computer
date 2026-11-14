@@ -10,6 +10,8 @@ enum TransactionCategory: string
     case BUY_SPAREPART = 'pembelian_stok_sparepart';
     case OPERATIONAL = 'operasional_toko';
     case REFUND = 'pengembalian_dana';
+    case CHECKING_FEE = 'biaya_pengecekan';
+    case OTHER_INCOME = 'pendapatan_lain';
 
     public function label(): string
     {
@@ -21,6 +23,8 @@ enum TransactionCategory: string
             self::BUY_SPAREPART => 'Belanja Stok / Sparepart',
             self::OPERATIONAL => 'Biaya Operasional Toko',
             self::REFUND => 'Refund Pelanggan',
+            self::CHECKING_FEE => 'Biaya Pengecekan / Pembatalan',
+            self::OTHER_INCOME => 'Pendapatan Lain-lain',
         };
     }
 }

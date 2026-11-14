@@ -49,6 +49,7 @@ export function ServiceFormModal({ isOpen, onClose }: Props) {
         is_unit_left_at_store: true, 
         estimated_cost: '',
         down_payment: '',
+        payment_method: 'cash',
         send_wa: true,
     });
 
@@ -155,6 +156,7 @@ export function ServiceFormModal({ isOpen, onClose }: Props) {
             phone: finalPhone,
             estimated_cost: currentData.is_technician_on_site ? (currentData.estimated_cost || 0) : 0,
             down_payment: currentData.is_technician_on_site ? (currentData.down_payment || 0) : 0,
+            payment_method: currentData.payment_method || 'cash',
             is_unit_left_at_store: (currentData.is_technician_on_site && isIndentCase) ? currentData.is_unit_left_at_store : true,
         }));
 
@@ -361,6 +363,31 @@ export function ServiceFormModal({ isOpen, onClose }: Props) {
                                                             value={displayDownPayment} onChange={(e) => handleDownPaymentChange(e.target.value)} 
                                                         />
                                                     </div>
+                                                    {Number(data.down_payment || 0) > 0 && (
+                                                        <div className="space-y-1 pt-1.5">
+                                                            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">Metode Bayar DP</span>
+                                                            <div className="grid grid-cols-3 gap-1.5">
+                                                                {[
+                                                                    { id: 'cash', label: 'Tunai' },
+                                                                    { id: 'transfer', label: 'Transfer' },
+                                                                    { id: 'qris', label: 'QRIS' }
+                                                                ].map((m) => (
+                                                                    <button
+                                                                        key={m.id}
+                                                                        type="button"
+                                                                        onClick={() => setData('payment_method', m.id)}
+                                                                        className={`py-1 text-[11px] font-semibold rounded border transition-all cursor-pointer ${
+                                                                            data.payment_method === m.id
+                                                                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                                                                                : 'bg-muted/50 text-slate-600 dark:text-slate-400 border-border hover:bg-muted'
+                                                                        }`}
+                                                                    >
+                                                                        {m.label}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
 

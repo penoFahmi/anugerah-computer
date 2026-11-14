@@ -9,7 +9,7 @@ use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
-use App\Http\Middleware\Checkuserisactive;
+use App\Http\Middleware\CheckUserIsActive;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(

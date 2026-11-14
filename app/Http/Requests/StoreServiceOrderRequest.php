@@ -34,6 +34,7 @@ class StoreServiceOrderRequest extends FormRequest
             'is_unit_left_at_store' => ['nullable', 'boolean'],
             'estimated_cost' => ['nullable', 'numeric', 'min:0'],
             'down_payment' => ['nullable', 'numeric', 'min:0'],
+            'payment_method' => ['nullable', 'string', 'in:cash,transfer,qris'],
             'send_wa' => ['nullable', 'boolean'],
         ];
     }
